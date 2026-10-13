@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ApexQuant Terminal | Stock Analysis, Future EPS Growth & PEG < 1 Valuation Model</title>
+  <meta name="description" content="Professional quantitative equity analytics terminal featuring PEG < 1 GARP screening, future EPS growth compounding, expected stock return models, technical indicators, and NLP sentiment news.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <!-- Real-time Market Indices Ticker Tape -->
+  <div class="market-ticker-tape" id="marketTickerTape">
+    <div class="tape-item">
+      <span class="tape-label">🇮🇳 NIFTY 50 (NSE)</span>
+      <span class="tape-val text-emerald" id="tapeNifty">22,721.95 (+1.60%)</span>
+    </div>
+    <div class="tape-item">
+      <span class="tape-label">🇮🇳 SENSEX (BSE)</span>
+      <span class="tape-val text-emerald" id="tapeSensex">73,033.78 (+1.54%)</span>
+    </div>
+    <div class="tape-item">
+      <span class="tape-label">🇮🇳 INDIA VIX</span>
+      <span class="tape-val text-emerald" id="tapeIndiaVix">13.82 (-2.10%)</span>
+    </div>
+    <div class="tape-item">
+      <span class="tape-label">🇺🇸 S&P 500</span>
+      <span class="tape-val text-emerald" id="tapeSp500">5,864.67 (+0.77%)</span>
+    </div>
+    <div class="tape-item">
+      <span class="tape-label">🇺🇸 NASDAQ</span>
+      <span class="tape-val text-emerald" id="tapeNasdaq">18,502.61 (+1.12%)</span>
+    </div>
+    <div class="tape-item">
+      <span class="tape-label">US 10Y YIELD</span>
+      <span class="tape-val text-rose">4.09% (+0.03%)</span>
+    </div>
+    <div class="tape-item">
+      <span class="tape-label">GARP PEG &lt; 1 REGIME</span>
+      <span class="tape-val text-cyan">ACTIVE (Alpha Factor +4.8%)</span>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-area">
+        <div class="logo-icon">
+          <i data-lucide="line-chart"></i>
+        </div>
+        <div>
+          <div class="logo-title">ApexQuant Terminal</div>
+          <span class="logo-badge">Institutional Edition 2.4</span>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <!-- Real-Time Stock Omnibar Search -->
+        <div class="search-omnibar-wrapper">
+          <i data-lucide="search" class="search-icon inline-icon"></i>
+          <input 
+            type="text" 
+            id="stockSearchInput" 
+            class="stock-search-input" 
+            placeholder="Search any NSE India or US stock (e.g. Tata Power, Reliance, Apple, NVDA, TATAPOWER)..." 
+            autocomplete="off"
+            aria-label="Search stock on Yahoo Finance or NSE India"
+          />
+          <button id="clearSearchBtn" class="clear-search-btn" title="Clear search" style="display: none;">&times;</button>
+          <div id="searchResultsDropdown" class="search-results-dropdown"></div>
+        </div>
+
+        <!-- Pre-loaded Dropdown Selector -->
+        <div class="search-select-wrapper">
+          <select id="stockSelector" class="stock-selector" aria-label="Select Stock for Analysis">
+            <optgroup label="🇮🇳 NSE India Listed Stocks (National Stock Exchange)">
+              <option value="TATAMOTORS.NS">TATAMOTORS.NS - Tata Motors (PEG 0.41 ★ Deep GARP)</option>
+              <option value="SBIN.NS">SBIN.NS - State Bank of India (PEG 0.76 ★ GARP)</option>
+              <option value="ICICIBANK.NS">ICICIBANK.NS - ICICI Bank (PEG 0.83 ★ GARP)</option>
+              <option value="HDFCBANK.NS">HDFCBANK.NS - HDFC Bank (PEG 0.86 ★ GARP)</option>
+              <option value="BAJFINANCE.NS">BAJFINANCE.NS - Bajaj Finance (PEG 0.93 ★ GARP)</option>
+              <option value="RELIANCE.NS">RELIANCE.NS - Reliance Industries (Conglomerate)</option>
+              <option value="INFY.NS">INFY.NS - Infosys Ltd. (IT Services)</option>
+              <option value="TCS.NS">TCS.NS - Tata Consultancy Services (IT Services)</option>
+            </optgroup>
+            <optgroup label="🇺🇸 US GARP Opportunities (PEG < 1.0)">
+              <option value="MU">MU - Micron Technology (PEG 0.40)</option>
+              <option value="BABA">BABA - Alibaba Group (PEG 0.74)</option>
+              <option value="GOOGL">GOOGL - Alphabet Inc. (PEG 0.90)</option>
+              <option value="META">META - Meta Platforms (PEG 0.94)</option>
+              <option value="NVDA" selected>NVDA - NVIDIA Corporation (PEG 0.97)</option>
+            </optgroup>
+            <optgroup label="🇺🇸 US Mega-Cap & Growth">
+              <option value="AMZN">AMZN - Amazon.com (PEG 1.19)</option>
+              <option value="MSFT">MSFT - Microsoft Corp. (PEG 2.08)</option>
+              <option value="AAPL">AAPL - Apple Inc. (PEG 2.71)</option>
+              <option value="TSLA">TSLA - Tesla Inc. (PEG 3.22)</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <!-- Live Sync & Status Indicator -->
+        <div class="live-status-pill" id="liveFeedStatus" title="Connected to Yahoo Finance real-time query stream">
+          <span class="pulse-dot"></span>
+          <span class="live-label">YAHOO FINANCE LIVE</span>
+          <span id="liveTimestamp" class="live-time-text">Streaming</span>
+        </div>
+
+        <button id="refreshLiveBtn" class="btn btn-outline btn-sm" title="Refresh Live Real-Time Market Data">
+          <i data-lucide="refresh-cw" id="refreshIcon" class="inline-icon"></i>
+          <span>Live Sync</span>
+        </button>
+
+        <button id="openCustomStockBtn" class="btn btn-outline" title="Simulate Any Custom Stock or Ticker">
+          <i data-lucide="plus-circle" class="inline-icon"></i>
+          <span>+ Custom Model</span>
+        </button>
+
+        <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle Dark and Light Mode">
+          <i data-lucide="sun" id="themeIconSun" class="inline-icon"></i>
+          <i data-lucide="moon" id="themeIconMoon" class="inline-icon" style="display: none;"></i>
+          <span id="themeToggleText">Light Mode</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Quick Stock Chips Navigation -->
+    <div class="quick-stock-chips-row">
+      <span class="quick-chips-label"><i data-lucide="zap" class="inline-icon text-cyan"></i> Watch:</span>
+      <span class="chips-group-tag">🇮🇳 NSE:</span>
+      <button class="quick-chip-btn" data-ticker="TATAMOTORS.NS">TATAMOTORS (PEG 0.41 ★)</button>
+      <button class="quick-chip-btn" data-ticker="SBIN.NS">SBIN (PEG 0.76 ★)</button>
+      <button class="quick-chip-btn" data-ticker="ICICIBANK.NS">ICICI (PEG 0.83 ★)</button>
+      <button class="quick-chip-btn" data-ticker="HDFCBANK.NS">HDFC (PEG 0.86 ★)</button>
+      <button class="quick-chip-btn" data-ticker="BAJFINANCE.NS">BAJFIN (PEG 0.93 ★)</button>
+      <button class="quick-chip-btn" data-ticker="RELIANCE.NS">RELIANCE</button>
+      <button class="quick-chip-btn" data-ticker="TCS.NS">TCS</button>
+      <button class="quick-chip-btn" data-ticker="INFY.NS">INFY</button>
+      <span class="chips-group-tag">🇺🇸 US:</span>
+      <button class="quick-chip-btn active" data-ticker="NVDA">NVDA (PEG 0.97 ★)</button>
+      <button class="quick-chip-btn" data-ticker="MU">MU (PEG 0.40 ★)</button>
+      <button class="quick-chip-btn" data-ticker="GOOGL">GOOGL (PEG 0.90 ★)</button>
+      <button class="quick-chip-btn" data-ticker="META">META (PEG 0.94 ★)</button>
+      <button class="quick-chip-btn" data-ticker="AAPL">AAPL</button>
+    </div>
+
+    <!-- Main Stock Hero Overview Card -->
+    <section class="stock-hero-card" id="stockHeroCard">
+      <div class="hero-main-row">
+        <div class="ticker-identity">
+          <div class="ticker-badge-box">
+            <div class="hero-ticker" id="heroTicker">NVDA</div>
+            <div class="hero-exchange" id="heroExchange">NASDAQ</div>
+          </div>
+          <div class="company-details">
+            <h1 id="heroName">NVIDIA Corporation</h1>
+            <div class="company-meta-tags">
+              <span id="heroSector"><i data-lucide="cpu" class="inline-icon"></i> Semiconductors & AI Hardware</span>
+              <span>•</span>
+              <span id="heroMarketCap">Cap: $3.39T</span>
+              <span>•</span>
+              <span id="heroBeta">Beta: 1.68</span>
+              <span>•</span>
+              <span id="hero52Range">52W Range: $45.20 - $140.76</span>
+              <span>•</span>
+              <span id="heroSessionStatus" class="session-status-badge text-cyan"><i data-lucide="clock" class="inline-icon"></i> Live Market Session</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="price-display-group">
+          <div class="hero-current-price" id="heroPrice">$138.25</div>
+          <div class="price-change-pill badge-strong-buy" id="heroChangePill">
+            <i data-lucide="trending-up" class="inline-icon"></i>
+            <span id="heroChange">+$4.15 (+3.09%)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quant Rating & PEG Highlight Banner -->
+      <div class="hero-quant-banner">
+        <div class="quant-rating-section">
+          <div class="quant-score-circle" id="quantScoreCircle">
+            <span class="score-value" id="heroQuantScore">89</span>
+            <span class="score-max">/100</span>
+          </div>
+          <div class="rating-text-group">
+            <span class="rating-label">Quant Multi-Factor Model</span>
+            <span class="rating-verdict text-emerald" id="heroQuantRating">STRONG BUY (Alpha Conviction)</span>
+          </div>
+        </div>
+
+        <!-- PEG < 1 GARP Highlight -->
+        <div class="peg-highlight-banner" id="heroPegBanner">
+          <div class="peg-ratio-big" id="heroPegRatio">0.97</div>
+          <div>
+            <div class="peg-desc-text" id="heroPegStatus">★ PEG &lt; 1.0 GARP DETECTED</div>
+            <div style="font-size: 0.72rem; color: var(--text-dim);" id="heroPegDetail">
+              P/E (33.3x) is lower than projected annual EPS growth (34.5%)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="hero-metrics-grid">
+        <div class="metric-tile">
+          <span class="metric-label">TTM EPS</span>
+          <span class="metric-val" id="metricTtmEPS">$2.95</span>
+        </div>
+        <div class="metric-tile">
+          <span class="metric-label">Forward EPS (FY1)</span>
+          <span class="metric-val text-cyan" id="metricForwardEPS">$4.15</span>
+        </div>
+        <div class="metric-tile">
+          <span class="metric-label">Proj. EPS Growth</span>
+          <span class="metric-val text-emerald" id="metricEpsGrowth">+34.5%</span>
+        </div>
+        <div class="metric-tile">
+          <span class="metric-label">Forward P/E</span>
+          <span class="metric-val" id="metricForwardPE">33.3x</span>
+        </div>
+        <div class="metric-tile">
+          <span class="metric-label">Operating Margin</span>
+          <span class="metric-val" id="metricOpMargin">62.8%</span>
+        </div>
+        <div class="metric-tile">
+          <span class="metric-label">ROE</span>
+          <span class="metric-val text-cyan" id="metricROE">115.4%</span>
+        </div>
+        <div class="metric-tile">
+          <span class="metric-label">Debt / Equity</span>
+          <span class="metric-val" id="metricDebtEquity">0.18</span>
+        </div>
+        <div class="metric-tile">
+          <span class="metric-label">RSI (14)</span>
+          <span class="metric-val" id="metricRSI">64.2</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs" role="tablist">
+      <button class="tab-btn active" data-tab="tab-return-model" role="tab" aria-selected="true">
+        <i data-lucide="calculator" class="inline-icon"></i>
+        <span>Expected Return & PEG Model</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-technicals" role="tab" aria-selected="false">
+        <i data-lucide="candlestick-chart" class="inline-icon"></i>
+        <span>Technical Analysis</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-fundamentals" role="tab" aria-selected="false">
+        <i data-lucide="bar-chart-3" class="inline-icon"></i>
+        <span>EPS Growth & Fundamentals</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-sensitivity" role="tab" aria-selected="false">
+        <i data-lucide="grid" class="inline-icon"></i>
+        <span>Lynch GARP & Sensitivity Matrix</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-news" role="tab" aria-selected="false">
+        <i data-lucide="newspaper" class="inline-icon"></i>
+        <span>News & NLP Sentiment</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-screener" role="tab" aria-selected="false">
+        <i data-lucide="radar" class="inline-icon"></i>
+        <span>GARP Radar (PEG &lt; 1)</span>
+      </button>
+    </nav>
+
+    <!-- TAB 1: Expected Return & PEG Valuation Model -->
+    <main class="tab-content">
+      <section id="tab-return-model" class="tab-pane active" role="tabpanel">
+        <div class="model-dashboard-grid">
+          <!-- Left Column: Return Engine and Interactive Parameters -->
+          <div>
+            <!-- Expected Return KPI Cards -->
+            <div class="return-cards-row">
+              <div class="return-kpi-card highlight-cagr">
+                <span class="return-kpi-label">Expected Annualized CAGR</span>
+                <span class="return-kpi-val text-emerald" id="kpiReturnCAGR">+30.8%</span>
+                <span class="return-kpi-sub" id="kpiReturnHorizon">Over 3-Year Investment Horizon</span>
+              </div>
+              <div class="return-kpi-card">
+                <span class="return-kpi-label">Target Exit Price</span>
+                <span class="return-kpi-val text-cyan" id="kpiTargetPrice">$308.13</span>
+                <span class="return-kpi-sub" id="kpiTotalGain">+$169.88 (+122.9%)</span>
+              </div>
+              <div class="return-kpi-card">
+                <span class="return-kpi-label">Projected Exit EPS</span>
+                <span class="return-kpi-val" id="kpiProjectedEPS">$9.25</span>
+                <span class="return-kpi-sub" id="kpiBaseEPS">From FY1 $4.15 Base EPS</span>
+              </div>
+            </div>
+
+            <!-- Interactive Model Controls -->
+            <div class="panel-card">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">
+                    <i data-lucide="sliders" class="inline-icon text-cyan"></i>
+                    Interactive Quant Valuation Simulator
+                  </h2>
+                  <p class="panel-subtitle">Adjust key assumptions to re-calculate Target Price and Expected CAGR in real time.</p>
+                </div>
+                <button id="resetSlidersBtn" class="btn btn-outline btn-sm">
+                  <i data-lucide="rotate-ccw" class="inline-icon"></i> Reset Consensus
+                </button>
+              </div>
+
+              <div class="interactive-controls-box">
+                <!-- Slider 1: EPS Growth Rate -->
+                <div class="slider-group">
+                  <div class="slider-label-row">
+                    <span class="slider-name">
+                      <i data-lucide="trending-up" class="inline-icon"></i>
+                      Projected Annual EPS Growth Rate (g)
+                    </span>
+                    <span class="slider-current-val" id="sliderValGrowth">34.5%</span>
+                  </div>
+                  <input type="range" id="sliderGrowth" min="5" max="60" step="0.5" value="34.5" aria-label="EPS Growth Rate">
+                </div>
+
+                <!-- Slider 2: Exit P/E Multiple -->
+                <div class="slider-group">
+                  <div class="slider-label-row">
+                    <span class="slider-name">
+                      <i data-lucide="pie-chart" class="inline-icon"></i>
+                      Projected Exit P/E Multiple
+                    </span>
+                    <span class="slider-current-val" id="sliderValPE">33.3x</span>
+                  </div>
+                  <input type="range" id="sliderPE" min="8" max="65" step="0.5" value="33.3" aria-label="Exit PE Multiple">
+                </div>
+
+                <!-- Slider 3: Time Horizon -->
+                <div class="slider-group">
+                  <div class="slider-label-row">
+                    <span class="slider-name">
+                      <i data-lucide="calendar" class="inline-icon"></i>
+                      Investment Holding Period (Years)
+                    </span>
+                    <span class="slider-current-val" id="sliderValYears">3 Years</span>
+                  </div>
+                  <input type="range" id="sliderYears" min="1" max="5" step="1" value="3" aria-label="Investment Years">
+                </div>
+              </div>
+
+              <!-- Mathematical Model Formula Card -->
+              <div style="background: var(--bg-card); padding: 14px 18px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); font-size: 0.8rem;">
+                <div style="font-weight: 700; margin-bottom: 6px; color: var(--text-muted);">
+                  <i data-lucide="code" class="inline-icon"></i> Quant Formula Specification:
+                </div>
+                <div class="font-mono" style="color: var(--cyan-primary); line-height: 1.6;">
+                  • Future EPS<sub>t+n</sub> = Base EPS × (1 + g)<sup>n</sup><br>
+                  • Target Price = Future EPS<sub>t+n</sub> × Exit P/E<br>
+                  • Expected CAGR = (Target Price / Current Price)<sup>(1/n)</sup> - 1<br>
+                  • PEG Ratio = (P/E Multiple) / (Annual EPS Growth Rate %)
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Peter Lynch PEG Analysis & 3-Scenario Matrix -->
+          <div>
+            <!-- Peter Lynch Fair Value Card -->
+            <div class="panel-card">
+              <div class="panel-header">
+                <h3 class="panel-title">
+                  <i data-lucide="shield-check" class="inline-icon text-amber"></i>
+                  Peter Lynch GARP Model (PEG &lt; 1)
+                </h3>
+              </div>
+              <div class="lynch-fair-value-box">
+                <div class="lynch-header">
+                  <span class="lynch-title">Peter Lynch Fair Value</span>
+                  <span class="lynch-formula">Fair Value = Forward EPS × Growth%</span>
+                </div>
+                <div class="lynch-body">
+                  <div class="lynch-stat-box">
+                    <div class="lynch-stat-label">Lynch Fair Value</div>
+                    <div class="lynch-stat-val text-emerald" id="lynchFairPrice">$143.18</div>
+                  </div>
+                  <div class="lynch-stat-box">
+                    <div class="lynch-stat-label">Current Price</div>
+                    <div class="lynch-stat-val" id="lynchCurrentPrice">$138.25</div>
+                  </div>
+                  <div class="lynch-stat-box">
+                    <div class="lynch-stat-label">Margin of Safety</div>
+                    <div class="lynch-stat-val text-emerald" id="lynchMarginSafety">+3.6%</div>
+                  </div>
+                </div>
+              </div>
+              <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;" id="lynchExplanationText">
+                According to legendary Fidelity fund manager Peter Lynch, a company's fair P/E equals its percentage growth rate. With a PEG ratio under 1.0, the stock is trading below its growth potential, offering a positive margin of safety.
+              </p>
+            </div>
+
+            <!-- 3-Scenario Stress Test Matrix -->
+            <div class="panel-card">
+              <div class="panel-header">
+                <h3 class="panel-title">
+                  <i data-lucide="layers" class="inline-icon text-cyan"></i>
+                  3-Scenario Stress Test Matrix
+                </h3>
+                <span style="font-size: 0.72rem; color: var(--text-dim);">Bear / Base / Bull</span>
+              </div>
+              <div style="overflow-x: auto;">
+                <table class="scenario-table" id="scenariosTable">
+                  <thead>
+                    <tr>
+                      <th>Scenario</th>
+                      <th>EPS Growth</th>
+                      <th>Exit P/E</th>
+                      <th>Target</th>
+                      <th>CAGR</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><span class="scenario-badge badge-bear">Bear (25%)</span></td>
+                      <td class="font-mono" id="scenBearGrowth">24.2%</td>
+                      <td class="font-mono" id="scenBearPE">26.6x</td>
+                      <td class="font-mono" id="scenBearTarget">$210.45</td>
+                      <td class="font-mono text-emerald" id="scenBearCAGR">+15.0%</td>
+                    </tr>
+                    <tr>
+                      <td><span class="scenario-badge badge-base">Base (50%)</span></td>
+                      <td class="font-mono" id="scenBaseGrowth">34.5%</td>
+                      <td class="font-mono" id="scenBasePE">33.3x</td>
+                      <td class="font-mono" id="scenBaseTarget">$308.13</td>
+                      <td class="font-mono text-emerald" id="scenBaseCAGR">+30.8%</td>
+                    </tr>
+                    <tr>
+                      <td><span class="scenario-badge badge-bull">Bull (25%)</span></td>
+                      <td class="font-mono" id="scenBullGrowth">43.1%</td>
+                      <td class="font-mono" id="scenBullPE">38.3x</td>
+                      <td class="font-mono" id="scenBullTarget">$435.20</td>
+                      <td class="font-mono text-emerald" id="scenBullCAGR">+46.5%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style="margin-top: 14px; padding: 10px; background: var(--bg-card); border-radius: var(--radius-sm); display: flex; justify-content: space-between; font-size: 0.8rem;">
+                <span style="color: var(--text-muted); font-weight: 600;">Probability-Weighted Expected CAGR:</span>
+                <span class="font-mono text-emerald font-bold" id="scenWeightedCAGR">+30.8%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: Technical Analysis -->
+      <section id="tab-technicals" class="tab-pane" role="tabpanel">
+        <div class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">
+                <i data-lucide="candlestick-chart" class="inline-icon text-cyan"></i>
+                Technical Trend & Price Action
+              </h2>
+              <p class="panel-subtitle">Daily Price with 50-day SMA, 200-day SMA, and Trading Volume</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <span class="badge badge-buy" id="techCrossStatus">Golden Cross Active (50 &gt; 200 SMA)</span>
+            </div>
+          </div>
+          <div class="chart-box-main">
+            <canvas id="priceChartCanvas"></canvas>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="panel-card">
+            <div class="panel-header">
+              <h3 class="panel-title">
+                <i data-lucide="activity" class="inline-icon text-amber"></i>
+                Relative Strength Index (RSI 14)
+              </h3>
+              <span class="font-mono" id="rsiCurrentValue">64.2 (Healthy Momentum)</span>
+            </div>
+            <div class="chart-box-sub">
+              <canvas id="rsiChartCanvas"></canvas>
+            </div>
+          </div>
+
+          <div class="panel-card">
+            <div class="panel-header">
+              <h3 class="panel-title">
+                <i data-lucide="compass" class="inline-icon text-purple"></i>
+                Support, Resistance & Momentum
+              </h3>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.85rem;">
+              <div style="display: flex; justify-content: space-between; padding: 8px; background: var(--bg-card); border-radius: var(--radius-sm);">
+                <span style="color: var(--text-muted);">Technical Trend:</span>
+                <span class="font-mono text-emerald font-bold" id="techTrendSummary">Strong Uptrend</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 8px; background: var(--bg-card); border-radius: var(--radius-sm);">
+                <span style="color: var(--text-muted);">Key Resistance Level:</span>
+                <span class="font-mono text-rose font-bold" id="techResistanceVal">$140.76</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 8px; background: var(--bg-card); border-radius: var(--radius-sm);">
+                <span style="color: var(--text-muted);">Key Support Level:</span>
+                <span class="font-mono text-emerald font-bold" id="techSupportVal">$128.00</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 8px; background: var(--bg-card); border-radius: var(--radius-sm);">
+                <span style="color: var(--text-muted);">MACD Histogram:</span>
+                <span class="font-mono text-cyan" id="techMacdVal">+0.65 (Bullish Divergence)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: Fundamentals & EPS Trajectory -->
+      <section id="tab-fundamentals" class="tab-pane" role="tabpanel">
+        <div class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">
+                <i data-lucide="trending-up" class="inline-icon text-emerald"></i>
+                Reported vs Consensus Projected EPS Trajectory • <span id="fundamentalsStockTicker" class="text-cyan">NVDA</span>
+              </h2>
+              <p class="panel-subtitle">
+                Audited historical financials and projected consensus for <strong id="fundamentalsStockName">NVIDIA Corporation</strong> • Real-time as of current date: <span id="fundamentalsCurrentDate" class="text-emerald">Oct 13, 2026</span>
+              </p>
+            </div>
+          </div>
+          <div class="chart-box-fundamental">
+            <canvas id="epsTrajectoryChartCanvas"></canvas>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="panel-card">
+            <div class="panel-header">
+              <h3 class="panel-title">
+                <i data-lucide="percent" class="inline-icon text-cyan"></i>
+                Operating Efficiency & Margins (%) • <span id="marginsStockTicker">NVDA</span>
+              </h3>
+            </div>
+            <div class="chart-box-sub">
+              <canvas id="marginsChartCanvas"></canvas>
+            </div>
+          </div>
+
+          <div class="panel-card">
+            <div class="panel-header">
+              <h3 class="panel-title">
+                <i data-lucide="file-spreadsheet" class="inline-icon text-blue"></i>
+                Fundamental Health & Cash Flow
+              </h3>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.85rem;">
+              <div style="display: flex; justify-content: space-between; padding: 8px; background: var(--bg-card); border-radius: var(--radius-sm);">
+                <span style="color: var(--text-muted);">TTM Revenue:</span>
+                <span class="font-mono" id="fundRevenue">$96.3B</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 8px; background: var(--bg-card); border-radius: var(--radius-sm);">
+                <span style="color: var(--text-muted);">Net Income:</span>
+                <span class="font-mono" id="fundNetIncome">$53.0B</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 8px; background: var(--bg-card); border-radius: var(--radius-sm);">
+                <span style="color: var(--text-muted);">Free Cash Flow:</span>
+                <span class="font-mono text-emerald" id="fundFCF">$42.1B</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 8px; background: var(--bg-card); border-radius: var(--radius-sm);">
+                <span style="color: var(--text-muted);">EV / EBITDA:</span>
+                <span class="font-mono" id="fundEvEbitda">38.4x</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 8px; background: var(--bg-card); border-radius: var(--radius-sm);">
+                <span style="color: var(--text-muted);">Price / Sales:</span>
+                <span class="font-mono" id="fundPriceSales">35.2x</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: Sensitivity Matrix Heatmap -->
+      <section id="tab-sensitivity" class="tab-pane" role="tabpanel">
+        <div class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">
+                <i data-lucide="grid" class="inline-icon text-cyan"></i>
+                2D Return Sensitivity Matrix (CAGR % Heatmap) • <span id="sensitivityStockTicker" class="text-emerald">NVDA</span>
+              </h2>
+              <p class="panel-subtitle">
+                Annualized return across varying EPS Growth Rates (rows) and Exit P/E Multiples (columns) for <strong id="sensitivityStockSub">NVDA</strong> • Real-time as of current date: <span id="sensitivityCurrentDate" class="text-cyan">Oct 13, 2026</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="matrix-container">
+            <table class="sensitivity-table" id="sensitivityTable">
+              <!-- Dynamically populated by JS -->
+            </table>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: flex-end; gap: 16px; margin-top: 14px; font-size: 0.76rem; color: var(--text-dim);">
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span style="width: 12px; height: 12px; background: rgba(16, 185, 129, 0.35); border-radius: 2px;"></span>
+              <span>&gt; 25% CAGR (Super Alpha)</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span style="width: 12px; height: 12px; background: rgba(16, 185, 129, 0.2); border-radius: 2px;"></span>
+              <span>10% - 25% CAGR (Solid)</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span style="width: 12px; height: 12px; background: rgba(245, 158, 11, 0.2); border-radius: 2px;"></span>
+              <span>0% - 10% CAGR (Modest)</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span style="width: 12px; height: 12px; background: rgba(244, 63, 94, 0.25); border-radius: 2px;"></span>
+              <span>&lt; 0% (Capital Loss)</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: News & NLP Sentiment Feed -->
+      <section id="tab-news" class="tab-pane" role="tabpanel">
+        <div class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">
+                <i data-lucide="newspaper" class="inline-icon text-cyan"></i>
+                Breaking Financial News & NLP Sentiment • <span id="newsStockTicker" class="text-cyan">NVDA</span>
+              </h2>
+              <p class="panel-subtitle">
+                Real-time Yahoo Finance breaking market intelligence sorted by current date (newest first).
+              </p>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <span class="badge badge-strong-buy" id="newsStatusCount">Live Stories</span>
+              <div class="news-filters-bar">
+                <button class="news-filter-btn active" data-filter="ALL">All News</button>
+                <button class="news-filter-btn" data-filter="BULLISH">Bullish Only</button>
+                <button class="news-filter-btn" data-filter="BEARISH">Bearish Only</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="news-feed-container" id="newsFeedList">
+            <!-- Dynamically populated by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 6: GARP Radar Screener (PEG < 1) -->
+      <section id="tab-screener" class="tab-pane" role="tabpanel">
+        <div class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">
+                <i data-lucide="radar" class="inline-icon text-emerald"></i>
+                GARP Radar: Growth At A Reasonable Price (PEG &lt; 1.0) • Real-Time Universe
+              </h2>
+              <p class="panel-subtitle">
+                Systematic scan of equity universe based on real-time market data • Sorted by current date / last updated.
+              </p>
+            </div>
+            <span class="badge badge-peg-garp" id="garpMatchCount">Calculating...</span>
+          </div>
+
+          <!-- Screener Sorting & Filter Controls -->
+          <div class="screener-controls-bar">
+            <div class="screener-market-group">
+              <span class="sort-label"><i data-lucide="compass" class="inline-icon"></i> Market:</span>
+              <button class="screener-market-btn active" data-market="ALL">All Markets</button>
+              <button class="screener-market-btn" data-market="NSE">🇮🇳 NSE India</button>
+              <button class="screener-market-btn" data-market="US">🇺🇸 US Markets</button>
+            </div>
+            <div class="screener-sort-group">
+              <span class="sort-label"><i data-lucide="arrow-down-up" class="inline-icon"></i> Sort:</span>
+              <button class="screener-sort-btn active" data-sort="date">
+                <i data-lucide="calendar" class="inline-icon"></i> Date
+              </button>
+              <button class="screener-sort-btn" data-sort="peg">
+                <i data-lucide="zap" class="inline-icon"></i> Lowest PEG
+              </button>
+              <button class="screener-sort-btn" data-sort="cagr">
+                <i data-lucide="trending-up" class="inline-icon"></i> 3Y CAGR
+              </button>
+              <button class="screener-sort-btn" data-sort="upside">
+                <i data-lucide="shield-check" class="inline-icon"></i> Lynch Upside
+              </button>
+              <button class="screener-sort-btn" data-sort="ticker">
+                Symbol
+              </button>
+            </div>
+            <button id="screenerGarpToggle" class="btn btn-outline btn-sm">
+              ★ PEG &lt; 1.0 Only
+            </button>
+          </div>
+
+          <div class="screener-table-wrap">
+            <table class="screener-table">
+              <thead>
+                <tr>
+                  <th>Ticker / Company</th>
+                  <th>Real-Time Price</th>
+                  <th>Forward P/E</th>
+                  <th>Proj. EPS Growth</th>
+                  <th>PEG Ratio</th>
+                  <th>Expected 3Y CAGR</th>
+                  <th>Lynch Upside</th>
+                  <th>Last Updated / Date</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="screenerTableBody">
+                <!-- Dynamically populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal: Custom Stock Simulator -->
+  <div class="modal-backdrop" id="customStockModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          <i data-lucide="cpu" class="inline-icon text-cyan"></i>
+          Simulate Any Custom Stock or Ticker
+        </h3>
+        <button class="modal-close-btn" id="closeCustomStockBtn">&times;</button>
+      </div>
+
+      <form id="customStockForm">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="customTicker">Stock Ticker Symbol</label>
+              <input type="text" id="customTicker" class="form-input" placeholder="e.g. PLTR, AMD, TSMC" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="customName">Company Name</label>
+              <input type="text" id="customName" class="form-input" placeholder="e.g. Palantir Technologies">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="customPrice">Current Share Price ($)</label>
+              <input type="number" id="customPrice" class="form-input" step="0.01" value="45.00" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="customEPS">TTM EPS ($)</label>
+              <input type="number" id="customEPS" class="form-input" step="0.01" value="1.20" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="customGrowth">Expected Annual EPS Growth (%)</label>
+              <input type="number" id="customGrowth" class="form-input" step="0.5" value="28.0" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="customPE">Target / Forward P/E Multiple</label>
+              <input type="number" id="customPE" class="form-input" step="0.5" value="24.0" required>
+            </div>
+            <div class="form-group col-span-2">
+              <label class="form-label" for="customSector">Sector / Industry</label>
+              <input type="text" id="customSector" class="form-input" value="Enterprise Software & AI">
+            </div>
+          </div>
+
+          <!-- Live Preview Box -->
+          <div class="modal-preview-box">
+            <div class="modal-preview-item">
+              <div class="modal-preview-label">Calculated PEG</div>
+              <div class="modal-preview-val text-cyan" id="modalPreviewPeg">0.86</div>
+            </div>
+            <div class="modal-preview-item">
+              <div class="modal-preview-label">Expected 3Y CAGR</div>
+              <div class="modal-preview-val text-emerald" id="modalPreviewCAGR">+25.4%</div>
+            </div>
+            <div class="modal-preview-item">
+              <div class="modal-preview-label">GARP Regime</div>
+              <span class="badge badge-peg-garp" id="modalPreviewBadge">PEG &lt; 1 (GARP Opportunity)</span>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-outline" id="cancelCustomStockBtn">Cancel</button>
+            <button type="submit" class="btn btn-primary">
+              <i data-lucide="check" class="inline-icon"></i> Run Quant Simulation
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main Application JavaScript -->
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
