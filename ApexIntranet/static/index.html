@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Apex Intraday - Technical Expert Screener & Chart Terminal</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <!-- Lightweight Charts (TradingView) bundled locally -->
+  <script src="/static/lightweight-charts.js"></script>
+</head>
+<body class="view-chart">
+
+  <!-- Top Navigation & Control Bar -->
+  <header class="header-bar">
+    <div class="brand-section">
+      <div class="brand-logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+          <polyline points="16 7 22 7 22 13"></polyline>
+        </svg>
+        <span>APEX<span style="color: #10b981;">INTRADAY</span></span>
+      </div>
+      <div class="pulse-badge">
+        <div class="pulse-dot"></div>
+        <span>1-MIN LIVE</span>
+      </div>
+    </div>
+
+    <!-- Market Selector Tabs -->
+    <div class="market-tabs">
+      <button class="tab-btn active" data-market="NSE_MOMENTUM" id="tab-nse" title="Nifty 50 Momentum Leaders">
+        <span>🇮🇳 Nifty 50</span>
+      </button>
+      <button class="tab-btn" data-market="NSE_BANK" id="tab-nse-bank" title="Bank Nifty Leaders">
+        <span>🏦 Bank Nifty</span>
+      </button>
+      <button class="tab-btn" data-market="NSE_IT" id="tab-nse-it" title="Nifty IT Leaders">
+        <span>💻 Nifty IT</span>
+      </button>
+      <button class="tab-btn" data-market="US_MAG7" id="tab-us-mag7" title="US Magnificent 7">
+        <span>🇺🇸 Mag 7</span>
+      </button>
+      <button class="tab-btn" data-market="US_MOMENTUM" id="tab-us" title="US High-Beta Movers">
+        <span>🇺🇸 US Movers</span>
+      </button>
+      <button class="tab-btn" data-market="CUSTOM" id="tab-custom" title="Scan Any Custom Tickers">
+        <span>⚡ Custom</span>
+      </button>
+    </div>
+
+    <!-- Search & Quick Ticker Add -->
+    <div class="header-center">
+      <div class="search-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="ticker-search-input" placeholder="Scan symbol (e.g. TCS.NS, NVDA, RELIANCE.NS, TSLA)..." />
+        <button class="btn-icon" id="btn-search-go" title="Analyze Stock">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Controls & Status -->
+    <div class="header-right">
+      <div class="market-status-pill" id="market-status-box" title="Real-time Feed Status">
+        <span id="market-status-text">Checking market...</span>
+      </div>
+
+      <!-- Theme Switcher (Dark / Light Mode) -->
+      <button class="btn-secondary" id="btn-theme-toggle" title="Toggle Dark / Light Theme" style="padding: 5px 9px;">
+        <span id="theme-icon">🌙</span>
+        <span id="theme-label" style="font-size: 0.72rem;">Dark</span>
+      </button>
+
+      <!-- Audio Alert Toggle -->
+      <button class="btn-secondary" id="btn-sound-toggle" title="Toggle audio chime on breakout signals" style="padding: 5px 8px;">
+        <span id="sound-icon">🔔</span>
+        <span id="sound-label" style="font-size: 0.72rem;">Alerts: On</span>
+      </button>
+
+      <div class="refresh-control">
+        <select id="auto-refresh-select" class="btn-secondary" style="font-size: 0.75rem;">
+          <option value="0">Auto: Off</option>
+          <option value="15">Auto: 15s</option>
+          <option value="30" selected>Auto: 30s</option>
+          <option value="60">Auto: 60s</option>
+        </select>
+
+        <button class="btn-action" id="btn-manual-scan">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M23 4v6h-6"></path>
+            <path d="M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          <span id="scan-btn-label">Scan</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile / Tablet Responsive Navigation Switcher -->
+  <nav class="mobile-nav-bar" id="mobile-nav-bar">
+    <button class="mobile-nav-btn" data-view="radar" id="mob-btn-radar">
+      <span>📡</span>
+      <span>Radar</span>
+      <span class="mob-badge" id="mob-badge-count">--</span>
+    </button>
+    <button class="mobile-nav-btn active" data-view="chart" id="mob-btn-chart">
+      <span>📈</span>
+      <span>Chart</span>
+    </button>
+    <button class="mobile-nav-btn" data-view="analysis" id="mob-btn-analysis">
+      <span>📋</span>
+      <span>Blueprint</span>
+    </button>
+  </nav>
+
+  <!-- Main Terminal 3-Pane Layout -->
+  <main class="terminal-layout" id="terminal-layout">
+
+    <!-- PANE 1: Intraday Stock Radar & Screener List -->
+    <aside class="screener-pane" id="screener-pane">
+      <div class="screener-header">
+        <div class="screener-title-row">
+          <span class="pane-title">Opportunity Radar</span>
+          <span class="scan-counter" id="scan-count-badge">0 Stocks</span>
+        </div>
+        <!-- Filter Pills with Strategy Playbooks -->
+        <div class="filter-pills">
+          <button class="filter-pill active" data-filter="all">All</button>
+          <button class="filter-pill" data-filter="buy" style="color: #34d399;">Buy</button>
+          <button class="filter-pill" data-filter="sell" style="color: #f87171;">Short</button>
+          <button class="filter-pill" data-filter="rvol" style="color: #fbbf24;">High Vol</button>
+          <button class="filter-pill" data-filter="breakout" style="color: #60a5fa;">Breakout</button>
+          <button class="filter-pill" data-filter="vwap" style="color: #eab308;">VWAP</button>
+          <button class="filter-pill" data-filter="ema" style="color: #c084fc;">EMA</button>
+        </div>
+      </div>
+
+      <!-- Stock Cards List -->
+      <div class="stock-list" id="stock-cards-container">
+        <div class="state-container">
+          <div class="spinner"></div>
+          <p>Scanning 1-minute order flow & momentum setups...</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- PANE 2: Interactive Candlestick Chart Terminal -->
+    <section class="chart-pane" id="chart-pane">
+      <div class="chart-toolbar">
+        <div class="symbol-meta">
+          <!-- Desktop toggle left sidebar -->
+          <button class="btn-secondary" id="btn-toggle-left" title="Collapse/Expand Screener Pane" style="padding: 2px 6px; font-size: 0.7rem;">
+            <span>◀</span>
+          </button>
+          <span class="active-symbol-title" id="active-symbol-ticker">--</span>
+          <span class="active-company-name" id="active-symbol-name">Select a stock</span>
+          <span class="active-price-pill" id="active-price-pill">--</span>
+        </div>
+
+        <div class="toolbar-controls">
+          <!-- Timeframe selector -->
+          <div class="timeframe-group">
+            <button class="tf-btn active" data-tf="1m">1m</button>
+            <button class="tf-btn" data-tf="5m">5m</button>
+            <button class="tf-btn" data-tf="15m">15m</button>
+          </div>
+
+          <!-- Indicator & Marker Toggles -->
+          <div class="indicator-toggles">
+            <button class="toggle-chip active" id="toggle-vwap" title="Volume Weighted Average Price">
+              <span class="chip-dot" style="background: #eab308;"></span>
+              <span>VWAP</span>
+            </button>
+            <button class="toggle-chip active" id="toggle-ema" title="EMA Ribbon 9, 21, 50">
+              <span class="chip-dot" style="background: #8b5cf6;"></span>
+              <span>EMAs</span>
+            </button>
+            <button class="toggle-chip active" id="toggle-levels" title="Stop Loss & Targets">
+              <span class="chip-dot" style="background: #ef4444;"></span>
+              <span>SL/TGT</span>
+            </button>
+            <button class="toggle-chip active" id="toggle-markers" title="Candlestick Patterns & Signal Trigger Markers">
+              <span class="chip-dot" style="background: #10b981;"></span>
+              <span>Patterns</span>
+            </button>
+          </div>
+
+          <!-- Zoom & Display Resolution Controls -->
+          <div class="zoom-controls">
+            <button class="btn-secondary" id="btn-zoom-in" title="Zoom In (Wider Candles)" style="padding: 3px 6px; font-size: 0.75rem; font-weight: bold;">+</button>
+            <button class="btn-secondary" id="btn-zoom-out" title="Zoom Out (More Candles)" style="padding: 3px 6px; font-size: 0.75rem; font-weight: bold;">−</button>
+            <button class="btn-secondary active" id="btn-fit-recent" title="Show Recent 60m Action (Optimal Candle Width)" style="padding: 3px 6px; font-size: 0.68rem;">60m</button>
+            <button class="btn-secondary" id="btn-chart-reset" title="Fit Entire Trading Session" style="padding: 3px 6px; font-size: 0.68rem;">Day</button>
+          </div>
+
+          <!-- Session Replay Controls -->
+          <button class="btn-secondary" id="btn-replay-toggle" title="Bar-by-Bar Session Replay Simulator" style="padding: 3px 6px; font-size: 0.7rem;">
+            <span>▶ Replay</span>
+          </button>
+
+          <!-- Desktop toggle right sidebar -->
+          <button class="btn-secondary" id="btn-toggle-right" title="Collapse/Expand Analysis Blueprint" style="padding: 2px 6px; font-size: 0.7rem;">
+            <span>▶</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Replay Controls Bar (Hidden by default, shown when Replay active) -->
+      <div id="replay-bar" style="display: none; background: var(--bg-surface-elevated); border-bottom: 1px solid var(--border-color); padding: 5px 14px; align-items: center; justify-content: space-between; font-size: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #fbbf24; font-weight: 700;">▶ REPLAY SIMULATOR:</span>
+          <span id="replay-time-label" style="font-family: var(--font-mono); color: var(--text-main);">Bar 0 / 0</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <button class="btn-secondary" id="replay-play-btn" style="padding: 2px 8px; font-size: 0.7rem;">Play</button>
+          <button class="btn-secondary" id="replay-step-btn" style="padding: 2px 8px; font-size: 0.7rem;">Step ❯</button>
+          <select id="replay-speed-select" class="btn-secondary" style="padding: 2px 4px; font-size: 0.7rem;">
+            <option value="1">1x</option>
+            <option value="3" selected>3x</option>
+            <option value="5">5x</option>
+          </select>
+          <button class="btn-secondary" id="replay-exit-btn" style="padding: 2px 8px; font-size: 0.7rem; color: #ef4444;">Exit</button>
+        </div>
+      </div>
+
+      <!-- Chart Canvas Viewports -->
+      <div class="chart-viewport-container" id="chart-viewport-container">
+        <!-- Floating Live Price & Indicator Values -->
+        <div class="chart-floating-legend" id="chart-legend">
+          <div class="legend-item"><span>O:</span> <span class="legend-val" id="leg-open">--</span></div>
+          <div class="legend-item"><span>H:</span> <span class="legend-val" id="leg-high">--</span></div>
+          <div class="legend-item"><span>L:</span> <span class="legend-val" id="leg-low">--</span></div>
+          <div class="legend-item"><span>C:</span> <span class="legend-val" id="leg-close">--</span></div>
+          <div class="legend-item"><span>Vol:</span> <span class="legend-val" id="leg-vol">--</span></div>
+          <div class="legend-item"><span style="color:#eab308;">VWAP:</span> <span class="legend-val" id="leg-vwap">--</span></div>
+          <div class="legend-item"><span style="color:#a78bfa;">RSI:</span> <span class="legend-val" id="leg-rsi">--</span></div>
+        </div>
+
+        <div id="main-candlestick-chart"></div>
+        <div id="rsi-sub-chart"></div>
+      </div>
+    </section>
+
+    <!-- PANE 3: Technical Expert Rationale & Execution Plan -->
+    <aside class="analysis-pane" id="analysis-sidebar">
+      <div class="analysis-header">
+        <span class="pane-title">Institutional Trade Blueprint</span>
+        
+        <!-- Signal & Setup Banner -->
+        <div class="signal-banner" id="signal-banner">
+          <div class="banner-left">
+            <span class="signal-badge-lg" id="detail-signal-badge">ANALYZING</span>
+            <div class="setup-title" id="detail-setup-title">Evaluating Technical Pattern</div>
+            <div class="setup-sub" id="detail-setup-desc">Inspecting volume profile and indicators...</div>
+          </div>
+          <div class="score-circle" id="score-circle-badge">
+            <span class="score-num" id="detail-score-num">--</span>
+            <span class="score-label">Score</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Multi-Timeframe Alignment Matrix -->
+      <div class="plan-section">
+        <div class="section-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          <span>Multi-Timeframe Alignment (MTF)</span>
+        </div>
+
+        <div id="mtf-matrix-container">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Execution Levels Section -->
+      <div class="plan-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div class="section-label" style="margin-bottom: 0;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span>Day Stop Loss & Targets</span>
+          </div>
+          <button class="btn-secondary" id="btn-copy-plan" style="padding: 2px 7px; font-size: 0.68rem; color: #60a5fa;" title="Copy formatted trade setup">
+            📋 Copy Setup
+          </button>
+        </div>
+
+        <div class="levels-grid">
+          <div class="level-card entry">
+            <div class="level-title">Entry / CMP</div>
+            <div class="level-price" id="plan-entry">--</div>
+            <div class="level-diff" style="color: #f59e0b;" id="plan-action-type">LONG</div>
+          </div>
+          <div class="level-card sl">
+            <div class="level-title">Day Stop Loss</div>
+            <div class="level-price" id="plan-sl">--</div>
+            <div class="level-diff" style="color: #ef4444;" id="plan-sl-diff">--</div>
+          </div>
+          <div class="level-card t1">
+            <div class="level-title">Target 1 (Scalp 1:1.5)</div>
+            <div class="level-price" id="plan-t1">--</div>
+            <div class="level-diff" style="color: #10b981;" id="plan-t1-diff">--</div>
+          </div>
+          <div class="level-card t2">
+            <div class="level-title">Target 2 (Main 1:2.5)</div>
+            <div class="level-price" id="plan-t2">--</div>
+            <div class="level-diff" style="color: #06b6d4;" id="plan-t2-diff">--</div>
+          </div>
+        </div>
+
+        <div class="trade-execution-box" id="plan-exec-rule">
+          Trailing Rule: Book 50% at Target 1, trail Stop Loss to Cost/Entry, and aim for Target 2.
+        </div>
+
+        <!-- Position Sizing Calculator -->
+        <div class="calc-box">
+          <div class="calc-inputs">
+            <div class="calc-field">
+              <label>Capital (<span id="calc-curr-symbol">₹</span>)</label>
+              <input type="number" id="calc-capital" value="100000" step="5000" />
+            </div>
+            <div class="calc-field">
+              <label>Risk % per Trade</label>
+              <input type="number" id="calc-risk-pct" value="1.0" step="0.25" min="0.2" max="5.0" />
+            </div>
+          </div>
+          <div class="calc-results">
+            <span>Position Size: <strong class="calc-shares" id="calc-qty">-- Shares</strong></span>
+            <span>Max Risk: <strong style="color:#ef4444;" id="calc-max-loss">--</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6-Point Technical Rationale Breakdown -->
+      <div class="plan-section">
+        <div class="section-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          <span>Why This Stock Was Picked</span>
+        </div>
+
+        <div class="rationale-list" id="rationale-container">
+          <!-- Dynamically populated 6 pillars -->
+        </div>
+      </div>
+
+      <!-- Multi-Factor Verification Checklist -->
+      <div class="plan-section">
+        <div class="section-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="9 11 12 14 22 4"></polyline>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+          </svg>
+          <span>Algorithmic Indicator Checklist</span>
+        </div>
+
+        <div class="rationale-list" id="checklist-container">
+          <!-- Dynamically populated checks -->
+        </div>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
