@@ -820,6 +820,38 @@
           </div>
         </div>
 
+        <!-- Interactive Showcase: Top 3 Quant-Screened Leader Stocks for Selected Sector -->
+        <div class="panel-card showcase-panel highlight-showcase" id="sectorShowcasePanel" style="margin-top: 24px;">
+          <div class="panel-header" style="flex-wrap: wrap; gap: 14px;">
+            <div>
+              <div class="showcase-badge-row" style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <span class="badge badge-tag" style="background: rgba(0, 242, 254, 0.15); color: var(--cyan-primary); border-color: rgba(0,242,254,0.35);">
+                  <i data-lucide="sparkles" class="inline-icon"></i> Quant Analysis & Performance Leaders
+                </span>
+                <span class="badge badge-neutral" id="showcaseRankBadge">Rank #1 Sector</span>
+              </div>
+              <h2 class="panel-title" style="font-size: 1.2rem;">
+                <i data-lucide="award" class="inline-icon text-cyan"></i>
+                <span id="showcaseSectorName">Semiconductors & AI Hardware</span> — Top 3 Quant Leader Stocks
+              </h2>
+              <p class="panel-subtitle" id="showcaseSectorDesc">
+                Screened by highest Expected CAGR, Peter Lynch GARP valuation (PEG &lt; 1.0), Quant Multi-Factor Score, and YTD performance.
+              </p>
+            </div>
+            <div class="showcase-selector-wrap" style="display: flex; align-items: center; gap: 10px;">
+              <span class="toolbar-label"><i data-lucide="layers" class="inline-icon text-cyan"></i> Sector:</span>
+              <select id="sectorShowcaseSelect" class="sector-sort-select" style="min-width: 220px;">
+                <!-- Populated by JS -->
+              </select>
+            </div>
+          </div>
+
+          <!-- Top 3 Quant Stock Cards Grid -->
+          <div class="top-three-quant-grid" id="topThreeQuantContainer">
+            <!-- Populated dynamically with 3 rich Quant Stock Cards -->
+          </div>
+        </div>
+
         <!-- Sector Breakdown Grid / Cards -->
         <div class="panel-card" style="margin-top: 24px;">
           <div class="panel-header">

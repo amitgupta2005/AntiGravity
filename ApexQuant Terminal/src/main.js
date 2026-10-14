@@ -41,7 +41,8 @@ import {
   Building2,
   Flame,
   Shield,
-  Filter
+  Filter,
+  Sparkles
 } from 'lucide';
 
 import { STOCKS_DATA } from './data/stocks.js';
@@ -128,7 +129,8 @@ function refreshIcons() {
       Building2,
       Flame,
       Shield,
-      Filter
+      Filter,
+      Sparkles
     }
   });
 }

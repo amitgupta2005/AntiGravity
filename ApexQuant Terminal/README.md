@@ -65,10 +65,20 @@ ApexQuant Terminal is an institutional-grade, responsive quantitative equity ana
 ### 10. 🌐 All Sectors Dashboard (Ranked by YTD Return Descending)
 - **Top Navigation Bar Tab**: Dedicated navigation tab giving instant access to broad market sector rotation and performance.
 - **Sorted by YTD Descending**: All 12 primary market sectors strictly ranked from top alpha generator (Semiconductors & AI Hardware $+64.8\%$) to laggards (Real Estate $-2.8\%$).
-- **Ranked Horizontal Bar Chart**: Interactive Chart.js visualization mapping sector returns in vibrant green ($> 0\%$) and red ($< 0\%$) with on-bar data badges.
+- **Interactive Sector Selection & Top 3 Quant Leader Stocks Showcase**:
+  - **Dynamic Sector Selection**: Selecting any sector (via the ranked bar chart, the interactive selector dropdown, or clicking any sector card) immediately displays that sector's **Top 3 Quant-Screened Leader Stocks**.
+  - **Institutional Quant Screening Criteria**: Every stock satisfies the quantitative model:
+    - **Expected 3-Year CAGR (%)**: Compounded annualized total return projection.
+    - **Peter Lynch GARP Valuation**: Forward P/E and PEG Ratio with dedicated `PEG < 1.0 GARP` margin-of-safety badge.
+    - **Multi-Factor Quant Composite Score**: Scored out of 100 on Valuation, Growth, Quality, and Momentum factors ($\ge 85/100$).
+    - **Peter Lynch Fair Value & Upside %**: Clear discounted intrinsic value target.
+    - **Order Book to Revenue Ratio**: Contracted backlog coverage highlighted in **green when $> 1.0\times$**.
+    - **Quant Model Analysis Thesis**: Qualitative and quantitative investment rationale for why the stock qualifies.
+  - **One-Click Terminal Loading**: Every quant pick card has an **"Analyze [Ticker] in Terminal"** button that immediately loads the company into the core terminal valuation and financial model.
+- **Ranked Horizontal Bar Chart**: Interactive Chart.js visualization mapping sector returns in vibrant green ($> 0\%$) and red ($< 0\%$) with on-bar data badges. Clicking any bar instantly selects that sector.
 - **Top Sector KPI Metrics**: Top Performing Sector, Median Sector YTD Return, Market Breadth (% of sectors in the green), and Laggard Sector.
 - **Market Filters & Sorting Options**: Quick toggle between **All Sectors (Global 🌐)**, **NSE India 🇮🇳**, and **US Equities 🇺🇸**, with sorting by YTD Change, Name, or Market Cap.
-- **Constituent Leaders & Direct Analysis**: Displays top constituent stocks with individual YTD returns and one-click navigation to immediately analyze any stock.
+- **Constituent Leaders & Direct Analysis**: Displays constituent stock chips with individual YTD returns and one-click navigation to immediately analyze any stock.
 
 ---
 
