@@ -113,6 +113,12 @@
           <span>Live Sync</span>
         </button>
 
+        <button id="topNavSectorDashboardBtn" class="btn btn-outline btn-sector-dashboard" title="View All Sectors YTD Dashboard & Quant Leaders">
+          <i data-lucide="layout-grid" class="inline-icon text-cyan"></i>
+          <span>Sector Dashboard</span>
+          <span class="top-nav-ytd-tag">YTD</span>
+        </button>
+
         <button id="openCustomStockBtn" class="btn btn-outline" title="Simulate Any Custom Stock or Ticker">
           <i data-lucide="plus-circle" class="inline-icon"></i>
           <span>+ Custom Model</span>
@@ -258,10 +264,6 @@
       <button class="tab-btn" data-tab="tab-orderbook" role="tab" aria-selected="false">
         <i data-lucide="layers" class="inline-icon"></i>
         <span>Order Book & History</span>
-      </button>
-      <button class="tab-btn" data-tab="tab-sectors" role="tab" aria-selected="false">
-        <i data-lucide="layout-grid" class="inline-icon"></i>
-        <span>Sectors Dashboard (YTD)</span>
       </button>
       <button class="tab-btn" data-tab="tab-sensitivity" role="tab" aria-selected="false">
         <i data-lucide="grid" class="inline-icon"></i>
@@ -829,6 +831,7 @@
                   <i data-lucide="sparkles" class="inline-icon"></i> Quant Analysis & Performance Leaders
                 </span>
                 <span class="badge badge-neutral" id="showcaseRankBadge">Rank #1 Sector</span>
+                <span class="badge badge-neutral" id="showcaseMarketActiveBadge" style="border-color: rgba(0, 242, 254, 0.3); color: var(--cyan-primary);">All Markets 🌐</span>
               </div>
               <h2 class="panel-title" style="font-size: 1.2rem;">
                 <i data-lucide="award" class="inline-icon text-cyan"></i>
@@ -843,6 +846,19 @@
               <select id="sectorShowcaseSelect" class="sector-sort-select" style="min-width: 220px;">
                 <!-- Populated by JS -->
               </select>
+            </div>
+          </div>
+
+          <!-- Market Filter Over Quant Analysis & Performance Leaders -->
+          <div class="showcase-controls-bar">
+            <div class="showcase-market-filter-group" id="showcaseMarketFilterGroup">
+              <span class="toolbar-label"><i data-lucide="compass" class="inline-icon text-cyan"></i> Market Filter:</span>
+              <button class="filter-chip active" data-showcase-market="ALL">All Markets 🌐</button>
+              <button class="filter-chip" data-showcase-market="NSE">NSE India 🇮🇳</button>
+              <button class="filter-chip" data-showcase-market="US">US Equities 🇺🇸</button>
+            </div>
+            <div class="showcase-filter-hint">
+              <span class="text-dim" style="font-size: 0.75rem;"><i data-lucide="filter" class="inline-icon" style="width: 12px; height: 12px;"></i> Filtering Top 3 Quant Picks by selected market</span>
             </div>
           </div>
 

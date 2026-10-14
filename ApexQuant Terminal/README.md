@@ -63,8 +63,16 @@ ApexQuant Terminal is an institutional-grade, responsive quantitative equity ana
 - **Commercial Contract Segments**: Revenue backlog breakdown across key business units and high-growth verticals.
 
 ### 10. 🌐 All Sectors Dashboard (Ranked by YTD Return Descending)
-- **Top Navigation Bar Tab**: Dedicated navigation tab giving instant access to broad market sector rotation and performance.
+- **Top Navigation Bar Menu Item**: Positioned prominently in the top application header right where `+ Custom Model` is located, giving instant one-click access to broad market sector rotation and performance.
 - **Sorted by YTD Descending**: All 12 primary market sectors strictly ranked from top alpha generator (Semiconductors & AI Hardware $+64.8\%$) to laggards (Real Estate $-2.8\%$).
+- **Market Filter Over Quant Analysis & Performance Leaders**:
+  - Dedicated market filter control group positioned directly **over** the Quant Analysis & Performance Leaders showcase cards.
+  - Allows instant toggling between **All Markets 🌐**, **NSE India 🇮🇳**, and **US Equities 🇺🇸**.
+  - Dynamically updates the Top 3 Quant-Screened Leader Stocks to match the selected market:
+    - **NSE India 🇮🇳**: Surfaces premier Indian quant picks (e.g., *Dixon Technologies*, *Kaynes Tech*, *Bharat Electronics*, *Tata Motors*, *SBI*, etc.).
+    - **US Equities 🇺🇸**: Surfaces premier US quant picks (e.g., *NVIDIA*, *Taiwan Semi*, *Broadcom*, *RTX*, *Meta*, *JPMorgan*, etc.).
+    - **All Markets 🌐**: Surfaces the top 3 overall ranked by quant composite score and expected CAGR.
+  - Automatically synced with the main sector dashboard toolbar market filter chips.
 - **Interactive Sector Selection & Top 3 Quant Leader Stocks Showcase**:
   - **Dynamic Sector Selection**: Selecting any sector (via the ranked bar chart, the interactive selector dropdown, or clicking any sector card) immediately displays that sector's **Top 3 Quant-Screened Leader Stocks**.
   - **Institutional Quant Screening Criteria**: Every stock satisfies the quantitative model:

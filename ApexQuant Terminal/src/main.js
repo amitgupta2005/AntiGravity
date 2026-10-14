@@ -170,8 +170,8 @@ function setupThemeEngine() {
       updateOrderBookTheme(isDark);
     }
 
-    const activeTab = document.querySelector('.tab-btn.active')?.getAttribute('data-tab');
-    if (activeTab === 'tab-sectors') {
+    const isSectorsActive = document.getElementById('tab-sectors')?.classList.contains('active');
+    if (isSectorsActive) {
       renderSectorsDashboard(state.universe, (t) => {
         loadStockRealtime(t);
         document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
@@ -194,10 +194,45 @@ function setupThemeEngine() {
 function setupTabNavigation() {
   const tabBtns = document.querySelectorAll('.tab-btn');
   const tabPanes = document.querySelectorAll('.tab-pane');
+  const topNavSectorBtn = document.getElementById('topNavSectorDashboardBtn');
+
+  const openSectorDashboard = () => {
+    tabBtns.forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-selected', 'false');
+    });
+    tabPanes.forEach(p => p.classList.remove('active'));
+
+    const sectorsPane = document.getElementById('tab-sectors');
+    if (sectorsPane) {
+      sectorsPane.classList.add('active');
+    }
+    if (topNavSectorBtn) {
+      topNavSectorBtn.classList.add('active');
+    }
+
+    renderSectorsDashboard(state.universe, (t) => {
+      loadStockRealtime(t);
+      document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
+    }, state.isDarkMode);
+
+    sectorsPane?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    refreshIcons();
+  };
+
+  if (topNavSectorBtn) {
+    topNavSectorBtn.addEventListener('click', () => {
+      openSectorDashboard();
+    });
+  }
 
   tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       const targetId = btn.getAttribute('data-tab');
+
+      if (topNavSectorBtn) {
+        topNavSectorBtn.classList.remove('active');
+      }
 
       tabBtns.forEach(b => {
         b.classList.remove('active');
@@ -214,6 +249,7 @@ function setupTabNavigation() {
       }
 
       if (targetId === 'tab-sectors') {
+        if (topNavSectorBtn) topNavSectorBtn.classList.add('active');
         renderSectorsDashboard(state.universe, (t) => {
           loadStockRealtime(t);
           document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
