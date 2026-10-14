@@ -54,6 +54,7 @@ export function getOrGenerateOrderBook(stock) {
     const execution = Number((baseRevNum * factor).toFixed(1));
     const inflows = Number((ttmInflows * factor * (1 + (idx * 0.04))).toFixed(1));
     const b2b = Number((inflows / execution).toFixed(2));
+    const obToRev = Number((backlog / execution).toFixed(2));
     const prevBacklog = idx > 0 ? (ttmBacklog * histFactors[idx - 1]) : (backlog * 0.85);
     const growth = Number((((backlog - prevBacklog) / prevBacklog) * 100).toFixed(1));
 
@@ -64,6 +65,7 @@ export function getOrGenerateOrderBook(stock) {
       inflows,
       execution,
       bookToBill: b2b,
+      obToRev,
       growth: idx === 0 ? 14.5 : growth
     };
   });
@@ -80,6 +82,7 @@ export function getOrGenerateOrderBook(stock) {
     const inflows = Number((lastRev * 1.26).toFixed(1));
     lastBacklog = Number((lastBacklog + (inflows - lastRev * 0.95)).toFixed(1));
     const b2b = Number((inflows / lastRev).toFixed(2));
+    const obToRev = Number((lastBacklog / lastRev).toFixed(2));
     const prevBacklog = idx === 0 ? ttmBacklog : (lastBacklog / (1 + g));
     const yoy = Number((((lastBacklog - prevBacklog) / prevBacklog) * 100).toFixed(1));
 
@@ -90,6 +93,7 @@ export function getOrGenerateOrderBook(stock) {
       inflows,
       execution: lastRev,
       bookToBill: b2b,
+      obToRev,
       growth: yoy
     };
   });
@@ -160,6 +164,7 @@ export function getOrGenerateOrderBook(stock) {
     curr,
     currentBacklog: ttmBacklog,
     currentBacklogFormatted: formatValue(ttmBacklog, unit, curr),
+    orderBookToRevenue: Number((ttmBacklog / baseRevNum).toFixed(2)),
     bookToBill: Number((ttmInflows / baseRevNum).toFixed(2)),
     revenueVisibilityYears: Number((ttmBacklog / baseRevNum).toFixed(1)),
     forwardCAGR: Number((((projected5Y[4].backlog - ttmBacklog) / ttmBacklog) / 5 * 100).toFixed(1)),
@@ -206,6 +211,9 @@ export function renderOrderBook(stock, isDarkMode) {
   // 1. Update Top KPI Metrics
   const elBacklog = document.getElementById('obCurrentBacklog');
   const elBacklogGrowth = document.getElementById('obBacklogGrowth');
+  const elObToRevRatio = document.getElementById('obToRevRatio');
+  const elObToRevStatus = document.getElementById('obToRevStatus');
+  const cardObToRev = document.getElementById('cardObToRev');
   const elBookToBill = document.getElementById('obBookToBill');
   const elBookToBillStatus = document.getElementById('obBookToBillStatus');
   const elRevVis = document.getElementById('obRevenueVisibility');
@@ -216,6 +224,34 @@ export function renderOrderBook(stock, isDarkMode) {
 
   if (elBacklog) elBacklog.textContent = ob.currentBacklogFormatted;
   if (elBacklogGrowth) elBacklogGrowth.textContent = `+${ob.historical5Y[4].growth}% YoY Expansion • All-Time High`;
+
+  // Order Book to Revenue Ratio (Marked in Green if > 1.0)
+  const obToRevRatio = ob.orderBookToRevenue;
+  const isRatioGreaterThanOne = obToRevRatio > 1.0;
+
+  if (elObToRevRatio) {
+    elObToRevRatio.textContent = `${obToRevRatio.toFixed(2)}x`;
+    elObToRevRatio.className = isRatioGreaterThanOne ? 'ob-kpi-val text-emerald' : 'ob-kpi-val text-amber';
+  }
+
+  if (elObToRevStatus) {
+    if (isRatioGreaterThanOne) {
+      elObToRevStatus.innerHTML = '★ &gt; 1.0 (Backlog Exceeds Annual Revenue)';
+      elObToRevStatus.className = 'ob-kpi-sub text-emerald font-bold';
+    } else {
+      elObToRevStatus.innerHTML = '≤ 1.0 (Backlog Below Annual Revenue)';
+      elObToRevStatus.className = 'ob-kpi-sub text-amber';
+    }
+  }
+
+  if (cardObToRev) {
+    if (isRatioGreaterThanOne) {
+      cardObToRev.classList.add('highlight-ob-rev-green');
+    } else {
+      cardObToRev.classList.remove('highlight-ob-rev-green');
+    }
+  }
+
   if (elBookToBill) elBookToBill.textContent = `${ob.bookToBill}x`;
   if (elBookToBillStatus) {
     elBookToBillStatus.textContent = ob.bookToBill >= 1.0 
@@ -339,7 +375,10 @@ function renderOrderHistoryChart(ob, colors, isDarkMode) {
             afterBody: (items) => {
               const idx = items[0].dataIndex;
               const item = timeline[idx];
+              const obToRev = item.obToRev != null ? item.obToRev : Number((item.backlog / (item.execution || 1)).toFixed(2));
+              const isGreen = obToRev > 1.0;
               return [
+                `Order Book / Rev: ${obToRev.toFixed(2)}x ${isGreen ? '★ (> 1.0 Green Target)' : ''}`,
                 `Book-to-Bill Ratio: ${item.bookToBill}x`,
                 `YoY Backlog Growth: +${item.growth}%`
               ];
@@ -388,6 +427,12 @@ function renderOrderBookTable(ob) {
 
     const b2bClass = row.bookToBill >= 1.25 ? 'text-emerald' : row.bookToBill >= 1.0 ? 'text-cyan' : 'text-amber';
 
+    const obToRev = row.obToRev != null ? row.obToRev : Number((row.backlog / (row.execution || 1)).toFixed(2));
+    const isObRevGreen = obToRev > 1.0;
+    const obRevBadge = isObRevGreen
+      ? `<span class="ob-ratio-pill ratio-green" title="Order Book to Revenue > 1.0 (Backlog covers > 1 year of revenue)">✓ ${obToRev.toFixed(2)}x</span>`
+      : `<span class="ob-ratio-pill ratio-neutral" title="Order Book to Revenue ≤ 1.0">${obToRev.toFixed(2)}x</span>`;
+
     return `
       <tr>
         <td class="font-mono font-bold">${row.year}</td>
@@ -395,6 +440,7 @@ function renderOrderBookTable(ob) {
         <td class="font-mono font-bold text-cyan">${formatValue(row.backlog, ob.unit, ob.curr)}</td>
         <td class="font-mono">${formatValue(row.inflows, ob.unit, ob.curr)}</td>
         <td class="font-mono">${formatValue(row.execution, ob.unit, ob.curr)}</td>
+        <td style="text-align: right;">${obRevBadge}</td>
         <td class="font-mono font-bold ${b2bClass}">${row.bookToBill}x</td>
         <td class="font-mono text-emerald">+${row.growth}%</td>
       </tr>
