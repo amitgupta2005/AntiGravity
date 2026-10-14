@@ -8,7 +8,7 @@
 
 **AntiGravity** is an institutional-grade financial intelligence and quantitative analysis suite. The repository houses two primary specialized terminals:
 
-1. **[ApexQuant Terminal](./ApexQuant%20Terminal/)**: A high-performance web platform featuring Peter Lynch **Growth-At-A-Reasonable-Price (GARP)** valuation models, 10-year Order Book Backlog history with YoY growth metrics, real-time Level 2 Market Depth (Bids/Asks), a comprehensive **Sector Rotation & Quant Leaders Dashboard**, 3-scenario stress testing, 2D sensitivity matrices, Chart.js momentum technicals, and financial NLP sentiment analysis.
+1. **[ApexQuant Terminal](./ApexQuant%20Terminal/)**: A high-performance web platform featuring Peter Lynch **Growth-At-A-Reasonable-Price (GARP)** valuation models, **On-Demand 10-Year Order Book Backlog History** (2020–2029) with YoY growth metrics & Level 2 Market Depth (Bids/Asks), a dedicated **Sector Rotation & Quant Leaders Dashboard** with **Full-View Mode** (auto-hiding stock card and nav tabs for maximum focus), 3-scenario stress testing, 2D sensitivity matrices, Chart.js momentum technicals, and financial NLP sentiment analysis.
 2. **[ApexIntranet](./ApexIntranet/)**: An intraday trading terminal and momentum scanner with real-time 1-minute candle streaming, automated pattern recognition (Engulfing, Hammer, Shooting Star, RVOL volume breakouts), multi-timeframe confluence rating, and dynamic stop-loss/target calculations.
 
 ---
@@ -212,7 +212,9 @@ sequenceDiagram
 flowchart TD
     %% Sector Rotation and Screening Workflow
 
-    StartSector["User Selects 'Sectors' Tab or Clicks Sector Card"] --> LoadSectors["Load 12 Primary Sectors (SECTORS_DATA)"]
+    StartSector["User Selects 'Sector Dashboard' (Top Nav Header)"] --> ModeSwitch["Enter Sector Full-View Mode:<br/>• Add body.view-sector-dashboard<br/>• Hide Stock Card (#stockHeroCard)<br/>• Hide Stock Nav Tabs (.nav-tabs)<br/>• Display Sector View Header with 'Back to Stock Terminal'"]
+    
+    ModeSwitch --> LoadSectors["Load 12 Primary Sectors (SECTORS_DATA)"]
     LoadSectors --> FetchQuotes["Concurrent Batch Fetch: Real-Time Quotes for Benchmarks & Constituents"]
     FetchQuotes --> CalcYTD["Compute Real-Time Sector YTD Returns (%)"]
     CalcYTD --> SortSectors["Sort Sectors Descending by YTD Change (Alpha to Laggard)"]
@@ -230,10 +232,15 @@ flowchart TD
     UniverseUS --> QuantScreen
 
     QuantScreen --> SelectTop3["Isolate Top 3 Quant-Screened Leader Stocks"]
-    SelectTop3 --> RenderTop3Cards["Render Top 3 Leader Cards with Quant Score & Inline Order Book Badge"]
+    SelectTop3 --> RenderTop3Cards["Render Top 3 Leader Cards:<br/>• Quant Score & GARP Badges<br/>• Inline Backlog & OB/Rev Multiple<br/>• 'View 10-Year Order History & Depth ↓' Button"]
 
-    RenderTop3Cards --> GenerateOB["Invoke Order Book Engine for Top 3 Stocks"]
-    GenerateOB --> RenderSectorOB["Render Sector Order Book Section:<br/>• Stock Switcher Tabs (#1, #2, #3, Compare All 3)<br/>• KPI Strip (Backlog, OB/Rev > 1.0x Green, CAGR)<br/>• 10-Year Order History Bar Graph (Backlog vs Revenue + YoY % Line)<br/>• 10-Year Backlog Ledger Audit Table<br/>• Real-Time Level 2 Market Depth (Bids vs Asks)"]
+    RenderTop3Cards --> OBCheck{"User Clicks 'View 10-Year Order History & Depth'?"}
+    OBCheck -->|"Not Clicked (Default)"| OBHidden["Keep #sectorOrderBookSection Hidden (display: none)"]
+    OBCheck -->|"Button Clicked for Stock"| ShowOB["Open Sector Order Book for Clicked Stock:<br/>• activeSectorObTicker = stock.ticker<br/>• display: block with smooth scroll<br/>• Button updates to 'Viewing 10-Year Order History ✓'<br/>• Stock Tabs (#1, #2, #3, Compare All 3)<br/>• 10-Year Bar Chart (Backlog vs Revenue + YoY % Line)<br/>• 10-Year Backlog Ledger Audit Table<br/>• Real-Time Level 2 Market Depth (Bids vs Asks)<br/>• 'Hide Order Book' Close Button"]
+
+    ShowOB --> UserExit{"User Exits to Stock Terminal?"}
+    OBHidden --> UserExit
+    UserExit -->|"Clicks 'Back to Stock Terminal' / Top Nav Toggle / 'Analyze in Terminal' / Omnibar Search"| RestoreStockView["Exit Sector Full-View Mode:<br/>• Remove body.view-sector-dashboard<br/>• Restore Stock Card & Nav Tabs<br/>• Load Selected Stock View (tab-return-model)"]
 ```
 
 #### 2.4 Order Book & 10-Year Backlog Engine Architecture

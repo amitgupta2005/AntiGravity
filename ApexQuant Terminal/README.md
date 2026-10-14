@@ -95,9 +95,13 @@ ApexQuant Terminal is an institutional-grade, responsive quantitative equity ana
   - **Live Sync & On-Demand Refresh**: Dedicated `Live Sync` button (`#sectorLiveSyncBtn`) with spinning indicator to refresh real-time quotes on demand anytime.
 - **Constituent Leaders & Direct Analysis**: Displays constituent stock chips with individual live prices, day change, and one-click navigation to immediately analyze any stock.
 
-### 11. 📚 Sector-Level Order Book & 10-Year History for Top 3 Stocks
-- **Inline Backlog Snapshot on Quant Leader Cards**: Every Top 3 Quant stock card displays an inline Order Book preview with total backlog value, Order Book to Revenue ratio (`OB/Rev`), 10-year forward backlog CAGR, and a direct "View 10Y Order History & Depth ↓" button.
-- **Dedicated Sector Order Book Container**: Positioned directly underneath the Top 3 Quant cards, featuring:
+### 11. 📚 On-Demand Sector-Level Order Book & 10-Year History for Top 3 Stocks
+- **On-Demand Visibility**: The Sector Order Book Section is **hidden by default** when browsing sectors or switching market filters, maintaining a clean, distraction-free interface. It is only revealed when a user explicitly clicks the **"View 10-Year Order History & Depth ↓"** button on a specific Top 3 Quant stock card.
+- **Inline Backlog Snapshot on Quant Leader Cards**: Every Top 3 Quant stock card displays an inline Order Book preview with total backlog value, Order Book to Revenue ratio (`OB/Rev`), 10-year forward backlog CAGR, and the interactive trigger button.
+- **Dedicated Sector Order Book Container**: When triggered:
+  - **Auto-Focus on Selected Stock**: Directly opens and highlights the 10-year order history and market depth for that particular stock.
+  - **Button State Toggle**: The clicked card's button updates to **"Viewing 10-Year Order History & Depth ✓"** with an active cyan glow. Clicking it again toggles the section closed.
+  - **Interactive Close Button**: Prominent **"Hide"** button (`#sectorObCloseBtn`) inside the Order Book header collapses the section on demand and smoothly returns focus to the Top 3 cards.
   - **Stock Switcher Tabs**: Smoothly toggle between **Stock #1**, **Stock #2**, **Stock #3**, or select **"Compare All 3"** for multi-bar side-by-side analysis.
   - **KPI Metric Strip**: Live Total Backlog, Order Book to Revenue Ratio (highlighted in emerald green `✓ > 1.0x`), 10Y Forward Backlog CAGR, and Level 2 Bid/Ask Spread.
   - **10-Year Order History Bar Graph**: Dual-period timeline covering **Last 5 Years Historical (2020–2024 TTM)** and **Next 5 Years Projected (2025–2029 FY5)** with Backlog vs Revenue Execution bars and secondary YoY Growth (%) line with floating percentage labels.
@@ -319,7 +323,9 @@ sequenceDiagram
 flowchart TD
     %% Sector Rotation and Screening Workflow
 
-    StartSector["User Selects 'Sectors' Tab or Clicks Sector Card"] --> LoadSectors["Load 12 Primary Sectors (SECTORS_DATA)"]
+    StartSector["User Selects 'Sector Dashboard' (Top Nav Header)"] --> ModeSwitch["Enter Sector Full-View Mode:<br/>• Add body.view-sector-dashboard<br/>• Hide Stock Card (#stockHeroCard)<br/>• Hide Stock Nav Tabs (.nav-tabs)<br/>• Display Sector View Header with 'Back to Stock Terminal'"]
+    
+    ModeSwitch --> LoadSectors["Load 12 Primary Sectors (SECTORS_DATA)"]
     LoadSectors --> FetchQuotes["Concurrent Batch Fetch: Real-Time Quotes for Benchmarks & Constituents"]
     FetchQuotes --> CalcYTD["Compute Real-Time Sector YTD Returns (%)"]
     CalcYTD --> SortSectors["Sort Sectors Descending by YTD Change (Alpha to Laggard)"]
@@ -337,10 +343,15 @@ flowchart TD
     UniverseUS --> QuantScreen
 
     QuantScreen --> SelectTop3["Isolate Top 3 Quant-Screened Leader Stocks"]
-    SelectTop3 --> RenderTop3Cards["Render Top 3 Leader Cards with Quant Score & Inline Order Book Badge"]
+    SelectTop3 --> RenderTop3Cards["Render Top 3 Leader Cards:<br/>• Quant Score & GARP Badges<br/>• Inline Backlog & OB/Rev Multiple<br/>• 'View 10-Year Order History & Depth ↓' Button"]
 
-    RenderTop3Cards --> GenerateOB["Invoke Order Book Engine for Top 3 Stocks"]
-    GenerateOB --> RenderSectorOB["Render Sector Order Book Section:<br/>• Stock Switcher Tabs (#1, #2, #3, Compare All 3)<br/>• KPI Strip (Backlog, OB/Rev > 1.0x Green, CAGR)<br/>• 10-Year Order History Bar Graph (Backlog vs Revenue + YoY % Line)<br/>• 10-Year Backlog Ledger Audit Table<br/>• Real-Time Level 2 Market Depth (Bids vs Asks)"]
+    RenderTop3Cards --> OBCheck{"User Clicks 'View 10-Year Order History & Depth'?"}
+    OBCheck -->|"Not Clicked (Default)"| OBHidden["Keep #sectorOrderBookSection Hidden (display: none)"]
+    OBCheck -->|"Button Clicked for Stock"| ShowOB["Open Sector Order Book for Clicked Stock:<br/>• activeSectorObTicker = stock.ticker<br/>• display: block with smooth scroll<br/>• Button updates to 'Viewing 10-Year Order History ✓'<br/>• Stock Tabs (#1, #2, #3, Compare All 3)<br/>• 10-Year Bar Chart (Backlog vs Revenue + YoY % Line)<br/>• 10-Year Backlog Ledger Audit Table<br/>• Real-Time Level 2 Market Depth (Bids vs Asks)<br/>• 'Hide Order Book' Close Button"]
+
+    ShowOB --> UserExit{"User Exits to Stock Terminal?"}
+    OBHidden --> UserExit
+    UserExit -->|"Clicks 'Back to Stock Terminal' / Top Nav Toggle / 'Analyze in Terminal' / Omnibar Search"| RestoreStockView["Exit Sector Full-View Mode:<br/>• Remove body.view-sector-dashboard<br/>• Restore Stock Card & Nav Tabs<br/>• Load Selected Stock View (tab-return-model)"]
 ```
 
 #### 2.4 Order Book & 10-Year Backlog Engine Architecture
