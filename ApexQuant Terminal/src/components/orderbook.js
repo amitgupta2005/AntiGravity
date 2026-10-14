@@ -39,8 +39,8 @@ export function getOrGenerateOrderBook(stock) {
     else if (stock.price < 50) baseRevNum = 8.5;
   }
 
-  // Backlog multiple (Work-in-hand relative to annual revenue: e.g. 1.8x to 3.2x)
-  const backlogMultiple = isINR ? 2.45 : 1.75;
+  // Backlog multiple (Work-in-hand relative to annual revenue: e.g. 1.8x to 3.6x)
+  const backlogMultiple = stock.obToRev || stock.orderBookToRevenue || (isINR ? 2.45 : 1.75);
   const ttmBacklog = Number((baseRevNum * backlogMultiple).toFixed(1));
   const ttmInflows = Number((baseRevNum * 1.28).toFixed(1));
 

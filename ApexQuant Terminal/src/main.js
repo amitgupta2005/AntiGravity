@@ -42,7 +42,8 @@ import {
   Flame,
   Shield,
   Filter,
-  Sparkles
+  Sparkles,
+  ChevronDown
 } from 'lucide';
 
 import { STOCKS_DATA } from './data/stocks.js';
@@ -130,10 +131,12 @@ function refreshIcons() {
       Flame,
       Shield,
       Filter,
-      Sparkles
+      Sparkles,
+      ChevronDown
     }
   });
 }
+window.refreshIcons = refreshIcons;
 
 /**
  * Theme Engine: Toggle between Dark and Light mode

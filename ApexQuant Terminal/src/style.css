@@ -2638,3 +2638,198 @@ input[type="range"]::-webkit-slider-thumb:hover {
     grid-column: span 1;
   }
 }
+
+/* Sector Dashboard Top 3 Order Book & Backlog History */
+.sector-orderbook-section {
+  position: relative;
+  transition: all var(--transition-normal);
+}
+
+.sector-ob-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-surface);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+}
+
+.sector-ob-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sector-ob-tab-btn:hover {
+  color: var(--text-bright);
+  background: var(--bg-card-hover);
+}
+
+.sector-ob-tab-btn.active {
+  background: rgba(0, 242, 254, 0.12);
+  color: var(--cyan-primary);
+  border-color: rgba(0, 242, 254, 0.4);
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.15);
+}
+
+.sector-ob-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.sector-ob-kpi-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.sector-ob-kpi-card:hover {
+  border-color: var(--cyan-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.sector-ob-kpi-card.active-card {
+  border-color: var(--cyan-primary);
+  background: rgba(0, 242, 254, 0.04);
+  box-shadow: 0 0 14px rgba(0, 242, 254, 0.12);
+}
+
+.sector-ob-kpi-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.sector-ob-kpi-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-bright);
+}
+
+.sector-ob-kpi-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+}
+
+.sector-ob-kpi-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sector-ob-kpi-item .lbl {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sector-ob-kpi-item .val {
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+/* Inline Order Book Card Widget inside Top 3 Quant Leader Cards */
+.quant-ob-box {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+[data-theme="light"] .quant-ob-box {
+  background: rgba(241, 245, 249, 0.7);
+}
+
+.quant-ob-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.quant-ob-header .ob-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-bright);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.quant-ob-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.q-ob-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.q-ob-stat .stat-lbl {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+}
+
+.q-ob-stat .stat-val {
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.btn-view-stock-ob {
+  background: transparent;
+  border: 1px dashed var(--border-subtle);
+  color: var(--cyan-primary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all var(--transition-fast);
+}
+
+.btn-view-stock-ob:hover {
+  background: rgba(0, 242, 254, 0.08);
+  border-color: var(--cyan-primary);
+}
+
+@media (max-width: 900px) {
+  .sector-ob-details-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

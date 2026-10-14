@@ -874,6 +874,136 @@
           <div class="top-three-quant-grid" id="topThreeQuantContainer">
             <!-- Populated dynamically with 3 rich Quant Stock Cards -->
           </div>
+
+          <!-- Top 3 Stocks Order Book & Backlog History Section -->
+          <div class="sector-orderbook-section" id="sectorOrderBookSection" style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border-subtle);">
+            <div class="sector-ob-header-row" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                  <span class="badge badge-tag" style="background: rgba(16, 185, 129, 0.15); color: var(--emerald-bull); border-color: rgba(16, 185, 129, 0.35);">
+                    <i data-lucide="book-open" class="inline-icon"></i> Order Book &amp; Backlog History
+                  </span>
+                  <span class="badge badge-neutral" id="sectorObSubtitleBadge">Top 3 Quant Leaders</span>
+                  <span class="ob-ratio-pill ratio-green" title="Ratio of Order Book Backlog to Annual Revenue">
+                    <i data-lucide="check" class="inline-icon" style="width: 11px; height: 11px;"></i> OB / Revenue &gt; 1.0 Target
+                  </span>
+                </div>
+                <h3 class="panel-title" style="font-size: 1.2rem; margin: 0;">
+                  <i data-lucide="bar-chart-3" class="inline-icon text-cyan"></i>
+                  <span id="sectorObSectorName">Selected Sector</span> — Top 3 Stocks Order Book &amp; 10-Year Backlog History
+                </h3>
+                <p class="panel-subtitle" style="margin-top: 4px;">
+                  Historical Backlog (Last 5 Years: 2020–2024 TTM) vs Future Contract Projections (Next 5 Years: 2025–2029 FY5) with YoY Growth % and Order Book to Revenue Coverage.
+                </p>
+              </div>
+
+              <!-- Top 3 Stocks Order Book Selector Tabs -->
+              <div class="sector-ob-tabs" id="sectorObTabs">
+                <!-- Dynamically populated with Stock 1, Stock 2, Stock 3, and Compare All -->
+              </div>
+            </div>
+
+            <!-- Top 3 Stocks Comparative Order Book KPI Cards -->
+            <div class="sector-ob-kpi-grid" id="sectorObKpiGrid">
+              <!-- Dynamically populated with 3 summary cards -->
+            </div>
+
+            <!-- 10-Year Order History Bar Graph Card -->
+            <div class="panel-card" style="margin-top: 20px; background: var(--bg-surface); border: 1px solid var(--border-subtle);">
+              <div class="panel-header" style="flex-wrap: wrap; gap: 10px;">
+                <div>
+                  <h4 class="panel-title" style="font-size: 1.05rem;" id="sectorObChartTitle">
+                    <i data-lucide="bar-chart-2" class="inline-icon text-cyan"></i>
+                    Order Book History &amp; 10-Year Backlog Growth Trajectory
+                  </h4>
+                  <p class="panel-subtitle" id="sectorObChartSubtitle">
+                    Contracted Backlog vs Annual Revenue Execution with YoY Growth (%) annotations on each bar.
+                  </p>
+                </div>
+                <div class="orderbook-chart-legend" style="display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.78rem;">
+                  <span class="legend-badge-item"><span class="legend-dot" style="background: #00f2fe;"></span> Order Book Backlog</span>
+                  <span class="legend-badge-item"><span class="legend-dot" style="background: #10b981;"></span> Annual Revenue Execution</span>
+                  <span class="legend-badge-item"><span class="legend-dot" style="background: #f59e0b;"></span> YoY Growth (%)</span>
+                </div>
+              </div>
+              <div class="sector-ob-chart-container" style="height: 330px; position: relative;">
+                <canvas id="sectorOrderBookChart"></canvas>
+              </div>
+            </div>
+
+            <!-- 10-Year Order Book Ledger Table & Real-Time Level 2 Depth Grid -->
+            <div class="sector-ob-details-grid" style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 18px; margin-top: 20px;">
+              <!-- 10-Year Ledger Table -->
+              <div class="panel-card" style="background: var(--bg-surface); border: 1px solid var(--border-subtle);">
+                <div class="panel-header" style="padding-bottom: 10px;">
+                  <h4 class="panel-title" style="font-size: 0.95rem;">
+                    <i data-lucide="list-ordered" class="inline-icon text-cyan"></i>
+                    10-Year Order Book Ledger (Last 5Y &amp; Next 5Y)
+                  </h4>
+                  <span class="text-dim font-mono" style="font-size: 0.75rem;" id="sectorObTableUnit"></span>
+                </div>
+                <div class="table-responsive" style="max-height: 340px; overflow-y: auto;">
+                  <table class="quant-table ob-table" style="width: 100%; font-size: 0.8rem;">
+                    <thead>
+                      <tr>
+                        <th>Year</th>
+                        <th>Period</th>
+                        <th>Backlog</th>
+                        <th>Execution</th>
+                        <th style="text-align: right;">OB / Rev Ratio</th>
+                        <th style="text-align: right;">YoY Growth</th>
+                      </tr>
+                    </thead>
+                    <tbody id="sectorObTableBody">
+                      <!-- Populated dynamically -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Real-Time Level 2 Market Depth (Bids vs Asks) -->
+              <div class="panel-card" style="background: var(--bg-surface); border: 1px solid var(--border-subtle);">
+                <div class="panel-header" style="padding-bottom: 10px;">
+                  <h4 class="panel-title" style="font-size: 0.95rem;" id="sectorObDepthTitle">
+                    <i data-lucide="activity" class="inline-icon text-cyan"></i>
+                    Real-Time Order Depth (Bids vs Asks)
+                  </h4>
+                  <span class="badge badge-strong-buy" style="font-size: 0.65rem;" id="sectorObDepthSpread"></span>
+                </div>
+                
+                <!-- Depth Ratio Meter -->
+                <div class="l2-meter-container" style="margin-bottom: 12px;">
+                  <div class="l2-meter-bar-track">
+                    <div class="l2-meter-bar bid" id="sectorL2BidBar" style="width: 58%;"></div>
+                    <div class="l2-meter-bar ask" id="sectorL2AskBar" style="width: 42%;"></div>
+                  </div>
+                  <div class="l2-meter-labels font-mono" style="font-size: 0.72rem; display: flex; justify-content: space-between; margin-top: 4px;">
+                    <span class="text-emerald" id="sectorL2BidPercent">Buyers: 58%</span>
+                    <span id="sectorL2Imbalance" class="text-emerald font-bold">Buy Pressure (1.38x)</span>
+                    <span class="text-rose" id="sectorL2AskPercent">Sellers: 42%</span>
+                  </div>
+                </div>
+
+                <!-- Bids & Asks Rows -->
+                <div class="l2-ladder-wrapper" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                  <div>
+                    <div class="l2-column-header text-emerald font-bold font-mono" style="font-size: 0.72rem; margin-bottom: 4px; display: flex; justify-content: space-between;">
+                      <span>Bids (Price)</span>
+                      <span>Vol</span>
+                    </div>
+                    <div id="sectorL2BidsRows" style="font-size: 0.75rem;"></div>
+                  </div>
+                  <div>
+                    <div class="l2-column-header text-rose font-bold font-mono" style="font-size: 0.72rem; margin-bottom: 4px; display: flex; justify-content: space-between;">
+                      <span>Asks (Price)</span>
+                      <span>Vol</span>
+                    </div>
+                    <div id="sectorL2AsksRows" style="font-size: 0.75rem;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Sector Breakdown Grid / Cards -->

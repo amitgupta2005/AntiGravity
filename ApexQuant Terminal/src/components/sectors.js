@@ -7,8 +7,11 @@
 
 import { Chart } from 'chart.js';
 import { getThemeColors } from './charts.js';
+import { getOrGenerateOrderBook } from './orderbook.js';
 
 let sectorsChartInstance = null;
+let sectorOrderBookChartInstance = null;
+let activeSectorObTicker = null;
 let currentSortMode = 'ytd_desc';
 let currentMarketFilter = 'ALL';
 let selectedSectorId = 'semi'; // Default to #1 sector
@@ -2088,11 +2091,11 @@ export function renderSectorsDashboard(universe, onSelectStock, isDarkMode) {
   });
 
   // 3. Render Top 3 Quant Stocks Showcase for Selected Sector with Real-Time Pricing
-  renderSelectedSectorQuantPicks(selectedSectorId, onSelectStock, sortedSectors);
+  renderSelectedSectorQuantPicks(selectedSectorId, onSelectStock, sortedSectors, isDarkMode);
 
   // 4. Render Sector Detail Cards Grid with Real-Time Constituent Prices
   renderSectorsCardsGrid(sortedSectors, onSelectStock, (clickedSectorId) => {
-    selectSector(clickedSectorId, onSelectStock, sortedSectors);
+    selectSector(clickedSectorId, onSelectStock, sortedSectors, isDarkMode);
     const panel = document.getElementById('sectorShowcasePanel');
     if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
@@ -2104,11 +2107,11 @@ export function renderSectorsDashboard(universe, onSelectStock, isDarkMode) {
 /**
  * Select a specific sector and update the showcase panel
  */
-export function selectSector(sectorId, onSelectStock, sortedSectors = SECTORS_DATA) {
+export function selectSector(sectorId, onSelectStock, sortedSectors = SECTORS_DATA, isDarkMode = null) {
   selectedSectorId = sectorId;
   const sector = SECTORS_DATA.find(s => s.id === sectorId) || SECTORS_DATA[0];
 
-  renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors);
+  renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors, isDarkMode);
 
   // Highlight active sector card in grid
   document.querySelectorAll('.sector-card').forEach(card => {
@@ -2129,7 +2132,7 @@ export function selectSector(sectorId, onSelectStock, sortedSectors = SECTORS_DA
 /**
  * Render Top 3 Quant-Screened Leader Stocks for the selected sector with real-time streaming quotes
  */
-function renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors) {
+function renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors, isDarkMode = null) {
   const container = document.getElementById('topThreeQuantContainer');
   if (!container) return;
 
@@ -2179,6 +2182,24 @@ function renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors) 
       : 'Streaming Live...';
 
     const changeClass = effective.dayChange !== null && effective.dayChange >= 0 ? 'text-emerald' : (effective.dayChange !== null ? 'text-red' : 'text-dim');
+
+    // Generate Order Book Preview for this Top Stock
+    const uniStock = currentUniverse[stock.ticker] || {};
+    const stockObj = {
+      ticker: stock.ticker,
+      name: stock.name,
+      sector: sector.name,
+      price: effective.activePrice,
+      isINR: effective.isINR,
+      currency: effective.isINR ? 'INR' : 'USD',
+      currencySymbol: effective.currSym,
+      projectedEPSGrowth: stock.growth || 20,
+      ttmRevenue: uniStock.ttmRevenue,
+      obToRev: stock.obToRev,
+      ...uniStock
+    };
+    const ob = getOrGenerateOrderBook(stockObj);
+    const isObGreen = ob.orderBookToRevenue > 1.0;
 
     return `
       <div class="quant-stock-card rank-${idx + 1}">
@@ -2240,7 +2261,40 @@ function renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors) 
           </div>
         </div>
 
-        <div class="quant-thesis-box">
+        <!-- Order Book & Backlog Trajectory Snapshot -->
+        <div class="quant-ob-box">
+          <div class="quant-ob-header">
+            <span class="ob-label">
+              <i data-lucide="book-open" class="inline-icon text-emerald" style="width: 13px; height: 13px;"></i> Order Book &amp; 10Y Backlog:
+            </span>
+            <span class="ob-ratio-pill ${isObGreen ? 'ratio-green' : 'ratio-neutral'}" title="Order Book Backlog to Revenue Ratio">
+              ${isObGreen ? '✓' : ''} ${ob.orderBookToRevenue.toFixed(2)}x OB/Rev ${isObGreen ? '(> 1.0 Target)' : ''}
+            </span>
+          </div>
+          <div class="quant-ob-stats">
+            <div class="q-ob-stat">
+              <span class="stat-lbl">Contract Backlog</span>
+              <span class="stat-val font-mono text-cyan">${ob.currentBacklogFormatted}</span>
+            </div>
+            <div class="q-ob-stat">
+              <span class="stat-lbl">YoY Growth</span>
+              <span class="stat-val font-mono text-amber">+${ob.historical5Y[4].growth}%</span>
+            </div>
+            <div class="q-ob-stat">
+              <span class="stat-lbl">10Y Fwd CAGR</span>
+              <span class="stat-val font-mono text-emerald">+${ob.forwardCAGR}%</span>
+            </div>
+            <div class="q-ob-stat">
+              <span class="stat-lbl">Rev Visibility</span>
+              <span class="stat-val font-mono">${ob.revenueVisibilityYears} Yrs</span>
+            </div>
+          </div>
+          <button class="btn-view-stock-ob" data-ticker="${stock.ticker}" title="View detailed 10-Year Order History Bar Graph for ${stock.ticker}">
+            <span>View 10-Year Order History &amp; Depth ↓</span>
+          </button>
+        </div>
+
+        <div class="quant-thesis-box" style="margin-top: 10px;">
           <span class="thesis-label"><i data-lucide="check-circle-2" class="inline-icon text-emerald" style="width: 13px; height: 13px;"></i> Quant Model Analysis:</span>
           <p class="thesis-text">${stock.thesis}</p>
         </div>
@@ -2263,6 +2317,9 @@ function renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors) 
     });
   });
 
+  // Render Order Book & 10-Year Order History for the Top 3 stocks of the selected sector
+  renderSectorTopStocksOrderBook(quantStocks, sector, isDarkMode, onSelectStock);
+
   // Asynchronously fetch live quotes for displayed quant stocks in background
   const displayedTickers = quantStocks.map(s => s.ticker);
   batchFetchLiveQuotes(displayedTickers, (quote) => {
@@ -2271,6 +2328,602 @@ function renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors) 
       updateQuantStockCardDOM(quote, matchedStock);
     }
   });
+
+  if (window.refreshIcons) window.refreshIcons();
+}
+
+/**
+ * Render Order Book and Order Book History for Top 3 Stocks of Selected Sector
+ */
+export function renderSectorTopStocksOrderBook(quantStocks, sector, isDarkMode, onSelectStock) {
+  const section = document.getElementById('sectorOrderBookSection');
+  if (!section) return;
+
+  if (!quantStocks || quantStocks.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+
+  const isDark = isDarkMode ?? (document.documentElement.getAttribute('data-theme') !== 'light');
+  const colors = getThemeColors(isDark);
+
+  // Sector title
+  const sectorNameEl = document.getElementById('sectorObSectorName');
+  if (sectorNameEl) sectorNameEl.textContent = sector.name;
+
+  // Prepare Order Book data for all 3 stocks
+  const stockItems = quantStocks.map(stock => {
+    const effective = getEffectiveStockData(stock);
+    const uniStock = currentUniverse[stock.ticker] || {};
+    const stockObj = {
+      ticker: stock.ticker,
+      name: stock.name,
+      sector: sector.name,
+      price: effective.activePrice,
+      isINR: effective.isINR,
+      currency: effective.isINR ? 'INR' : 'USD',
+      currencySymbol: effective.currSym,
+      projectedEPSGrowth: stock.growth || 20,
+      ttmRevenue: uniStock.ttmRevenue,
+      obToRev: stock.obToRev,
+      ...uniStock
+    };
+    const ob = getOrGenerateOrderBook(stockObj);
+    return {
+      stock,
+      effective,
+      ob
+    };
+  });
+
+  // Default active ticker to first stock if not valid
+  if (!activeSectorObTicker || (activeSectorObTicker !== 'COMPARE' && !stockItems.some(i => i.stock.ticker === activeSectorObTicker))) {
+    activeSectorObTicker = stockItems[0].stock.ticker;
+  }
+
+  // 1. Render Tabs for the 3 Stocks + Compare All 3
+  const tabsContainer = document.getElementById('sectorObTabs');
+  if (tabsContainer) {
+    tabsContainer.innerHTML = `
+      ${stockItems.map((item, idx) => {
+        const s = item.stock;
+        const ob = item.ob;
+        const isActive = activeSectorObTicker === s.ticker;
+        const isGreen = ob.orderBookToRevenue > 1.0;
+        return `
+          <button class="sector-ob-tab-btn ${isActive ? 'active' : ''}" data-ticker="${s.ticker}">
+            <span style="color: var(--text-dim); font-size: 0.72rem;">#${idx + 1}</span>
+            <span>${s.ticker}</span>
+            <span class="ob-ratio-pill ${isGreen ? 'ratio-green' : 'ratio-neutral'}" style="font-size: 0.68rem; padding: 1px 5px;">
+              ${isGreen ? '✓' : ''} ${ob.orderBookToRevenue.toFixed(2)}x
+            </span>
+          </button>
+        `;
+      }).join('')}
+      <button class="sector-ob-tab-btn ${activeSectorObTicker === 'COMPARE' ? 'active' : ''}" data-ticker="COMPARE">
+        <i data-lucide="bar-chart-3" class="inline-icon" style="width: 12px; height: 12px;"></i>
+        <span>Compare All 3</span>
+      </button>
+    `;
+
+    tabsContainer.querySelectorAll('.sector-ob-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const t = btn.getAttribute('data-ticker');
+        if (t) {
+          activeSectorObTicker = t;
+          renderSectorTopStocksOrderBook(quantStocks, sector, isDark, onSelectStock);
+        }
+      });
+    });
+  }
+
+  // 2. Render 3 Comparative KPI Cards
+  const kpiGrid = document.getElementById('sectorObKpiGrid');
+  if (kpiGrid) {
+    kpiGrid.innerHTML = stockItems.map((item, idx) => {
+      const s = item.stock;
+      const ob = item.ob;
+      const effective = item.effective;
+      const isActive = activeSectorObTicker === s.ticker;
+      const isGreen = ob.orderBookToRevenue > 1.0;
+
+      return `
+        <div class="sector-ob-kpi-card ${isActive ? 'active-card' : ''}" data-ticker="${s.ticker}">
+          <div class="sector-ob-kpi-top">
+            <div class="sector-ob-kpi-title">
+              <span class="quant-rank-badge rank-${idx + 1}" style="font-size: 0.65rem; padding: 2px 6px;">#${idx + 1}</span>
+              <span>${s.ticker}</span>
+              <span style="font-size: 0.75rem; color: var(--text-dim); font-weight: normal;">${s.name}</span>
+            </div>
+            <span class="ob-ratio-pill ${isGreen ? 'ratio-green' : 'ratio-neutral'}">
+              ${isGreen ? '✓' : ''} ${ob.orderBookToRevenue.toFixed(2)}x OB/Rev
+            </span>
+          </div>
+          <div class="sector-ob-kpi-body">
+            <div class="sector-ob-kpi-item">
+              <span class="lbl">Contract Backlog</span>
+              <span class="val text-cyan">${ob.currentBacklogFormatted}</span>
+            </div>
+            <div class="sector-ob-kpi-item">
+              <span class="lbl">YoY Growth</span>
+              <span class="val text-amber">+${ob.historical5Y[4].growth}%</span>
+            </div>
+            <div class="sector-ob-kpi-item">
+              <span class="lbl">10Y Forward CAGR</span>
+              <span class="val text-emerald">+${ob.forwardCAGR}%</span>
+            </div>
+            <div class="sector-ob-kpi-item">
+              <span class="lbl">Market Depth</span>
+              <span class="val ${ob.level2Depth.imbalanceRatio >= 1.0 ? 'text-emerald' : 'text-rose'}">
+                ${ob.level2Depth.bidPercent}% Bids (${ob.level2Depth.imbalanceRatio}x)
+              </span>
+            </div>
+          </div>
+          <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 8px;">
+            <span style="font-size: 0.72rem; color: var(--text-dim);">Live Price: <strong>${effective.formattedPrice}</strong></span>
+            <span style="font-size: 0.72rem; color: var(--cyan-primary); font-weight: 600;">
+              ${isActive ? '● Currently Active' : 'Click to View Chart →'}
+            </span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    kpiGrid.querySelectorAll('.sector-ob-kpi-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const t = card.getAttribute('data-ticker');
+        if (t) {
+          activeSectorObTicker = t;
+          renderSectorTopStocksOrderBook(quantStocks, sector, isDark, onSelectStock);
+        }
+      });
+    });
+  }
+
+  // 3. Render 10-Year Order History Bar Chart
+  const activeItem = stockItems.find(i => i.stock.ticker === activeSectorObTicker) || stockItems[0];
+  renderSectorOrderBookChart(stockItems, activeSectorObTicker, colors, isDark);
+
+  // 4. Render 10-Year Order Book Ledger Table
+  renderSectorOrderBookTable(activeItem, activeSectorObTicker === 'COMPARE' ? stockItems : null);
+
+  // 5. Render Real-time Level 2 Market Depth (Bids vs Asks)
+  renderSectorOrderBookDepth(activeItem);
+
+  // Attach view buttons from the cards above
+  document.querySelectorAll('.btn-view-stock-ob').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const t = btn.getAttribute('data-ticker');
+      if (t) {
+        activeSectorObTicker = t;
+        renderSectorTopStocksOrderBook(quantStocks, sector, isDark, onSelectStock);
+        document.getElementById('sectorOrderBookSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+
+  if (window.refreshIcons) window.refreshIcons();
+}
+
+/**
+ * Render Interactive 10-Year Order History Bar Graph for Sector Top Stocks
+ */
+function renderSectorOrderBookChart(stockItems, activeTicker, colors, isDarkMode) {
+  const canvas = document.getElementById('sectorOrderBookChart');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  if (sectorOrderBookChartInstance) {
+    sectorOrderBookChartInstance.destroy();
+  }
+
+  const titleEl = document.getElementById('sectorObChartTitle');
+  const subEl = document.getElementById('sectorObChartSubtitle');
+
+  if (activeTicker === 'COMPARE') {
+    if (titleEl) titleEl.innerHTML = `<i data-lucide="bar-chart-2" class="inline-icon text-cyan"></i> Top 3 Stocks Order Book Backlog Comparison (2020–2029)`;
+    if (subEl) subEl.textContent = `Direct 10-year comparative backlog trajectory across ${stockItems.map(i => i.stock.ticker).join(', ')}.`;
+
+    const timeline = stockItems[0].ob.fullTimeline;
+    const labels = timeline.map(item => item.year);
+
+    const palette = [
+      { bg: isDarkMode ? '#00f2fe' : '#0284c7', border: '#00f2fe' },
+      { bg: isDarkMode ? '#10b981' : '#059669', border: '#10b981' },
+      { bg: isDarkMode ? '#f59e0b' : '#d97706', border: '#f59e0b' }
+    ];
+
+    const datasets = stockItems.map((item, idx) => ({
+      label: `#${idx + 1} ${item.stock.ticker} Backlog (${item.ob.unit})`,
+      data: item.ob.fullTimeline.map(t => t.backlog),
+      backgroundColor: palette[idx % palette.length].bg,
+      borderColor: palette[idx % palette.length].border,
+      borderWidth: 1.5,
+      borderRadius: 4,
+      borderSkipped: false
+    }));
+
+    sectorOrderBookChartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: {
+              color: colors.textBright,
+              boxWidth: 12,
+              boxHeight: 12,
+              font: { family: 'Inter', size: 11, weight: 600 }
+            }
+          },
+          tooltip: {
+            backgroundColor: colors.tooltipBg,
+            borderColor: colors.tooltipBorder,
+            borderWidth: 1,
+            titleColor: colors.textBright,
+            bodyColor: colors.text,
+            padding: 12
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: colors.grid },
+            ticks: { color: colors.text, font: { family: 'Inter', size: 11, weight: 600 } }
+          },
+          y: {
+            grid: { color: colors.grid },
+            ticks: { color: colors.text, font: { family: 'JetBrains Mono', size: 10 } },
+            title: {
+              display: true,
+              text: 'Order Book Backlog Value',
+              color: colors.textMuted,
+              font: { family: 'Inter', size: 11, weight: 600 }
+            }
+          }
+        }
+      }
+    });
+    return;
+  }
+
+  // Single Stock View
+  const item = stockItems.find(i => i.stock.ticker === activeTicker) || stockItems[0];
+  const ob = item.ob;
+  const s = item.stock;
+
+  if (titleEl) titleEl.innerHTML = `<i data-lucide="bar-chart-2" class="inline-icon text-cyan"></i> ${s.ticker} (${s.name}) — 10-Year Order History &amp; Backlog Trajectory`;
+  if (subEl) subEl.textContent = `Historical Backlog (2020–2024 TTM) vs Future Contract Projections (2025–2029 FY5) with YoY Growth (%) annotations.`;
+
+  const timeline = ob.fullTimeline;
+  const labels = timeline.map(it => it.year);
+  const backlogData = timeline.map(it => it.backlog);
+  const executionData = timeline.map(it => it.execution);
+  const inflowsData = timeline.map(it => it.inflows);
+
+  const backlogColors = timeline.map((it, idx) => 
+    idx < 5 ? (isDarkMode ? '#00f2fe' : '#0284c7') : (isDarkMode ? 'rgba(0, 242, 254, 0.65)' : 'rgba(2, 132, 199, 0.65)')
+  );
+  const executionColors = timeline.map((it, idx) => 
+    idx < 5 ? (isDarkMode ? '#10b981' : '#059669') : (isDarkMode ? 'rgba(16, 185, 129, 0.65)' : 'rgba(5, 150, 105, 0.65)')
+  );
+  const inflowColors = timeline.map((it, idx) => 
+    idx < 5 ? (isDarkMode ? '#3b82f6' : '#2563eb') : (isDarkMode ? 'rgba(59, 130, 246, 0.65)' : 'rgba(37, 99, 235, 0.65)')
+  );
+
+  sectorOrderBookChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: `Order Book Backlog (${ob.unit})`,
+          data: backlogData,
+          backgroundColor: backlogColors,
+          borderColor: isDarkMode ? '#00f2fe' : '#0284c7',
+          borderWidth: 1.5,
+          borderRadius: 4,
+          borderSkipped: false
+        },
+        {
+          label: `Annual Revenue Execution (${ob.unit})`,
+          data: executionData,
+          backgroundColor: executionColors,
+          borderColor: isDarkMode ? '#10b981' : '#059669',
+          borderWidth: 1.5,
+          borderRadius: 4,
+          borderSkipped: false
+        },
+        {
+          label: `New Order Inflows (${ob.unit})`,
+          data: inflowsData,
+          backgroundColor: inflowColors,
+          borderColor: isDarkMode ? '#3b82f6' : '#2563eb',
+          borderWidth: 1.5,
+          borderRadius: 4,
+          borderSkipped: false
+        },
+        {
+          type: 'line',
+          label: 'YoY Growth (%)',
+          data: timeline.map(it => it.growth),
+          yAxisID: 'y1',
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+          borderWidth: 2.5,
+          pointBackgroundColor: '#f59e0b',
+          pointBorderColor: isDarkMode ? '#0f172a' : '#ffffff',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7.5,
+          tension: 0.35,
+          order: 0
+        }
+      ]
+    },
+    plugins: [
+      {
+        id: 'sectorYoyGrowthDataLabels',
+        afterDatasetsDraw(chart) {
+          const { ctx, chartArea } = chart;
+          const yoyMeta = chart.getDatasetMeta(3);
+          if (!yoyMeta || !yoyMeta.data || !chartArea) return;
+
+          ctx.save();
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.font = 'bold 10px "JetBrains Mono", monospace';
+
+          yoyMeta.data.forEach((point, idx) => {
+            const growth = timeline[idx].growth;
+            const text = `${growth > 0 ? '+' : ''}${growth}%`;
+            const xPos = point.x;
+            const yPos = Math.max(chartArea.top + 16, point.y - 8);
+
+            const textMetrics = ctx.measureText(text);
+            const textWidth = textMetrics.width;
+            const padX = 4;
+            const padY = 2;
+            const bgX = xPos - textWidth / 2 - padX;
+            const bgY = yPos - 11 - padY;
+            const bgW = textWidth + padX * 2;
+            const bgH = 13 + padY * 2;
+
+            ctx.fillStyle = isDarkMode ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.95)';
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 1;
+
+            if (ctx.roundRect) {
+              ctx.beginPath();
+              ctx.roundRect(bgX, bgY, bgW, bgH, 3);
+              ctx.fill();
+              ctx.stroke();
+            } else {
+              ctx.fillRect(bgX, bgY, bgW, bgH);
+              ctx.strokeRect(bgX, bgY, bgW, bgH);
+            }
+
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillText(text, xPos, yPos);
+          });
+
+          ctx.restore();
+        }
+      }
+    ],
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            color: colors.textBright,
+            boxWidth: 12,
+            boxHeight: 12,
+            font: { family: 'Inter', size: 11, weight: 600 }
+          }
+        },
+        tooltip: {
+          backgroundColor: colors.tooltipBg,
+          borderColor: colors.tooltipBorder,
+          borderWidth: 1,
+          titleColor: colors.textBright,
+          bodyColor: colors.text,
+          padding: 12,
+          callbacks: {
+            title: (items) => {
+              const idx = items[0].dataIndex;
+              const it = timeline[idx];
+              return `${s.ticker} — ${it.year} [${it.period.toUpperCase()}]`;
+            },
+            afterBody: (items) => {
+              const idx = items[0].dataIndex;
+              const it = timeline[idx];
+              const obToRev = it.obToRev != null ? it.obToRev : Number((it.backlog / (it.execution || 1)).toFixed(2));
+              const isGreen = obToRev > 1.0;
+              return [
+                `📈 YoY Backlog Growth: +${it.growth}%`,
+                `Order Book / Rev: ${obToRev.toFixed(2)}x ${isGreen ? '★ (> 1.0 Target)' : ''}`,
+                `Book-to-Bill Ratio: ${it.bookToBill}x`
+              ];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: colors.grid },
+          ticks: { color: colors.text, font: { family: 'Inter', size: 11, weight: 600 } }
+        },
+        y: {
+          position: 'left',
+          grid: { color: colors.grid },
+          ticks: {
+            color: colors.text,
+            font: { family: 'JetBrains Mono', size: 10 },
+            callback: (val) => `${ob.curr}${val}${ob.unit.includes('Cr') ? ' Cr' : 'B'}`
+          },
+          title: {
+            display: true,
+            text: `Order Book & Execution (${ob.unit})`,
+            color: colors.textMuted,
+            font: { family: 'Inter', size: 11, weight: 600 }
+          }
+        },
+        y1: {
+          position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: {
+            color: '#f59e0b',
+            callback: (val) => `${val > 0 ? '+' : ''}${val}%`,
+            font: { family: 'JetBrains Mono', size: 10, weight: 600 }
+          },
+          title: {
+            display: true,
+            text: 'YoY Growth (%)',
+            color: '#f59e0b',
+            font: { family: 'Inter', size: 11, weight: 600 }
+          }
+        }
+      }
+    }
+  });
+}
+
+/**
+ * Render 10-Year Order Book Ledger Table for Sector Dashboard
+ */
+function renderSectorOrderBookTable(activeItem, allItems) {
+  const tbody = document.getElementById('sectorObTableBody');
+  const unitEl = document.getElementById('sectorObTableUnit');
+  if (!tbody) return;
+
+  if (allItems && allItems.length > 0) {
+    if (unitEl) unitEl.textContent = 'Comparing Top 3 Leaders';
+    const years = allItems[0].ob.fullTimeline;
+    tbody.innerHTML = years.map((row, idx) => {
+      const isProjected = row.period === 'Projected';
+      const periodBadge = isProjected
+        ? '<span class="badge badge-tag" style="background: rgba(0, 242, 254, 0.15); color: var(--cyan-primary); border-color: rgba(0,242,254,0.3); font-size: 0.65rem;">Proj</span>'
+        : '<span class="badge badge-tag" style="background: rgba(16, 185, 129, 0.15); color: var(--emerald-bull); border-color: rgba(16,185,129,0.3); font-size: 0.65rem;">Hist</span>';
+
+      const cells = allItems.map(item => {
+        const it = item.ob.fullTimeline[idx];
+        const isGreen = it.obToRev > 1.0;
+        return `
+          <td class="font-mono" style="border-left: 1px solid var(--border-subtle);">
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--text-bright);">${item.ob.curr}${it.backlog}${item.ob.unit.includes('Cr') ? ' Cr' : 'B'}</div>
+            <div style="display: flex; gap: 4px; align-items: center; margin-top: 2px;">
+              <span class="ob-ratio-pill ${isGreen ? 'ratio-green' : 'ratio-neutral'}" style="font-size: 0.65rem; padding: 1px 4px;">${it.obToRev.toFixed(2)}x</span>
+              <span class="ob-growth-pill" style="font-size: 0.65rem; padding: 1px 4px;">+${it.growth}%</span>
+            </div>
+          </td>
+        `;
+      }).join('');
+
+      return `
+        <tr>
+          <td class="font-mono font-bold">${row.year}</td>
+          <td>${periodBadge}</td>
+          ${cells}
+        </tr>
+      `;
+    }).join('');
+    return;
+  }
+
+  const ob = activeItem.ob;
+  if (unitEl) unitEl.textContent = `Amounts in ${ob.unit} (${activeItem.stock.ticker})`;
+
+  tbody.innerHTML = ob.fullTimeline.map(row => {
+    const isProjected = row.period === 'Projected';
+    const periodBadge = isProjected
+      ? '<span class="badge badge-tag" style="background: rgba(0, 242, 254, 0.15); color: var(--cyan-primary); border-color: rgba(0,242,254,0.3);">Projected</span>'
+      : '<span class="badge badge-tag" style="background: rgba(16, 185, 129, 0.15); color: var(--emerald-bull); border-color: rgba(16,185,129,0.3);">Historical</span>';
+
+    const obToRev = row.obToRev != null ? row.obToRev : Number((row.backlog / (row.execution || 1)).toFixed(2));
+    const isGreen = obToRev > 1.0;
+    const obRevBadge = isGreen
+      ? `<span class="ob-ratio-pill ratio-green" title="Order Book to Revenue > 1.0">✓ ${obToRev.toFixed(2)}x</span>`
+      : `<span class="ob-ratio-pill ratio-neutral">${obToRev.toFixed(2)}x</span>`;
+
+    const growthBadge = `
+      <span class="ob-growth-pill ${row.growth >= 16 ? 'growth-high' : 'growth-normal'}" title="YoY Backlog Growth: +${row.growth}%">
+        <i data-lucide="trending-up" class="inline-icon" style="width: 11px; height: 11px;"></i> +${row.growth}%
+      </span>
+    `;
+
+    const backlogFmt = `${ob.curr}${row.backlog}${ob.unit.includes('Cr') ? ' Cr' : 'B'}`;
+    const execFmt = `${ob.curr}${row.execution}${ob.unit.includes('Cr') ? ' Cr' : 'B'}`;
+
+    return `
+      <tr>
+        <td class="font-mono font-bold">${row.year}</td>
+        <td>${periodBadge}</td>
+        <td class="font-mono font-bold text-cyan">${backlogFmt}</td>
+        <td class="font-mono">${execFmt}</td>
+        <td style="text-align: right;">${obRevBadge}</td>
+        <td style="text-align: right;">${growthBadge}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+/**
+ * Render Real-time Level 2 Market Depth (Bids vs Asks) for Sector Dashboard
+ */
+function renderSectorOrderBookDepth(activeItem) {
+  const depth = activeItem.ob.level2Depth;
+  if (!depth) return;
+
+  const curr = activeItem.effective.currSym;
+  const titleEl = document.getElementById('sectorObDepthTitle');
+  const spreadEl = document.getElementById('sectorObDepthSpread');
+  const bidBar = document.getElementById('sectorL2BidBar');
+  const askBar = document.getElementById('sectorL2AskBar');
+  const bidPctEl = document.getElementById('sectorL2BidPercent');
+  const askPctEl = document.getElementById('sectorL2AskPercent');
+  const imbEl = document.getElementById('sectorL2Imbalance');
+  const bidsRows = document.getElementById('sectorL2BidsRows');
+  const asksRows = document.getElementById('sectorL2AsksRows');
+
+  if (titleEl) titleEl.innerHTML = `<i data-lucide="activity" class="inline-icon text-cyan"></i> ${activeItem.stock.ticker} Real-Time Market Depth (DOM)`;
+  if (spreadEl) spreadEl.textContent = `Spread: ${curr}${depth.spread.toFixed(2)} (${depth.spreadPercent}%)`;
+  if (bidBar) bidBar.style.width = `${depth.bidPercent}%`;
+  if (askBar) askBar.style.width = `${depth.askPercent}%`;
+  if (bidPctEl) bidPctEl.textContent = `Buyers: ${depth.bidPercent}% (${depth.bidTotal.toLocaleString()})`;
+  if (askPctEl) askPctEl.textContent = `Sellers: ${depth.askPercent}% (${depth.askTotal.toLocaleString()})`;
+  if (imbEl) {
+    imbEl.textContent = depth.imbalanceRatio >= 1.0 ? `Buy Pressure (${depth.imbalanceRatio}x)` : `Sell Pressure (${depth.imbalanceRatio}x)`;
+    imbEl.className = depth.imbalanceRatio >= 1.0 ? 'text-emerald font-bold' : 'text-rose font-bold';
+  }
+
+  if (bidsRows) {
+    bidsRows.innerHTML = depth.bids.map(b => `
+      <div style="display: flex; justify-content: space-between; padding: 2px 4px; font-family: var(--font-mono); font-size: 0.74rem;">
+        <span class="text-emerald font-bold">${curr}${b.price.toFixed(2)}</span>
+        <span class="text-dim">${b.size.toLocaleString()}</span>
+      </div>
+    `).join('');
+  }
+
+  if (asksRows) {
+    asksRows.innerHTML = depth.asks.map(a => `
+      <div style="display: flex; justify-content: space-between; padding: 2px 4px; font-family: var(--font-mono); font-size: 0.74rem;">
+        <span class="text-rose font-bold">${curr}${a.price.toFixed(2)}</span>
+        <span class="text-dim">${a.size.toLocaleString()}</span>
+      </div>
+    `).join('');
+  }
 }
 
 /**
