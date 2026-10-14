@@ -764,7 +764,8 @@ export async function fetchAllUniverseQuotes(universe) {
       let queryTicker = ticker;
       if (ticker === 'TATAMOTORS.NS') queryTicker = 'TMCV.NS';
 
-      const res = await fetch(`/api/yahoo/chart/${encodeURIComponent(queryTicker)}?range=1y&interval=1d`);
+      const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:5173';
+      const res = await fetch(`${baseUrl}/api/yahoo/chart/${encodeURIComponent(queryTicker)}?range=5d&interval=1d`);
       if (!res.ok) return null;
       const data = await res.json();
       const meta = data?.chart?.result?.[0]?.meta;
@@ -784,8 +785,8 @@ export async function fetchAllUniverseQuotes(universe) {
       if (existing) {
         const livePrice = meta.regularMarketPrice || meta.chartPreviousClose || existing.price;
         const prevClose = meta.chartPreviousClose || livePrice;
-        const change = Number((meta.fulldayChange || (livePrice - prevClose)).toFixed(2));
-        const changePercent = Number((meta.regularMarketChangePercent || ((change / prevClose) * 100)).toFixed(2));
+        const change = Number((meta.fulldayChange ?? (livePrice - prevClose)).toFixed(2));
+        const changePercent = Number((meta.regularMarketChangePercent ?? ((change / prevClose) * 100)).toFixed(2));
         const peForward = Number((livePrice / existing.forwardEPS).toFixed(1));
         const pegRatio = calculatePEG(peForward, existing.projectedEPSGrowth);
 
@@ -804,7 +805,8 @@ export async function fetchAllUniverseQuotes(universe) {
           lastUpdatedDate: dateFormatted,
           lastUpdatedTime: timeFormatted,
           lastUpdatedFormatted: `${dateFormatted} • ${timeFormatted}`,
-          lastUpdated: `${dateFormatted} • ${timeFormatted}`
+          lastUpdated: `${dateFormatted} • ${timeFormatted}`,
+          isRealtime: true
         };
       }
     }

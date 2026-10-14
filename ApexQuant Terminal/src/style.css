@@ -374,6 +374,9 @@ body {
   gap: 4px;
 }
 .quick-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   color: var(--text-muted);
@@ -385,6 +388,16 @@ body {
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast);
+}
+.quick-chip-btn .chip-sym {
+  color: var(--text-bright);
+}
+.quick-chip-btn .chip-price {
+  color: var(--cyan-primary);
+  font-weight: 700;
+}
+.quick-chip-btn.active .chip-price {
+  color: #fff;
 }
 .quick-chip-btn:hover {
   color: var(--text-main);

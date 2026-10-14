@@ -23,7 +23,13 @@ export default defineConfig({
               if (!rawSym) {
                 rawSym = parsedUrl.searchParams.get('symbol') || '';
               }
-              const symbol = decodeURIComponent(rawSym).replace(/[\[\]\{\}\(\)\<\>\\\/\|\^\$\*\+\?`~@#!%&=:;,"']/g, '').trim().toUpperCase();
+              let clean = decodeURIComponent(rawSym).trim().toUpperCase();
+              const isIndex = clean.startsWith('^');
+              clean = clean.replace(/[\[\]\{\}\(\)\<\>\\\/\|\$\*\+\?`~@#!%&=:;,"']/g, '').trim();
+              if (isIndex && !clean.startsWith('^')) {
+                clean = '^' + clean;
+              }
+              const symbol = clean;
               const range = parsedUrl.searchParams.get('range') || '1y';
               const interval = parsedUrl.searchParams.get('interval') || '1d';
 

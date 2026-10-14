@@ -596,8 +596,10 @@ export async function loadStockRealtime(ticker, notify = true) {
   if (state.isLoadingRealtime) return;
   state.isLoadingRealtime = true;
 
-  if (refreshIcon) refreshIcon.classList.add('spinning');
-  if (liveTimestamp) liveTimestamp.textContent = 'Resolving & Syncing...';
+  if (notify) {
+    if (refreshIcon) refreshIcon.classList.add('spinning');
+    if (liveTimestamp) liveTimestamp.textContent = 'Resolving & Syncing...';
+  }
 
   try {
     const liveData = await fetchLiveStockData(rawTicker);
@@ -703,7 +705,7 @@ export async function loadStockRealtime(ticker, notify = true) {
     }
   } finally {
     state.isLoadingRealtime = false;
-    if (refreshIcon) refreshIcon.classList.remove('spinning');
+    if (notify && refreshIcon) refreshIcon.classList.remove('spinning');
   }
 }
 
@@ -868,18 +870,22 @@ function setupOmnibarSearch() {
  */
 async function syncMarketTickerTape() {
   const indices = [
-    { sym: '^NSEI', elId: 'tapeNifty' },
-    { sym: '^BSESN', elId: 'tapeSensex' },
-    { sym: '^GSPC', elId: 'tapeSp500' },
-    { sym: '^IXIC', elId: 'tapeNasdaq' }
+    { sym: '^NSEI', elId: 'tapeNifty', label: 'Nifty 50' },
+    { sym: '^BSESN', elId: 'tapeSensex', label: 'Sensex' },
+    { sym: '^INDIAVIX', elId: 'tapeIndiaVix', label: 'India VIX', isVix: true },
+    { sym: '^GSPC', elId: 'tapeSp500', label: 'S&P 500' },
+    { sym: '^IXIC', elId: 'tapeNasdaq', label: 'Nasdaq' },
+    { sym: '^TNX', elId: 'tapeUs10Y', label: 'US 10Y Yield', isYield: true }
   ];
+
+  const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:5173';
 
   await Promise.allSettled(
     indices.map(async (item) => {
       const el = document.getElementById(item.elId);
       if (!el) return;
       try {
-        const res = await fetch(`/api/yahoo/chart/${encodeURIComponent(item.sym)}?range=1d&interval=1d`);
+        const res = await fetch(`${baseUrl}/api/yahoo/chart/${encodeURIComponent(item.sym)}?range=5d&interval=1d`);
         if (!res.ok) return;
         const data = await res.json();
         const meta = data?.chart?.result?.[0]?.meta;
@@ -887,12 +893,18 @@ async function syncMarketTickerTape() {
 
         const price = meta.regularMarketPrice || meta.chartPreviousClose;
         const prevClose = meta.chartPreviousClose || price;
-        const change = price - prevClose;
-        const changePct = (change / prevClose) * 100;
+        const change = Number((meta.fulldayChange ?? (price - prevClose)).toFixed(2));
+        const changePct = Number((meta.regularMarketChangePercent ?? ((change / prevClose) * 100)).toFixed(2));
         const isPos = change >= 0;
 
         el.className = `tape-val ${isPos ? 'text-emerald' : 'text-rose'}`;
-        el.textContent = `${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${isPos ? '+' : ''}${changePct.toFixed(2)}%)`;
+        if (item.isYield) {
+          el.textContent = `${price.toFixed(2)}% (${isPos ? '+' : ''}${change.toFixed(2)}%)`;
+        } else if (item.isVix) {
+          el.textContent = `${price.toFixed(2)} (${isPos ? '+' : ''}${changePct.toFixed(2)}%)`;
+        } else {
+          el.textContent = `${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${isPos ? '+' : ''}${changePct.toFixed(2)}%)`;
+        }
       } catch (err) {
         console.warn(`Ticker tape sync warning for ${item.sym}:`, err);
       }
@@ -917,23 +929,164 @@ function setupQuickChips() {
 }
 
 /**
+ * Update Quick Watch Chips with Live Streaming Data
+ */
+function updateQuickChipsWithLiveData(universe) {
+  document.querySelectorAll('.quick-chip-btn').forEach(btn => {
+    const sym = btn.getAttribute('data-ticker');
+    const stock = universe[sym];
+    if (stock && stock.price) {
+      const isINR = stock.ticker.endsWith('.NS') || stock.currency === 'INR';
+      const curr = isINR ? '₹' : '$';
+      const peg = stock.pegRatio ? stock.pegRatio.toFixed(2) : (stock.peForward / (stock.projectedEPSGrowth || 20)).toFixed(2);
+      const isGarp = parseFloat(peg) < 1.0;
+      const cleanSym = sym.replace('.NS', '');
+      const changePct = stock.changePercent !== undefined ? stock.changePercent : 0;
+      const isPos = changePct >= 0;
+      const changeText = `${isPos ? '+' : ''}${changePct.toFixed(1)}%`;
+      const changeColor = isPos ? 'var(--emerald-bull)' : 'var(--rose-bear)';
+      btn.innerHTML = `
+        <span class="chip-sym">${cleanSym}</span>
+        <span class="chip-price font-mono font-bold">${curr}${stock.price.toFixed(1)}</span>
+        <span class="chip-change font-mono" style="color: ${changeColor}; font-size: 0.72rem;">${changeText}</span>
+        ${isGarp ? '<span class="chip-garp" style="color: var(--amber-gold); font-size: 0.75rem;">★</span>' : ''}
+      `;
+    }
+  });
+}
+
+/**
+ * Update Dropdown Options with Live Streaming Data
+ */
+function updateDropdownOptionsWithLiveData(universe) {
+  const selector = document.getElementById('stockSelector');
+  if (!selector) return;
+  for (const opt of selector.options) {
+    const sym = opt.value;
+    const stock = universe[sym];
+    if (stock && stock.price) {
+      const isINR = stock.ticker.endsWith('.NS') || stock.currency === 'INR';
+      const curr = isINR ? '₹' : '$';
+      const peg = stock.pegRatio ? stock.pegRatio.toFixed(2) : (stock.peForward / (stock.projectedEPSGrowth || 20)).toFixed(2);
+      const isGarp = parseFloat(peg) < 1.0;
+      opt.textContent = `${stock.ticker} - ${stock.name} (${curr}${stock.price.toFixed(2)} • PEG ${peg}${isGarp ? ' ★ GARP' : ''})`;
+    }
+  }
+}
+
+let autoRefreshTimer = null;
+const AUTO_REFRESH_INTERVAL_MS = 30000; // 30 seconds continuous polling
+
+/**
+ * Continuous Background Real-Time Polling Engine
+ */
+function startRealtimePolling() {
+  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+
+  autoRefreshTimer = setInterval(async () => {
+    if (document.hidden) return; // Conserve resources when window is hidden
+
+    try {
+      // 1. Refresh market ticker tape
+      syncMarketTickerTape();
+
+      // 2. Silently refresh active stock hero & models
+      if (state.currentTicker) {
+        await loadStockRealtime(state.currentTicker, false);
+      }
+
+      // 3. Batch sync all universe stocks
+      const updated = await fetchAllUniverseQuotes(state.universe);
+      state.universe = updated;
+
+      // 4. Update Quick Watch Chips & Dropdown
+      updateQuickChipsWithLiveData(state.universe);
+      updateDropdownOptionsWithLiveData(state.universe);
+
+      // 5. Update Screener Table
+      renderScreenerTable(state.universe, (t) => {
+        loadStockRealtime(t);
+        document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
+      }, state.currentTicker);
+
+      // 6. Update Sector Dashboard if active
+      const isSectorsActive = document.getElementById('tab-sectors')?.classList.contains('active');
+      if (isSectorsActive) {
+        renderSectorsDashboard(state.universe, (t) => {
+          loadStockRealtime(t);
+          document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
+        }, state.isDarkMode);
+      }
+
+      // 7. Update Live Timestamps
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const liveTimeEl = document.getElementById('liveTimestamp');
+      if (liveTimeEl) {
+        liveTimeEl.textContent = `Streaming (${timeStr})`;
+      }
+      const sectorTimeEl = document.getElementById('sectorLiveTimestamp');
+      if (sectorTimeEl) {
+        sectorTimeEl.textContent = timeStr;
+      }
+
+      refreshIcons();
+    } catch (err) {
+      console.warn('Real-time polling tick warning:', err);
+    }
+  }, AUTO_REFRESH_INTERVAL_MS);
+}
+
+/**
  * Setup Real-time Refresh Sync Button
  */
 function setupRefreshButton() {
   const refreshBtn = document.getElementById('refreshLiveBtn');
   if (refreshBtn) {
     refreshBtn.addEventListener('click', async () => {
-      // Refresh market ticker tape
-      syncMarketTickerTape();
-      // Refresh current stock
-      await loadStockRealtime(state.currentTicker, true);
-      // Batch refresh all universe stocks in parallel
-      const updated = await fetchAllUniverseQuotes(state.universe);
-      state.universe = updated;
-      renderScreenerTable(state.universe, (t) => {
-        loadStockRealtime(t);
-      }, state.currentTicker);
-      refreshIcons();
+      const refreshIcon = document.getElementById('refreshIcon');
+      if (refreshIcon) refreshIcon.classList.add('spinning');
+      const liveTimestamp = document.getElementById('liveTimestamp');
+      if (liveTimestamp) liveTimestamp.textContent = 'Syncing All Feeds...';
+
+      try {
+        // Refresh market ticker tape
+        await syncMarketTickerTape();
+
+        // Refresh current stock
+        await loadStockRealtime(state.currentTicker, true);
+
+        // Batch refresh all universe stocks in parallel
+        const updated = await fetchAllUniverseQuotes(state.universe);
+        state.universe = updated;
+
+        // Update Quick Watch Chips & Dropdown
+        updateQuickChipsWithLiveData(state.universe);
+        updateDropdownOptionsWithLiveData(state.universe);
+
+        // Update screener table
+        renderScreenerTable(state.universe, (t) => {
+          loadStockRealtime(t);
+        }, state.currentTicker);
+
+        // Update sectors dashboard if open
+        const isSectorsActive = document.getElementById('tab-sectors')?.classList.contains('active');
+        if (isSectorsActive) {
+          renderSectorsDashboard(state.universe, (t) => {
+            loadStockRealtime(t);
+            document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
+          }, state.isDarkMode);
+        }
+
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        if (liveTimestamp) liveTimestamp.textContent = `Live (${timeStr})`;
+        const sectorTimeEl = document.getElementById('sectorLiveTimestamp');
+        if (sectorTimeEl) sectorTimeEl.textContent = timeStr;
+      } finally {
+        if (refreshIcon) refreshIcon.classList.remove('spinning');
+        refreshIcons();
+      }
     });
   }
 }
@@ -1025,21 +1178,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Custom Stock Modal setup
   setupCustomStockModal(handleAddCustomStock);
 
-  // Sync real-time market indices ticker tape (NIFTY 50, SENSEX, S&P 500, NASDAQ)
+  // Sync real-time market indices ticker tape (NIFTY 50, SENSEX, INDIA VIX, S&P 500, NASDAQ, US 10Y YIELD)
   syncMarketTickerTape();
 
   // 1. Initialize with real-time live data for default ticker (NVDA)
   await loadStockRealtime('NVDA');
 
-  // 2. Batch-sync real-time quotes for all stocks in the universe so the GARP Radar displays live quotes
+  // 2. Batch-sync real-time quotes for all stocks in the universe so GARP Radar, Quick Chips & Dropdowns display live quotes
   fetchAllUniverseQuotes(state.universe).then(updated => {
     state.universe = updated;
+    updateQuickChipsWithLiveData(state.universe);
+    updateDropdownOptionsWithLiveData(state.universe);
     renderScreenerTable(state.universe, (t) => {
       loadStockRealtime(t);
       document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
     }, state.currentTicker);
     refreshIcons();
   });
+
+  // 3. Start continuous automated real-time polling (every 30 seconds)
+  startRealtimePolling();
 
   refreshIcons();
 });
