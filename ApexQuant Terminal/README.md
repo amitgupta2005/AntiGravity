@@ -94,6 +94,15 @@ ApexQuant Terminal is an institutional-grade, responsive quantitative equity ana
   - **Live Sync & On-Demand Refresh**: Dedicated `Live Sync` button (`#sectorLiveSyncBtn`) with spinning indicator to refresh real-time quotes on demand anytime.
 - **Constituent Leaders & Direct Analysis**: Displays constituent stock chips with individual live prices, day change, and one-click navigation to immediately analyze any stock.
 
+### 11. 📚 Sector-Level Order Book & 10-Year History for Top 3 Stocks
+- **Inline Backlog Snapshot on Quant Leader Cards**: Every Top 3 Quant stock card displays an inline Order Book preview with total backlog value, Order Book to Revenue ratio (`OB/Rev`), 10-year forward backlog CAGR, and a direct "View 10Y Order History & Depth ↓" button.
+- **Dedicated Sector Order Book Container**: Positioned directly underneath the Top 3 Quant cards, featuring:
+  - **Stock Switcher Tabs**: Smoothly toggle between **Stock #1**, **Stock #2**, **Stock #3**, or select **"Compare All 3"** for multi-bar side-by-side analysis.
+  - **KPI Metric Strip**: Live Total Backlog, Order Book to Revenue Ratio (highlighted in emerald green `✓ > 1.0x`), 10Y Forward Backlog CAGR, and Level 2 Bid/Ask Spread.
+  - **10-Year Order History Bar Graph**: Dual-period timeline covering **Last 5 Years Historical (2020–2024 TTM)** and **Next 5 Years Projected (2025–2029 FY5)** with Backlog vs Revenue Execution bars and secondary YoY Growth (%) line with floating percentage labels.
+  - **10-Year Backlog Ledger Table**: Full tabular audit including Period, Ending Backlog, Inflow Run-Rate, Executed Revenue, Book-to-Bill, OB/Rev ratio, and YoY Growth (%) pill badges.
+  - **Real-Time Level 2 Market Depth (Bids vs Asks)**: DOM ladder showing top 5 bids vs top 5 asks around current live price with volumetric bars and depth imbalance ratio.
+
 ---
 
 ## 📐 Mathematical & Quantitative Formulas
@@ -109,6 +118,352 @@ ApexQuant Terminal is an institutional-grade, responsive quantitative equity ana
 | **Book-to-Bill Ratio** | $\text{Book-to-Bill} = \frac{\text{New Order Inflows}}{\text{Executed Revenue}}$ | Values $> 1.0\times$ indicate expanding order backlog and pipeline. |
 | **Revenue Visibility** | $\text{Visibility (Yrs)} = \frac{\text{Current Order Backlog}}{\text{Annual Revenue Execution}}$ | Number of forward years of revenue secured by existing contracts. |
 | **14-Day RSI** | $RSI = 100 - \frac{100}{1 + RS}$ where $RS = \frac{\overline{Gain}_{14}}{\overline{Loss}_{14}}$ | Wilder's smoothed relative strength index. |
+
+---
+
+## 🏛️ System Architecture
+
+### 1. High-Level Technical Architecture (HLA)
+
+The ApexQuant Terminal is architected as an institutional-grade, client-driven quantitative analytics platform. The application employs a decoupled multi-tier topology featuring a reactive client presentation layer, a modular quantitative modeling engine, an intelligent API proxy gateway with multi-tier network resilience, and real-time streaming integrations with global exchanges (NSE India, NASDAQ, NYSE).
+
+```mermaid
+flowchart TD
+    %% ApexQuant Terminal - High-Level Technical Architecture
+
+    subgraph ClientPresentation ["1. Client Presentation Tier (Responsive Web Shell)"]
+        UI_Shell["Application Shell<br/>(index.html & style.css)"]
+        Omnibar["Universal Omnibar Search<br/>& Fuzzy Symbol Resolver"]
+        TickerTape["Streaming Market Ticker Tape<br/>(NIFTY 50 | SENSEX | S&P 500 | NASDAQ)"]
+        
+        subgraph TabNavigation ["Institutional Tab Navigation System"]
+            TabValuation["Peter Lynch GARP Valuation<br/>& 2D Sensitivity Matrix"]
+            TabMomentum["Technical Momentum & Candlesticks<br/>(SMA 50/200, RSI 14, Pivots)"]
+            TabOrderBook["Order Book & 10Y History<br/>(OB/Rev Ratio > 1.0x & Level 2 Depth)"]
+            TabNews["Financial News Feed<br/>& NLP Sentiment Classifier"]
+            TabScreener["Global GARP Radar Screener<br/>(NSE India / US Markets)"]
+            TabSectors["Sector Rotation Dashboard<br/>& Top 3 Quant Leaders"]
+        end
+    end
+
+    subgraph CoreEngines ["2. Application Logic & Quantitative Engine Tier (ES6+ Modules)"]
+        MainOrchestrator["Application Orchestrator & State Store<br/>(src/main.js)"]
+        QuantEngine["Quantitative Valuation Engine<br/>(src/quant/engine.js)<br/>• Peter Lynch Fair Value<br/>• PEG Ratio<br/>• 3-Scenario Stress Test<br/>• 2D Sensitivity Matrix"]
+        SectorEngine["Sector Rotation & Screener Engine<br/>(src/components/sectors.js)<br/>• YTD Performance Ranking<br/>• Top 3 Quant Leaders Isolation<br/>• Market Filter (NSE / US / Global)"]
+        OrderBookEngine["Contract Backlog & Order Book Engine<br/>(src/components/orderbook.js)<br/>• 10-Year Backlog Ledger (2020-2029)<br/>• OB / Revenue Ratio (> 1.0x Green)<br/>• Level 2 Market Depth Simulator"]
+        ChartEngine["Visualizations & Rendering Engine<br/>(src/components/charts.js)<br/>• Chart.js Dual-Axis Renderers<br/>• YoY Growth DataLabels Plugin"]
+        NewsEngine["Financial NLP Sentiment Classifier<br/>(src/components/news.js)"]
+        ScreenerEngine["GARP Radar Screener Controller<br/>(src/components/screener.js)"]
+        ModalEngine["Custom Stock Valuation Sandbox<br/>(src/components/customStockModal.js)"]
+    end
+
+    subgraph GatewayTier ["3. API Gateway & Network Resilience Tier"]
+        DevProxy["Vite Reverse Proxy Middleware<br/>(vite.config.js)<br/>• /api/yahoo/v8/finance/chart/*<br/>• /api/yahoo/v1/finance/search/*<br/>• Header Spoofing & CORS Bypass"]
+        DataService["Market Data Service<br/>(src/services/yahooFinance.js)<br/>• Multi-Tier Fallback Orchestrator<br/>• Symbol Resolver & Sanitizer<br/>• Response Normalizer & DTO Mapper"]
+        CORSProxy["Public CORS Failover Proxies<br/>(AllOrigins / CorsProxy.io)"]
+        BaselineStore["Offline Institutional Baseline Cache<br/>(src/data/stocks.js)"]
+    end
+
+    subgraph ExternalFeeds ["4. External Market Data & Exchange Feeds"]
+        YahooAPI["Yahoo Finance Streaming Query APIs<br/>• Real-time Quotes & Tickers<br/>• 1Y Daily Price Candles<br/>• Curated Financial News Feed"]
+        Exchanges["Global Stock Exchanges<br/>• NSE India (.NS / .BO)<br/>• US Markets (NASDAQ / NYSE)"]
+    end
+
+    %% Data Flow Connections
+    Omnibar -->|"Search Query / Enter"| MainOrchestrator
+    MainOrchestrator -->|"Fetch Quote / History"| DataService
+    DataService -->|"Tier 1: Proxy Request"| DevProxy
+    DevProxy -->|"HTTP GET (Streaming)"| YahooAPI
+    DataService -.->|"Tier 2: Failover (Direct / CORS)"| CORSProxy
+    CORSProxy -.->|"Forward Query"| YahooAPI
+    DataService -.->|"Tier 3: Offline Fallback"| BaselineStore
+    YahooAPI --- Exchanges
+
+    DataService -->|"Normalized Stock DTO"| MainOrchestrator
+    MainOrchestrator -->|"Stock Profile"| QuantEngine
+    MainOrchestrator -->|"Stock Profile"| OrderBookEngine
+    MainOrchestrator -->|"Constituents & Benchmarks"| SectorEngine
+    MainOrchestrator -->|"Historical Daily Series"| ChartEngine
+    MainOrchestrator -->|"Raw News Headlines"| NewsEngine
+
+    QuantEngine -->|"Valuation Models & Scenarios"| TabValuation
+    ChartEngine -->|"Momentum Visualizations"| TabMomentum
+    OrderBookEngine -->|"10Y History & Level 2 Depth"| TabOrderBook
+    NewsEngine -->|"NLP Scored News Stream"| TabNews
+    ScreenerEngine -->|"Live GARP Grid"| TabScreener
+    SectorEngine -->|"Ranked Sectors & Top 3 Picks"| TabSectors
+```
+
+#### Layer-by-Layer Architectural Responsibilities:
+
+| Tier | Primary Responsibilities | Core Technologies |
+| :--- | :--- | :--- |
+| **1. Client Presentation Tier** | Renders high-contrast dark/light glassmorphism UI, universal omnibar search, streaming ticker tape, and 5 interactive analytical views. Dispatches user interaction events to the orchestrator. | HTML5, Vanilla CSS Design System, Lucide SVG Icons |
+| **2. Core Application Engines Tier** | Computes quantitative valuations (PEG, Peter Lynch Fair Value, 3-Scenario stress tests), generates 10-year order book timelines with YoY growth %, simulates Level 2 market depth, calculates sector rotation rankings, and scores financial news headlines. | ES6+ Vanilla JavaScript Modules, Chart.js 4.x |
+| **3. API Gateway & Resilience Tier** | Bypasses CORS and origin restrictions via Vite development middleware, manages User-Agent headers, routes live streaming quote and historical candle requests, and executes multi-tier failovers. | Vite Node.js Proxy, Fetch API, Failover Handlers |
+| **4. External Market Feeds Tier** | Authoritative market data source supplying real-time stock quotes, bid/ask ticks, 1-year daily candlestick series, and breaking corporate news across NSE India and US exchanges. | Yahoo Finance Query APIs (v8 Chart, v1 Search, v6 Quote) |
+
+---
+
+### 2. Low-Level Technical Architecture (LLA)
+
+The Low-Level Architecture details the internal module structure, algorithmic pipelines, data flow lifecycles, and interface schemas governing system execution.
+
+#### 2.1 Component & Module Dependency Hierarchy
+
+```mermaid
+flowchart TD
+    %% Low-Level Component Hierarchy
+
+    subgraph EntryPoint ["Application Bootstrap"]
+        IndexHTML["index.html (DOM Shell)"]
+        MainJS["src/main.js (Controller & State Store)"]
+    end
+
+    subgraph StateStore ["Reactive Application State (main.js)"]
+        StateCurrentStock["state.currentStock: StockDTO"]
+        StateActiveTab["state.activeTab: string"]
+        StateTheme["state.isDarkMode: boolean"]
+        StateLiveSync["state.liveSyncInterval: Timer"]
+        StateScreenerFilter["state.marketFilter: 'all' | 'india' | 'us'"]
+    end
+
+    subgraph SubModules ["Functional Component Subsystems"]
+        QuantEngineJS["src/quant/engine.js<br/>• calculatePE()<br/>• calculatePEG()<br/>• calculateLynchFairValue()<br/>• generateScenarios()<br/>• generateSensitivityMatrix()<br/>• calculateQuantScore()"]
+        SectorJS["src/components/sectors.js<br/>• SECTORS_DATA (12 Sectors)<br/>• initSectorDashboard()<br/>• fetchRealtimeSectorQuotes()<br/>• renderSectorTopStocksOrderBook()<br/>• renderSectorOrderBookChart()<br/>• renderSectorOrderBookTable()<br/>• renderSectorOrderBookDepth()"]
+        OrderBookJS["src/components/orderbook.js<br/>• getOrGenerateOrderBook()<br/>• renderOrderBook()<br/>• renderOrderBookChart()<br/>• renderLevel2DOM()<br/>• updateOrderBookTheme()"]
+        ChartsJS["src/components/charts.js<br/>• renderStockChart()<br/>• renderEPSChart()<br/>• updateChartTheme()"]
+        ScreenerJS["src/components/screener.js<br/>• initScreener()<br/>• renderScreenerTable()<br/>• filterScreener()"]
+        NewsJS["src/components/news.js<br/>• renderNewsFeed()<br/>• scoreSentimentNLP()"]
+        CustomModalJS["src/components/customStockModal.js<br/>• initCustomStockModal()<br/>• computeCustomStock()"]
+    end
+
+    subgraph DataAccessLayer ["Data Access & External Services"]
+        YahooServiceJS["src/services/yahooFinance.js<br/>• fetchQuote(ticker)<br/>• fetchHistoricalData(ticker, range)<br/>• searchTicker(query)<br/>• resolveTicker(query)<br/>• fetchStockNews(ticker)"]
+        BaselineDataJS["src/data/stocks.js<br/>• STOCKS_DATA (Curated Universe)"]
+        ViteConfig["vite.config.js<br/>• Proxy /api/yahoo/v8/*<br/>• Proxy /api/yahoo/v1/*"]
+    end
+
+    IndexHTML --> MainJS
+    MainJS <--> StateStore
+    MainJS --> YahooServiceJS
+    MainJS --> QuantEngineJS
+    MainJS --> SectorJS
+    MainJS --> OrderBookJS
+    MainJS --> ChartsJS
+    MainJS --> ScreenerJS
+    MainJS --> NewsJS
+    MainJS --> CustomModalJS
+
+    SectorJS --> YahooServiceJS
+    SectorJS --> OrderBookJS
+    SectorJS --> QuantEngineJS
+    OrderBookJS --> BaselineDataJS
+    ScreenerJS --> BaselineDataJS
+    ScreenerJS --> YahooServiceJS
+    YahooServiceJS --> ViteConfig
+    YahooServiceJS -.-> BaselineDataJS
+```
+
+#### 2.2 Universal Omnibar Search & Fuzzy Resolution Pipeline
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as User / Investor
+    participant Omnibar as Universal Omnibar (index.html)
+    participant Main as Application Controller (main.js)
+    participant Service as Market Data Service (yahooFinance.js)
+    participant Proxy as Vite Proxy / Gateway
+    participant Yahoo as Yahoo Finance Query API
+    participant Quant as Quant Engine (engine.js)
+    participant OrderBook as Order Book Engine (orderbook.js)
+    participant UI as DOM Viewport Renderers
+
+    User->>Omnibar: Types query (e.g. "Tata Power", "NVDA", "Tata p[ower")
+    Omnibar->>Main: onInput event (250ms debounce)
+    Main->>Service: searchTicker(sanitizedQuery)
+    Service->>Proxy: GET /api/yahoo/v1/finance/search?q={query}
+    Proxy->>Yahoo: Forward with User-Agent & Origin headers
+    Yahoo-->>Proxy: JSON Results (quotes array)
+    Proxy-->>Service: Forward payload
+    Service-->>Main: Parsed candidates (symbol, name, exchange, type)
+    Main->>Omnibar: Render live autocomplete suggestions dropdown
+
+    User->>Omnibar: Press Enter / Click Candidate
+    Omnibar->>Main: onSelect(ticker)
+    par Concurrent Ingestion
+        Main->>Service: fetchQuote(ticker)
+        Service->>Proxy: GET /api/yahoo/v8/finance/chart/{ticker}?interval=1d&range=1d
+        Proxy-->>Service: Real-time price, day change, volume, high/low
+    and Historical Series
+        Main->>Service: fetchHistoricalData(ticker, '1y')
+        Service->>Proxy: GET /api/yahoo/v8/finance/chart/{ticker}?interval=1d&range=1y
+        Proxy-->>Service: 1-Year daily close, SMA 50/200, Wilder RSI 14
+    and Financial News
+        Main->>Service: fetchStockNews(ticker)
+        Service->>Proxy: GET /api/yahoo/v1/finance/search?q={ticker}&newsCount=10
+        Proxy-->>Service: News items with title, publisher, timestamp
+    end
+
+    Main->>Quant: Compute Valuation (PEG, Lynch Fair Value, Scenarios, Sensitivity)
+    Main->>OrderBook: Generate 10Y Backlog Ledger & Level 2 Depth
+    Main->>UI: Update Stock Profile Header, Charts, Order Book, News NLP Badges
+    UI-->>User: Instant Visual Confirmation (< 250ms)
+```
+
+#### 2.3 Sector Rotation & Quant Leader Screening Pipeline
+
+```mermaid
+flowchart TD
+    %% Sector Rotation and Screening Workflow
+
+    StartSector["User Selects 'Sectors' Tab or Clicks Sector Card"] --> LoadSectors["Load 12 Primary Sectors (SECTORS_DATA)"]
+    LoadSectors --> FetchQuotes["Concurrent Batch Fetch: Real-Time Quotes for Benchmarks & Constituents"]
+    FetchQuotes --> CalcYTD["Compute Real-Time Sector YTD Returns (%)"]
+    CalcYTD --> SortSectors["Sort Sectors Descending by YTD Change (Alpha to Laggard)"]
+    SortSectors --> RenderChart["Render Horizontal Ranked Bar Chart (Green > 0%, Red < 0%)"]
+    RenderChart --> RenderGrid["Render 12 Sector Cards with Constituent Stock Chips"]
+
+    FilterCheck{"User Selected Market Filter?"}
+    RenderGrid --> FilterCheck
+    FilterCheck -->|"All Markets 🌐"| UniverseAll["Evaluate All Global Constituents"]
+    FilterCheck -->|"NSE India 🇮🇳"| UniverseNSE["Filter Constituents Ending with .NS / .BO"]
+    FilterCheck -->|"US Equities 🇺🇸"| UniverseUS["Filter US Tickers (NASDAQ / NYSE)"]
+
+    UniverseAll --> QuantScreen["Institutional Multi-Factor Quant Screening Algorithm"]
+    UniverseNSE --> QuantScreen
+    UniverseUS --> QuantScreen
+
+    QuantScreen --> SelectTop3["Isolate Top 3 Quant-Screened Leader Stocks"]
+    SelectTop3 --> RenderTop3Cards["Render Top 3 Leader Cards with Quant Score & Inline Order Book Badge"]
+
+    RenderTop3Cards --> GenerateOB["Invoke Order Book Engine for Top 3 Stocks"]
+    GenerateOB --> RenderSectorOB["Render Sector Order Book Section:<br/>• Stock Switcher Tabs (#1, #2, #3, Compare All 3)<br/>• KPI Strip (Backlog, OB/Rev > 1.0x Green, CAGR)<br/>• 10-Year Order History Bar Graph (Backlog vs Revenue + YoY % Line)<br/>• 10-Year Backlog Ledger Audit Table<br/>• Real-Time Level 2 Market Depth (Bids vs Asks)"]
+```
+
+#### 2.4 Order Book & 10-Year Backlog Engine Architecture
+
+```mermaid
+flowchart TD
+    %% Order Book Calculation Engine
+
+    InputStock["Input: Stock Profile (Ticker, Name, Price, Sector, Currency)"] --> BaseRev["Determine Base Annual Revenue Execution (Rev_base)<br/>• USD: $Billion scale<br/>• INR: ₹ Crore scale"]
+    BaseRev --> BacklogMult["Extract Contract Backlog Multiple<br/>stock.obToRev || (isINR ? 2.45 : 1.75)"]
+    BacklogMult --> TTMBacklog["Calculate Current TTM Backlog = Rev_base * BacklogMultiple"]
+    TTMBacklog --> TTMInflows["Calculate TTM Order Inflows = Rev_base * 1.28"]
+
+    TTMBacklog --> CalcRatio["Calculate Order Book to Revenue Ratio = TTM Backlog / Rev_base"]
+    CalcRatio --> RatioCheck{"Is OB / Rev Ratio > 1.0x?"}
+    RatioCheck -->|"Yes (> 1.0x)"| GreenPill["Style with Emerald Green Badge (✓ > 1.0x Multi-Year Visibility)"]
+    RatioCheck -->|"No (<= 1.0x)"| AmberPill["Style with Neutral Amber Badge (< 1.0x Annual Coverage)"]
+
+    TTMBacklog --> HistGen["Generate 5-Year Historical Ledger (2020 - 2024 TTM)<br/>• Factor Curve: 0.52, 0.62, 0.74, 0.86, 1.0<br/>• Calculate Backlog, Inflows, Revenue Execution<br/>• Calculate Book-to-Bill & YoY Growth (%)"]
+    
+    TTMBacklog --> ProjGen["Generate 5-Year Forward Projections (2025 FY1 - 2029 FY5)<br/>• Growth Decay Model: g_t = max(0.08, g_initial * (1 - 0.015t))<br/>• Forward Compounded Revenue Execution<br/>• Dynamic Ending Backlog = PrevBacklog + Inflows - Executed*0.95<br/>• Calculate Book-to-Bill & YoY Growth (%)"]
+
+    HistGen --> ConcatTimeline["Concatenate 10-Year Master Timeline Array (fullTimeline)"]
+    ProjGen --> ConcatTimeline
+
+    InputStock --> Level2Gen["Generate Real-Time Level 2 Market Depth (DOM)<br/>• Spread = Price * 0.0008<br/>• Tick Step = Price * 0.0004<br/>• 5 Bids (Price - Spread/2 - Step*i)<br/>• 5 Asks (Price + Spread/2 + Step*i)<br/>• Depth Volume Aggregation & Imbalance Ratio"]
+
+    ConcatTimeline --> RenderChartJS["Chart.js Dual-Axis Visualization:<br/>• Bar 1: Order Book Backlog<br/>• Bar 2: Executed Revenue<br/>• Line: YoY Growth (%) with Data Labels"]
+    ConcatTimeline --> RenderLedgerTable["10-Year Backlog Ledger Table (Years, Periods, Backlog, Inflows, OB/Rev, YoY %)"]
+    Level2Gen --> RenderDOM["Level 2 DOM Visual Ladder (Bid % vs Ask % Bar & Order Book Rows)"]
+```
+
+#### 2.5 Resilient Multi-Tier Market Data Ingestion Pipeline
+
+```mermaid
+flowchart TD
+    %% Resilient Network Ingestion Cascade
+
+    Request["Inbound Market Data Request (fetchQuote / fetchHistoricalData)"] --> Tier1["Tier 1: Vite Dev Server Proxy (/api/yahoo/*)"]
+    
+    Tier1 --> TestTier1{"Proxy Response OK?"}
+    TestTier1 -->|"200 OK"| Normalize["Response Normalizer: Map to Standardized DTO"]
+    TestTier1 -->|"Fail / Network Error"| Tier2["Tier 2: Direct Client HTTP Request to query1.finance.yahoo.com"]
+
+    Tier2 --> TestTier2{"Direct Query OK?"}
+    TestTier2 -->|"200 OK"| Normalize
+    TestTier2 -->|"CORS Blocked / 429 Rate Limited"| Tier3["Tier 3: Public Failover CORS Proxy (AllOrigins API)"]
+
+    Tier3 --> TestTier3{"CORS Proxy OK?"}
+    TestTier3 -->|"200 OK"| Normalize
+    TestTier3 -->|"Failed / Timeout"| Tier4["Tier 4: Offline Curated Institutional Cache (src/data/stocks.js)"]
+
+    Tier4 --> MarkCached["Tag Data with isOfflineCache: true"]
+    MarkCached --> Normalize
+    Normalize --> ReturnDTO["Return Structured StockData DTO to Application State"]
+```
+
+---
+
+### 3. Core Data Contracts & Interface Schemas
+
+```typescript
+// Standardized Stock Data Transfer Object (DTO)
+interface StockData {
+  ticker: string;                     // e.g. "NVDA", "TATAPOWER.NS"
+  name: string;                       // e.g. "NVIDIA Corporation"
+  price: number;                      // Current market price
+  change: number;                     // Absolute price change today
+  changePercent: number;              // Percentage price change today
+  currency: 'USD' | 'INR';            // Currency denomination ('$' | '₹')
+  exchange: string;                   // "NASDAQ", "NSE", "NYSE"
+  marketCap: number;                  // Capitalization in base currency
+  pe: number;                         // Forward Price-to-Earnings ratio
+  eps: number;                        // Forward Earnings Per Share
+  growthRate: number;                 // Annualized EPS growth rate (decimal, e.g. 0.28)
+  peg: number;                        // Price/Earnings-to-Growth ratio
+  lynchFairValue: number;             // Peter Lynch calculated intrinsic fair value
+  fairValueUpside: number;            // Percentage upside to fair value
+  quantScore: number;                 // Composite quantitative score (0 - 100)
+  orderBook?: OrderBookData;          // Attached order book & backlog dataset
+}
+
+// 10-Year Order Book Backlog Ledger Entry
+interface OrderBookLedgerEntry {
+  year: string;                       // "2020", "2024 (TTM)", "2029 (FY5)"
+  period: 'Historical' | 'Projected'; // Period classification
+  backlog: number;                    // Ending contract work-in-hand
+  inflows: number;                    // New commercial contract bookings
+  execution: number;                  // Revenue recognized from backlog
+  bookToBill: number;                 // Inflows / Execution ratio
+  obToRev: number;                    // Backlog / Execution ratio
+  growth: number;                     // Year-over-Year Growth in %
+}
+
+// Order Book & Contract Backlog Model
+interface OrderBookData {
+  unit: string;                       // "$B" | "₹ Cr"
+  curr: string;                       // "$" | "₹"
+  currentBacklog: number;             // Current backlog magnitude
+  currentBacklogFormatted: string;    // e.g. "$168.5B", "₹1,07,800 Cr"
+  orderBookToRevenue: number;         // Ratio: Backlog / Annual Revenue
+  bookToBill: number;                 // Ratio: Inflows / Execution
+  revenueVisibilityYears: number;     // Backlog / Annual Revenue (Years)
+  forwardCAGR: number;                // 5-Year forward backlog CAGR %
+  inflowRunRateFormatted: string;     // Annual inflow run rate
+  historical5Y: OrderBookLedgerEntry[]; // 2020 - 2024 TTM (5 Years)
+  projected5Y: OrderBookLedgerEntry[];  // 2025 FY1 - 2029 FY5 (5 Years)
+  fullTimeline: OrderBookLedgerEntry[]; // Concatenated 10-Year Ledger
+  level2Depth: Level2Depth;           // Real-time market depth book
+}
+
+// Level 2 Market Depth (Bids vs Asks) Book
+interface Level2Depth {
+  spread: number;                     // Absolute bid-ask spread
+  spreadPercent: number;              // Spread as percentage of price
+  bidTotal: number;                   // Total cumulative bid shares
+  askTotal: number;                   // Total cumulative ask shares
+  bidPercent: number;                 // Bid depth percentage (e.g. 58%)
+  askPercent: number;                 // Ask depth percentage (e.g. 42%)
+  imbalanceRatio: number;             // BidTotal / AskTotal
+  bids: Array<{ price: number; size: number; orders: number }>;
+  asks: Array<{ price: number; size: number; orders: number }>;
+}
+```
 
 ---
 
