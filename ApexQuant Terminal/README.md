@@ -86,7 +86,13 @@ ApexQuant Terminal is an institutional-grade, responsive quantitative equity ana
 - **Ranked Horizontal Bar Chart**: Interactive Chart.js visualization mapping sector returns in vibrant green ($> 0\%$) and red ($< 0\%$) with on-bar data badges. Clicking any bar instantly selects that sector.
 - **Top Sector KPI Metrics**: Top Performing Sector, Median Sector YTD Return, Market Breadth (% of sectors in the green), and Laggard Sector.
 - **Market Filters & Sorting Options**: Quick toggle between **All Sectors (Global 🌐)**, **NSE India 🇮🇳**, and **US Equities 🇺🇸**, with sorting by YTD Change, Name, or Market Cap.
-- **Constituent Leaders & Direct Analysis**: Displays constituent stock chips with individual YTD returns and one-click navigation to immediately analyze any stock.
+- **Real-Time Streaming Market Data (Prices, Day Change & Dynamic Valuation)**:
+  - **Live Quotes Stream**: Directly streams real-time market prices from Yahoo Finance API for both **NSE India (₹)** and **US Markets ($)** across all top quant cards and sector constituent chips.
+  - **Live Day Change & Percent**: Displays real-time fullday price changes and percentages (e.g., `+2.64 (+0.97%)` in emerald or red) with a live streaming indicator dot (`● LIVE`).
+  - **Dynamic Real-Time Valuation Modeling**: Automatically recalculates **Forward P/E**, **PEG Ratio**, and **Fair Value Upside %** in real time as the live market price moves.
+  - **Constituent Leaders Real-Time Ledger**: All constituent stock chips in sector cards display real-time live prices and day change % in parallel.
+  - **Live Sync & On-Demand Refresh**: Dedicated `Live Sync` button (`#sectorLiveSyncBtn`) with spinning indicator to refresh real-time quotes on demand anytime.
+- **Constituent Leaders & Direct Analysis**: Displays constituent stock chips with individual live prices, day change, and one-click navigation to immediately analyze any stock.
 
 ---
 

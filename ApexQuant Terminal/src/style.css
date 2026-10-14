@@ -2168,6 +2168,17 @@ input[type="range"]::-webkit-slider-thumb:hover {
   font-size: 0.78rem;
 }
 
+.sector-stock-pill .stk-live-price {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--cyan-primary);
+}
+
+.sector-stock-pill .stk-live-change {
+  font-size: 0.70rem;
+  font-weight: 700;
+}
+
 .sector-stock-pill .stk-ytd {
   font-size: 0.72rem;
   color: #10b981;
@@ -2407,6 +2418,59 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 .quant-ytd {
   font-size: 0.76rem;
+}
+
+.quant-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.4px;
+  font-family: var(--font-mono);
+}
+
+.quant-live-badge.is-live {
+  background: rgba(16, 185, 129, 0.16);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.quant-live-badge.is-syncing {
+  background: rgba(56, 189, 248, 0.16);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.quant-live-price-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quant-day-change {
+  font-size: 0.76rem;
+  font-weight: 700;
+  margin-top: 1px;
+}
+
+.live-flash {
+  animation: liveFlashHighlight 0.9s ease-out;
+}
+
+@keyframes liveFlashHighlight {
+  0% { color: #00f2fe; text-shadow: 0 0 10px rgba(0, 242, 254, 0.8); }
+  100% { color: inherit; text-shadow: none; }
+}
+
+.spin-animation {
+  animation: spinContinuous 1s linear infinite;
+}
+
+@keyframes spinContinuous {
+  100% { transform: rotate(360deg); }
 }
 
 .quant-metrics-grid {

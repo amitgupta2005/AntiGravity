@@ -857,8 +857,16 @@
               <button class="filter-chip" data-showcase-market="NSE">NSE India 🇮🇳</button>
               <button class="filter-chip" data-showcase-market="US">US Equities 🇺🇸</button>
             </div>
-            <div class="showcase-filter-hint">
-              <span class="text-dim" style="font-size: 0.75rem;"><i data-lucide="filter" class="inline-icon" style="width: 12px; height: 12px;"></i> Filtering Top 3 Quant Picks by selected market</span>
+            <div class="showcase-live-sync-wrap" style="display: flex; align-items: center; gap: 10px;">
+              <div class="live-status-pill" id="sectorLiveFeedStatus" title="Streaming real-time stock prices from Yahoo Finance query API">
+                <span class="pulse-dot"></span>
+                <span class="live-label">YAHOO FINANCE LIVE</span>
+                <span id="sectorLiveTimestamp" class="live-time-text">Real-Time</span>
+              </div>
+              <button id="sectorLiveSyncBtn" class="btn btn-outline btn-sm" title="Refresh Live Real-Time Sector Quotes">
+                <i data-lucide="refresh-cw" id="sectorRefreshIcon" class="inline-icon"></i>
+                <span>Live Sync</span>
+              </button>
             </div>
           </div>
 

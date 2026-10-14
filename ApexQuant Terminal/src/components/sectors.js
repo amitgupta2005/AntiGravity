@@ -1820,6 +1820,214 @@ export const SECTORS_DATA = [
   }
 ];
 
+
+let currentUniverse = {};
+const liveQuotesCache = new Map();
+
+/**
+ * Format currency price based on exchange and value
+ */
+export function formatStockPrice(price, isINR) {
+  const sym = isINR ? '₹' : '$';
+  return `${sym}${price.toLocaleString(isINR ? 'en-IN' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/**
+ * Get effective stock data combining static quant model with live Yahoo Finance streaming data
+ */
+export function getEffectiveStockData(stock) {
+  const ticker = stock.ticker;
+  const uni = currentUniverse && currentUniverse[ticker];
+  const cached = liveQuotesCache.get(ticker);
+
+  const isINR = stock.marketType === 'NSE' || ticker.endsWith('.NS') || ticker.endsWith('.BO') || (stock.market && stock.market.includes('NSE'));
+  const currSym = isINR ? '₹' : '$';
+
+  let livePrice = null;
+  let dayChange = null;
+  let dayChangePercent = null;
+  let isRealtime = false;
+
+  if (cached && cached.price) {
+    livePrice = cached.price;
+    dayChange = cached.change;
+    dayChangePercent = cached.changePercent;
+    isRealtime = true;
+  } else if (uni && uni.price) {
+    livePrice = typeof uni.price === 'number' ? uni.price : parseFloat(String(uni.price).replace(/[^0-9.]/g, ''));
+    dayChange = uni.change ?? 0;
+    dayChangePercent = uni.changePercent ?? 0;
+    isRealtime = Boolean(uni.isRealtime || uni.lastUpdatedTimestamp);
+  }
+
+  const initialPrice = parseFloat(String(stock.price).replace(/[^0-9.]/g, '')) || 100;
+  const activePrice = livePrice !== null ? livePrice : initialPrice;
+  const formattedPrice = formatStockPrice(activePrice, isINR);
+
+  // Dynamic Valuation Calculations using live market price
+  const estimatedEPS = initialPrice / (stock.pe || 25);
+  const livePE = Number((activePrice / (estimatedEPS || 1)).toFixed(1));
+  const livePEG = Number((livePE / (stock.growth || 20)).toFixed(2));
+  const fairValueNum = parseFloat(String(stock.fairValue).replace(/[^0-9.]/g, '')) || (activePrice * 1.2);
+  const liveUpside = Number((((fairValueNum - activePrice) / activePrice) * 100).toFixed(1));
+
+  return {
+    ...stock,
+    activePrice,
+    formattedPrice,
+    dayChange,
+    dayChangePercent,
+    isRealtime,
+    livePE,
+    livePEG,
+    liveUpside,
+    currSym,
+    isINR
+  };
+}
+
+/**
+ * Fetch real-time live stock quote from Yahoo Finance query proxy
+ */
+export async function fetchLiveQuoteForTicker(ticker) {
+  if (!ticker) return null;
+  let queryTicker = ticker;
+  if (ticker === 'TATAMOTORS.NS') queryTicker = 'TMCV.NS';
+
+  try {
+    const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:5173';
+    const res = await fetch(`${baseUrl}/api/yahoo/chart/${encodeURIComponent(queryTicker)}?range=5d&interval=1d`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const meta = data?.chart?.result?.[0]?.meta;
+    if (!meta || meta.regularMarketPrice === undefined) return null;
+
+    const isINR = meta.currency === 'INR' || ticker.endsWith('.NS') || ticker.endsWith('.BO');
+    const price = Number(meta.regularMarketPrice.toFixed(2));
+    const prevClose = meta.chartPreviousClose || price;
+    const change = Number((meta.fulldayChange ?? (price - prevClose)).toFixed(2));
+    const changePercent = Number((meta.regularMarketChangePercent ?? ((change / prevClose) * 100)).toFixed(2));
+
+    const quote = {
+      ticker,
+      price,
+      change,
+      changePercent,
+      prevClose,
+      isINR,
+      currency: meta.currency || (isINR ? 'INR' : 'USD'),
+      currencySymbol: isINR ? '₹' : '$',
+      timestamp: Date.now()
+    };
+
+    liveQuotesCache.set(ticker, quote);
+    if (currentUniverse && currentUniverse[ticker]) {
+      currentUniverse[ticker] = {
+        ...currentUniverse[ticker],
+        price,
+        change,
+        changePercent,
+        isRealtime: true
+      };
+    }
+
+    return quote;
+  } catch (err) {
+    console.warn(`Real-time quote fetch error for ${ticker}:`, err);
+    return null;
+  }
+}
+
+/**
+ * Batch-fetch live quotes in parallel with immediate callback updates
+ */
+export async function batchFetchLiveQuotes(tickers, onUpdate) {
+  if (!tickers || !tickers.length) return;
+  const uniqueTickers = [...new Set(tickers)];
+  const promises = uniqueTickers.map(async (t) => {
+    const quote = await fetchLiveQuoteForTicker(t);
+    if (quote && onUpdate) {
+      onUpdate(quote);
+    }
+    return quote;
+  });
+  return Promise.allSettled(promises);
+}
+
+/**
+ * Update Quant Stock Card in DOM with Live Stream Quote
+ */
+function updateQuantStockCardDOM(quote, stock) {
+  const isINR = quote.isINR;
+  const formattedPrice = formatStockPrice(quote.price, isINR);
+
+  // 1. Update Price
+  const elPrice = document.getElementById(`quant-price-${stock.ticker}`);
+  if (elPrice) {
+    elPrice.textContent = formattedPrice;
+    elPrice.classList.add('live-flash');
+    setTimeout(() => elPrice.classList.remove('live-flash'), 1000);
+  }
+
+  // 2. Update Day Change
+  const elChange = document.getElementById(`quant-change-${stock.ticker}`);
+  if (elChange) {
+    const isPos = quote.change >= 0;
+    elChange.textContent = `${isPos ? '+' : ''}${quote.change.toFixed(2)} (${isPos ? '+' : ''}${quote.changePercent.toFixed(2)}%)`;
+    elChange.className = `quant-day-change font-mono ${isPos ? 'text-emerald' : 'text-red'}`;
+  }
+
+  // 3. Update Live Badge
+  const elBadge = document.getElementById(`quant-live-badge-${stock.ticker}`);
+  if (elBadge) {
+    elBadge.className = 'quant-live-badge is-live';
+    elBadge.innerHTML = '<span class="pulse-dot"></span> LIVE';
+  }
+
+  // 4. Update Dynamic Valuation Metrics
+  const initialPrice = parseFloat(String(stock.price).replace(/[^0-9.]/g, '')) || 100;
+  const estimatedEPS = initialPrice / (stock.pe || 25);
+  const livePE = Number((quote.price / (estimatedEPS || 1)).toFixed(1));
+  const livePEG = Number((livePE / (stock.growth || 20)).toFixed(2));
+  const fairValueNum = parseFloat(String(stock.fairValue).replace(/[^0-9.]/g, '')) || (quote.price * 1.2);
+  const liveUpside = Number((((fairValueNum - quote.price) / quote.price) * 100).toFixed(1));
+  const isGarp = livePEG <= 1.0;
+
+  const elPe = document.getElementById(`quant-pe-${stock.ticker}`);
+  if (elPe) elPe.textContent = `${livePE}x`;
+
+  const elPeg = document.getElementById(`quant-peg-${stock.ticker}`);
+  if (elPeg) {
+    const garpBadge = isGarp 
+      ? '<span class="ob-ratio-pill ratio-green" title="Peter Lynch GARP Qualified (PEG < 1.0)"><i data-lucide="check" class="inline-icon" style="width:11px;height:11px;"></i> PEG < 1.0 GARP</span>'
+      : '<span class="ob-ratio-pill ratio-neutral">Growth Multiple</span>';
+    elPeg.innerHTML = `${livePEG} ${garpBadge}`;
+    elPeg.className = `q-val font-mono ${isGarp ? 'text-emerald' : 'text-amber'}`;
+  }
+
+  const elFair = document.getElementById(`quant-fair-${stock.ticker}`);
+  if (elFair) {
+    elFair.textContent = `${stock.fairValue} (${liveUpside >= 0 ? '+' : ''}${liveUpside}%)`;
+  }
+}
+
+/**
+ * Update Constituent Leader Pill in DOM with Live Stream Quote
+ */
+function updateLeaderPillDOM(quote) {
+  const elPrice = document.getElementById(`pill-price-${quote.ticker}`);
+  if (elPrice) {
+    elPrice.textContent = formatStockPrice(quote.price, quote.isINR);
+  }
+
+  const elChange = document.getElementById(`pill-change-${quote.ticker}`);
+  if (elChange) {
+    const isPos = quote.changePercent >= 0;
+    elChange.textContent = `${isPos ? '+' : ''}${quote.changePercent.toFixed(1)}%`;
+    elChange.className = `stk-live-change font-mono ${isPos ? 'text-emerald' : 'text-red'}`;
+  }
+}
+
 /**
  * Filter & Sort Sectors Data
  * Defaults strictly to YTD Descending as requested
@@ -1838,9 +2046,9 @@ export function getSortedFilteredSectors(sortMode = 'ytd_desc', marketFilter = '
   list.sort((a, b) => {
     switch (sortMode) {
       case 'ytd_desc':
-        return b.ytd - a.ytd; // Highest positive YTD first
+        return b.ytd - a.ytd;
       case 'ytd_asc':
-        return a.ytd - b.ytd; // Lowest / negative YTD first
+        return a.ytd - b.ytd;
       case 'name_asc':
         return a.name.localeCompare(b.name);
       case 'mcap_desc': {
@@ -1860,6 +2068,7 @@ export function getSortedFilteredSectors(sortMode = 'ytd_desc', marketFilter = '
  * Main Render Function for Sectors Dashboard
  */
 export function renderSectorsDashboard(universe, onSelectStock, isDarkMode) {
+  currentUniverse = universe || {};
   const sortedSectors = getSortedFilteredSectors(currentSortMode, currentMarketFilter);
   const colors = getThemeColors(isDarkMode);
 
@@ -1873,17 +2082,17 @@ export function renderSectorsDashboard(universe, onSelectStock, isDarkMode) {
 
   // 2. Render Ranked Horizontal Bar Chart
   renderSectorsRankedChart(sortedSectors, colors, isDarkMode, (clickedSectorId) => {
-    selectSector(clickedSectorId, onSelectStock);
+    selectSector(clickedSectorId, onSelectStock, sortedSectors);
     const panel = document.getElementById('sectorShowcasePanel');
     if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
-  // 3. Render Top 3 Quant Stocks Showcase for Selected Sector
+  // 3. Render Top 3 Quant Stocks Showcase for Selected Sector with Real-Time Pricing
   renderSelectedSectorQuantPicks(selectedSectorId, onSelectStock, sortedSectors);
 
-  // 4. Render Sector Detail Cards Grid
+  // 4. Render Sector Detail Cards Grid with Real-Time Constituent Prices
   renderSectorsCardsGrid(sortedSectors, onSelectStock, (clickedSectorId) => {
-    selectSector(clickedSectorId, onSelectStock);
+    selectSector(clickedSectorId, onSelectStock, sortedSectors);
     const panel = document.getElementById('sectorShowcasePanel');
     if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
@@ -1918,7 +2127,7 @@ export function selectSector(sectorId, onSelectStock, sortedSectors = SECTORS_DA
 }
 
 /**
- * Render Top 3 Quant-Screened Leader Stocks for the selected sector
+ * Render Top 3 Quant-Screened Leader Stocks for the selected sector with real-time streaming quotes
  */
 function renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors) {
   const container = document.getElementById('topThreeQuantContainer');
@@ -1943,9 +2152,9 @@ function renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors) 
   // Filter candidate stocks by currentMarketFilter
   let pool = sector.topQuantStocks || [];
   if (currentMarketFilter === 'NSE') {
-    pool = pool.filter(s => s.marketType === 'NSE' || s.ticker.endsWith('.NS') || s.market.includes('NSE'));
+    pool = pool.filter(s => s.marketType === 'NSE' || s.ticker.endsWith('.NS') || (s.market && s.market.includes('NSE')));
   } else if (currentMarketFilter === 'US') {
-    pool = pool.filter(s => s.marketType === 'US' || (!s.ticker.endsWith('.NS') && !s.market.includes('NSE')));
+    pool = pool.filter(s => s.marketType === 'US' || (!s.ticker.endsWith('.NS') && !(s.market && s.market.includes('NSE'))));
   }
 
   // Sort candidates by Quant Score + Expected CAGR descending
@@ -1955,7 +2164,8 @@ function renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors) 
   const quantStocks = pool.slice(0, 3);
 
   container.innerHTML = quantStocks.map((stock, idx) => {
-    const isGarp = stock.peg <= 1.0;
+    const effective = getEffectiveStockData(stock);
+    const isGarp = effective.livePEG <= 1.0;
     const garpBadge = isGarp 
       ? '<span class="ob-ratio-pill ratio-green" title="Peter Lynch GARP Qualified (PEG < 1.0)"><i data-lucide="check" class="inline-icon" style="width:11px;height:11px;"></i> PEG < 1.0 GARP</span>'
       : '<span class="ob-ratio-pill ratio-neutral">Growth Multiple</span>';
@@ -1964,6 +2174,12 @@ function renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors) 
       ? '<span class="ob-ratio-pill ratio-green" title="Contracted Backlog exceeds 1.0x Annual Revenue">✓ > 1.0x Coverage</span>'
       : '<span class="ob-ratio-pill ratio-neutral">Standard Coverage</span>';
 
+    const dayChangeStr = effective.dayChange !== null 
+      ? `${effective.dayChange >= 0 ? '+' : ''}${effective.dayChange.toFixed(2)} (${effective.dayChangePercent >= 0 ? '+' : ''}${effective.dayChangePercent.toFixed(2)}%)`
+      : 'Streaming Live...';
+
+    const changeClass = effective.dayChange !== null && effective.dayChange >= 0 ? 'text-emerald' : (effective.dayChange !== null ? 'text-red' : 'text-dim');
+
     return `
       <div class="quant-stock-card rank-${idx + 1}">
         <div class="quant-stock-card-header">
@@ -1971,9 +2187,14 @@ function renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors) 
             <i data-lucide="award" class="inline-icon" style="width: 14px; height: 14px;"></i>
             <span>#${idx + 1} Quant Pick</span>
           </div>
-          <span class="quant-score-badge ${stock.quantScore >= 92 ? 'score-elite' : 'score-high'}">
-            <i data-lucide="shield-check" class="inline-icon" style="width: 13px; height: 13px;"></i> ${stock.quantScore}/100 Score
-          </span>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span class="quant-live-badge ${effective.isRealtime ? 'is-live' : 'is-syncing'}" id="quant-live-badge-${stock.ticker}">
+              <span class="pulse-dot"></span> ${effective.isRealtime ? 'LIVE' : 'SYNCING'}
+            </span>
+            <span class="quant-score-badge ${stock.quantScore >= 92 ? 'score-elite' : 'score-high'}">
+              <i data-lucide="shield-check" class="inline-icon" style="width: 13px; height: 13px;"></i> ${stock.quantScore}/100 Score
+            </span>
+          </div>
         </div>
 
         <div class="quant-stock-title-row">
@@ -1984,8 +2205,11 @@ function renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors) 
             <p class="quant-stock-name">${stock.name}</p>
           </div>
           <div class="quant-stock-price-box">
-            <span class="quant-price font-mono">${stock.price}</span>
-            <span class="quant-ytd font-mono font-bold text-emerald">+${stock.ytd}% YTD</span>
+            <div class="quant-live-price-row">
+              <span class="quant-price font-mono" id="quant-price-${stock.ticker}">${effective.formattedPrice}</span>
+            </div>
+            <span class="quant-day-change font-mono ${changeClass}" id="quant-change-${stock.ticker}">${dayChangeStr}</span>
+            <span class="quant-ytd font-mono font-bold text-dim" style="font-size: 0.72rem;">YTD +${stock.ytd}%</span>
           </div>
         </div>
 
@@ -1995,16 +2219,16 @@ function renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors) 
             <span class="q-val text-cyan font-mono">+${stock.cagr}%</span>
           </div>
           <div class="quant-kpi-cell">
-            <span class="q-label">Forward P/E</span>
-            <span class="q-val font-mono">${stock.pe}x</span>
+            <span class="q-label">Forward P/E (Live)</span>
+            <span class="q-val font-mono" id="quant-pe-${stock.ticker}">${effective.livePE}x</span>
           </div>
           <div class="quant-kpi-cell ${isGarp ? 'highlight-garp' : ''}">
-            <span class="q-label">PEG Ratio</span>
-            <span class="q-val font-mono ${isGarp ? 'text-emerald' : 'text-amber'}">${stock.peg} ${garpBadge}</span>
+            <span class="q-label">PEG Ratio (Live)</span>
+            <span class="q-val font-mono ${isGarp ? 'text-emerald' : 'text-amber'}" id="quant-peg-${stock.ticker}">${effective.livePEG} ${garpBadge}</span>
           </div>
           <div class="quant-kpi-cell">
             <span class="q-label">Peter Lynch Fair Value</span>
-            <span class="q-val text-emerald font-mono">${stock.fairValue} (+${stock.upside}%)</span>
+            <span class="q-val text-emerald font-mono" id="quant-fair-${stock.ticker}">${stock.fairValue} (${effective.liveUpside >= 0 ? '+' : ''}${effective.liveUpside}%)</span>
           </div>
           <div class="quant-kpi-cell">
             <span class="q-label">EPS Growth Rate</span>
@@ -2037,6 +2261,15 @@ function renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors) 
         onSelectStock(ticker);
       }
     });
+  });
+
+  // Asynchronously fetch live quotes for displayed quant stocks in background
+  const displayedTickers = quantStocks.map(s => s.ticker);
+  batchFetchLiveQuotes(displayedTickers, (quote) => {
+    const matchedStock = quantStocks.find(s => s.ticker === quote.ticker);
+    if (matchedStock) {
+      updateQuantStockCardDOM(quote, matchedStock);
+    }
   });
 }
 
@@ -2189,11 +2422,9 @@ function renderSectorsRankedChart(sectors, colors, isDarkMode, onBarClick) {
               const s = sorted[idx];
               const leaderList = s.leaders.map(l => `${l.ticker} (+${l.ytd}%)`).join(', ');
               return [
-                `1-Month Momentum: ${s.m1 > 0 ? '+' : ''}${s.m1}%`,
-                `1-Year Change: +${s.y1}%`,
-                `Market Cap: ${s.mcap} • Avg P/E: ${s.avgPe}x`,
-                `Top Leaders: ${leaderList}`,
-                '💡 Click bar to load Top 3 Quant Picks'
+                `Market Cap: ${s.mcap}`,
+                `Breadth: ${s.breadth}% Green`,
+                `Leaders: ${leaderList}`
               ];
             }
           }
@@ -2229,7 +2460,7 @@ function renderSectorsRankedChart(sectors, colors, isDarkMode, onBarClick) {
 }
 
 /**
- * Render Sector Detail Cards Grid
+ * Render Sector Detail Cards Grid with Real-Time Stock Prices
  */
 function renderSectorsCardsGrid(sectors, onSelectStock, onSectorClick) {
   const container = document.getElementById('sectorsGridContainer');
@@ -2241,12 +2472,34 @@ function renderSectorsCardsGrid(sectors, onSelectStock, onSectorClick) {
     const rankClass = idx === 0 ? 'sector-rank-badge rank-1' : idx === 1 ? 'sector-rank-badge rank-2' : idx === 2 ? 'sector-rank-badge rank-3' : 'sector-rank-badge';
     const isSelected = sec.id === selectedSectorId;
 
-    const stockPillsHtml = sec.leaders.map(stk => `
-      <button class="sector-stock-pill" data-ticker="${stk.ticker}" title="Click to analyze ${stk.name}">
-        <span class="stk-ticker">${stk.ticker}</span>
-        <span class="stk-ytd font-mono">+${stk.ytd}%</span>
-      </button>
-    `).join('');
+    const stockPillsHtml = sec.leaders.map(stk => {
+      const cached = liveQuotesCache.get(stk.ticker);
+      const uni = currentUniverse && currentUniverse[stk.ticker];
+      let priceText = '';
+      let changeText = `+${stk.ytd}%`;
+      let changeClass = 'text-emerald';
+
+      if (cached && cached.price) {
+        priceText = formatStockPrice(cached.price, cached.isINR);
+        const isPos = cached.changePercent >= 0;
+        changeText = `${isPos ? '+' : ''}${cached.changePercent.toFixed(1)}%`;
+        changeClass = isPos ? 'text-emerald' : 'text-red';
+      } else if (uni && uni.price) {
+        const isINR = stk.isINR || stk.ticker.endsWith('.NS');
+        priceText = formatStockPrice(uni.price, isINR);
+        const isPos = (uni.changePercent ?? 0) >= 0;
+        changeText = `${isPos ? '+' : ''}${(uni.changePercent ?? 0).toFixed(1)}%`;
+        changeClass = isPos ? 'text-emerald' : 'text-red';
+      }
+
+      return `
+        <button class="sector-stock-pill" data-ticker="${stk.ticker}" title="Click to analyze ${stk.name} in Terminal">
+          <span class="stk-ticker">${stk.ticker}</span>
+          <span class="stk-live-price font-mono" id="pill-price-${stk.ticker}">${priceText}</span>
+          <span class="stk-live-change font-mono ${changeClass}" id="pill-change-${stk.ticker}">${changeText}</span>
+        </button>
+      `;
+    }).join('');
 
     return `
       <div class="sector-card ${isSelected ? 'selected-sector' : ''}" data-sector-id="${sec.id}">
@@ -2292,7 +2545,7 @@ function renderSectorsCardsGrid(sectors, onSelectStock, onSectorClick) {
         </div>
 
         <div class="sector-leaders-section">
-          <span class="leaders-label">Top Constituent Leaders (Click to Analyze):</span>
+          <span class="leaders-label">Top Constituent Leaders (Real-Time Quotes):</span>
           <div class="sector-leaders-chips">
             ${stockPillsHtml}
           </div>
@@ -2339,10 +2592,16 @@ function renderSectorsCardsGrid(sectors, onSelectStock, onSectorClick) {
       }
     });
   });
+
+  // Asynchronously fetch live prices for all visible sector leader pills
+  const allLeaderTickers = sectors.flatMap(s => s.leaders.map(l => l.ticker));
+  batchFetchLiveQuotes(allLeaderTickers, (quote) => {
+    updateLeaderPillDOM(quote);
+  });
 }
 
 /**
- * Setup Controls for Toolbar (Filter & Sort) and Showcase Selector
+ * Setup Controls for Toolbar (Filter & Sort), Showcase Selector, and Live Sync
  */
 let controlsInitialized = false;
 function setupSectorsControls(universe, onSelectStock, isDarkMode, sortedSectors) {
@@ -2400,6 +2659,29 @@ function setupSectorsControls(universe, onSelectStock, isDarkMode, sortedSectors
   if (showcaseSelect) {
     showcaseSelect.addEventListener('change', (e) => {
       selectSector(e.target.value, onSelectStock, sortedSectors);
+    });
+  }
+
+  // 5. Live Quote Refresh Button
+  const sectorLiveSyncBtn = document.getElementById('sectorLiveSyncBtn');
+  if (sectorLiveSyncBtn) {
+    sectorLiveSyncBtn.addEventListener('click', async () => {
+      const icon = document.getElementById('sectorRefreshIcon');
+      if (icon) icon.classList.add('spin-animation');
+
+      // Clear cached live quotes to force network fetch
+      liveQuotesCache.clear();
+      renderSectorsDashboard(universe, onSelectStock, isDarkMode);
+
+      const timeEl = document.getElementById('sectorLiveTimestamp');
+      if (timeEl) {
+        const now = new Date();
+        timeEl.textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      }
+
+      setTimeout(() => {
+        if (icon) icon.classList.remove('spin-animation');
+      }, 1000);
     });
   }
 }
