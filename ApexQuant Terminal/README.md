@@ -54,10 +54,11 @@ ApexQuant Terminal is an institutional-grade, responsive quantitative equity ana
 - Streaming top market indices ticker tape: **NIFTY 50**, **SENSEX**, **S&P 500**, and **NASDAQ Composite**.
 
 ### 9. 📚 Real-Time Order Book & 10-Year Order History (Last 5 Years & Next 5 Years)
-- **10-Year Order History Bar Graph**: Interactive Chart.js grouped bar visualization comparing **Order Book Backlog**, **New Order Inflows**, and **Executed Revenue** across 2020–2024 (Historical) and 2025–2029 (Forward Projections).
+- **10-Year Order History Dual-Axis Chart**: Grouped bar visualization comparing **Order Book Backlog**, **New Order Inflows**, and **Executed Revenue** alongside a dedicated secondary right-axis **YoY Growth (%)** line with on-chart floating percentage badges across 2020–2024 (Historical) and 2025–2029 (Forward Projections).
+- **YoY Growth Display in %**: Displayed on the 10-year chart with interactive data points, floating percentage labels (`+XX.X%`), interactive tooltips, and in the **10-Year Order Book Ledger Table** as styled quantitative pill badges.
 - **Order Book to Revenue Ratio**: Dedicated KPI metric and ledger column measuring contracted backlog coverage relative to annual revenue. **Automatically marked in green when $> 1.0\times$** (indicating contracted multi-year revenue visibility).
 - **KPI Metrics**: Total Current Backlog, Order Book to Revenue Ratio ($Backlog \div Revenue$), Book-to-Bill Ratio ($Inflows \div Revenue$), Revenue Visibility (Years of execution locked in), and 5-Year Forward Backlog CAGR.
-- **10-Year Order Book Ledger Table**: Full multi-column data table including Year, Period, Order Book, Inflows, Executed Revenue, OB / Rev Ratio (green pills when $> 1.0\times$), Book-to-Bill, and YoY growth.
+- **10-Year Order Book Ledger Table**: Full multi-column data table including Year, Period, Order Book, Inflows, Executed Revenue, OB / Rev Ratio (green pills when $> 1.0\times$), Book-to-Bill, and YoY Growth (%).
 - **Real-Time Level 2 Market Depth (DOM)**: Live depth ladder displaying top bids, top asks, bid-ask spread, and order flow imbalance ratio.
 - **Commercial Contract Segments**: Revenue backlog breakdown across key business units and high-growth verticals.
 

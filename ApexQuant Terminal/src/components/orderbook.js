@@ -55,7 +55,7 @@ export function getOrGenerateOrderBook(stock) {
     const inflows = Number((ttmInflows * factor * (1 + (idx * 0.04))).toFixed(1));
     const b2b = Number((inflows / execution).toFixed(2));
     const obToRev = Number((backlog / execution).toFixed(2));
-    const prevBacklog = idx > 0 ? (ttmBacklog * histFactors[idx - 1]) : (backlog * 0.85);
+    const prevBacklog = idx > 0 ? (ttmBacklog * histFactors[idx - 1]) : (backlog / 1.15);
     const growth = Number((((backlog - prevBacklog) / prevBacklog) * 100).toFixed(1));
 
     return {
@@ -66,7 +66,7 @@ export function getOrGenerateOrderBook(stock) {
       execution,
       bookToBill: b2b,
       obToRev,
-      growth: idx === 0 ? 14.5 : growth
+      growth
     };
   });
 
@@ -80,10 +80,10 @@ export function getOrGenerateOrderBook(stock) {
     const g = Math.max(0.08, growthRate * decay);
     lastRev = Number((lastRev * (1 + g)).toFixed(1));
     const inflows = Number((lastRev * 1.26).toFixed(1));
+    const prevBacklog = lastBacklog;
     lastBacklog = Number((lastBacklog + (inflows - lastRev * 0.95)).toFixed(1));
     const b2b = Number((inflows / lastRev).toFixed(2));
     const obToRev = Number((lastBacklog / lastRev).toFixed(2));
-    const prevBacklog = idx === 0 ? ttmBacklog : (lastBacklog / (1 + g));
     const yoy = Number((((lastBacklog - prevBacklog) / prevBacklog) * 100).toFixed(1));
 
     return {
@@ -338,9 +338,75 @@ function renderOrderHistoryChart(ob, colors, isDarkMode) {
           borderWidth: 1.5,
           borderRadius: 4,
           borderSkipped: false
+        },
+        {
+          type: 'line',
+          label: 'YoY Growth (%)',
+          data: timeline.map(item => item.growth),
+          yAxisID: 'y1',
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+          borderWidth: 2.5,
+          pointBackgroundColor: '#f59e0b',
+          pointBorderColor: isDarkMode ? '#0f172a' : '#ffffff',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7.5,
+          tension: 0.35,
+          order: 0
         }
       ]
     },
+    plugins: [
+      {
+        id: 'yoyGrowthDataLabels',
+        afterDatasetsDraw(chart) {
+          const { ctx, chartArea } = chart;
+          const yoyMeta = chart.getDatasetMeta(3);
+          if (!yoyMeta || !yoyMeta.data || !chartArea) return;
+
+          ctx.save();
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.font = 'bold 10px "JetBrains Mono", monospace';
+
+          yoyMeta.data.forEach((point, idx) => {
+            const growth = timeline[idx].growth;
+            const text = `${growth > 0 ? '+' : ''}${growth}%`;
+            const xPos = point.x;
+            const yPos = Math.max(chartArea.top + 16, point.y - 8);
+
+            const textMetrics = ctx.measureText(text);
+            const textWidth = textMetrics.width;
+            const padX = 4;
+            const padY = 2;
+            const bgX = xPos - textWidth / 2 - padX;
+            const bgY = yPos - 11 - padY;
+            const bgW = textWidth + padX * 2;
+            const bgH = 13 + padY * 2;
+
+            ctx.fillStyle = isDarkMode ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.95)';
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 1;
+
+            if (ctx.roundRect) {
+              ctx.beginPath();
+              ctx.roundRect(bgX, bgY, bgW, bgH, 3);
+              ctx.fill();
+              ctx.stroke();
+            } else {
+              ctx.fillRect(bgX, bgY, bgW, bgH);
+              ctx.strokeRect(bgX, bgY, bgW, bgH);
+            }
+
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillText(text, xPos, yPos);
+          });
+
+          ctx.restore();
+        }
+      }
+    ],
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -378,13 +444,16 @@ function renderOrderHistoryChart(ob, colors, isDarkMode) {
               const obToRev = item.obToRev != null ? item.obToRev : Number((item.backlog / (item.execution || 1)).toFixed(2));
               const isGreen = obToRev > 1.0;
               return [
+                `📈 YoY Backlog Growth: +${item.growth}%`,
                 `Order Book / Rev: ${obToRev.toFixed(2)}x ${isGreen ? '★ (> 1.0 Green Target)' : ''}`,
-                `Book-to-Bill Ratio: ${item.bookToBill}x`,
-                `YoY Backlog Growth: +${item.growth}%`
+                `Book-to-Bill Ratio: ${item.bookToBill}x`
               ];
             },
             label: (ctx) => {
               const val = ctx.raw;
+              if (ctx.dataset.yAxisID === 'y1') {
+                return ` ${ctx.dataset.label}: +${val}%`;
+              }
               return ` ${ctx.dataset.label}: ${formatValue(val, ob.unit, ob.curr)}`;
             }
           }
@@ -399,11 +468,33 @@ function renderOrderHistoryChart(ob, colors, isDarkMode) {
           }
         },
         y: {
+          position: 'left',
           grid: { color: colors.grid },
           ticks: {
             color: colors.text,
             callback: (val) => formatValue(val, ob.unit, ob.curr),
             font: { family: 'JetBrains Mono', size: 10 }
+          },
+          title: {
+            display: true,
+            text: `Order Book & Execution (${ob.unit})`,
+            color: colors.textMuted,
+            font: { family: 'Inter', size: 11, weight: 600 }
+          }
+        },
+        y1: {
+          position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: {
+            color: '#f59e0b',
+            callback: (val) => `${val > 0 ? '+' : ''}${val}%`,
+            font: { family: 'JetBrains Mono', size: 10, weight: 600 }
+          },
+          title: {
+            display: true,
+            text: 'YoY Growth (%)',
+            color: '#f59e0b',
+            font: { family: 'Inter', size: 11, weight: 600 }
           }
         }
       }
@@ -433,6 +524,12 @@ function renderOrderBookTable(ob) {
       ? `<span class="ob-ratio-pill ratio-green" title="Order Book to Revenue > 1.0 (Backlog covers > 1 year of revenue)">✓ ${obToRev.toFixed(2)}x</span>`
       : `<span class="ob-ratio-pill ratio-neutral" title="Order Book to Revenue ≤ 1.0">${obToRev.toFixed(2)}x</span>`;
 
+    const growthBadge = `
+      <span class="ob-growth-pill ${row.growth >= 16 ? 'growth-high' : 'growth-normal'}" title="YoY Order Book Backlog Growth: +${row.growth}%">
+        <i data-lucide="trending-up" class="inline-icon" style="width: 12px; height: 12px;"></i> +${row.growth}%
+      </span>
+    `;
+
     return `
       <tr>
         <td class="font-mono font-bold">${row.year}</td>
@@ -442,7 +539,7 @@ function renderOrderBookTable(ob) {
         <td class="font-mono">${formatValue(row.execution, ob.unit, ob.curr)}</td>
         <td style="text-align: right;">${obRevBadge}</td>
         <td class="font-mono font-bold ${b2bClass}">${row.bookToBill}x</td>
-        <td class="font-mono text-emerald">+${row.growth}%</td>
+        <td style="text-align: right;">${growthBadge}</td>
       </tr>
     `;
   }).join('');
