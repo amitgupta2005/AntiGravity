@@ -259,6 +259,10 @@
         <i data-lucide="layers" class="inline-icon"></i>
         <span>Order Book & History</span>
       </button>
+      <button class="tab-btn" data-tab="tab-sectors" role="tab" aria-selected="false">
+        <i data-lucide="layout-grid" class="inline-icon"></i>
+        <span>Sectors Dashboard (YTD)</span>
+      </button>
       <button class="tab-btn" data-tab="tab-sensitivity" role="tab" aria-selected="false">
         <i data-lucide="grid" class="inline-icon"></i>
         <span>Lynch GARP & Sensitivity Matrix</span>
@@ -745,6 +749,94 @@
                 <!-- Populated by JS -->
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: Sectors Dashboard (All Sectors YTD Performance) -->
+      <section id="tab-sectors" class="tab-pane" role="tabpanel">
+        <!-- Top Metrics Row -->
+        <div class="sectors-kpi-grid">
+          <div class="sectors-kpi-card highlight-leader">
+            <span class="sector-kpi-label"><i data-lucide="award" class="inline-icon text-cyan"></i> Top Performing Sector</span>
+            <span class="sector-kpi-val text-cyan" id="sectorTopName">Semiconductors & AI Hardware</span>
+            <span class="sector-kpi-sub text-emerald font-bold" id="sectorTopYtd">+64.8% YTD Leader</span>
+          </div>
+          <div class="sectors-kpi-card">
+            <span class="sector-kpi-label"><i data-lucide="trending-up" class="inline-icon text-emerald"></i> Median Sector YTD Return</span>
+            <span class="sector-kpi-val text-emerald" id="sectorMedianYtd">+22.8%</span>
+            <span class="sector-kpi-sub" id="sectorMedianSub">Across 12 tracked sectors</span>
+          </div>
+          <div class="sectors-kpi-card">
+            <span class="sector-kpi-label"><i data-lucide="activity" class="inline-icon text-blue"></i> Market Breadth</span>
+            <span class="sector-kpi-val text-blue" id="sectorBreadth">92%</span>
+            <span class="sector-kpi-sub" id="sectorBreadthSub">11 of 12 Sectors Positive YTD</span>
+          </div>
+          <div class="sectors-kpi-card">
+            <span class="sector-kpi-label"><i data-lucide="trending-down" class="inline-icon text-amber"></i> Laggard Sector</span>
+            <span class="sector-kpi-val text-amber" id="sectorLaggardName">Real Estate & Construction</span>
+            <span class="sector-kpi-sub text-red font-bold" id="sectorLaggardYtd">-2.8% YTD</span>
+          </div>
+        </div>
+
+        <!-- Controls & Filter Toolbar -->
+        <div class="sectors-toolbar">
+          <div class="sectors-filter-group">
+            <span class="toolbar-label"><i data-lucide="compass" class="inline-icon text-cyan"></i> Market Filter:</span>
+            <button class="filter-chip active" data-market-filter="ALL">All Sectors (Global 🌐)</button>
+            <button class="filter-chip" data-market-filter="NSE">NSE India 🇮🇳</button>
+            <button class="filter-chip" data-market-filter="US">US Equities 🇺🇸</button>
+          </div>
+          <div class="sectors-sort-group">
+            <span class="toolbar-label"><i data-lucide="arrow-down-up" class="inline-icon text-cyan"></i> Sort By:</span>
+            <select id="sectorSortSelect" class="sector-sort-select">
+              <option value="ytd_desc" selected>YTD Return (%) — High to Low (Descending)</option>
+              <option value="ytd_asc">YTD Return (%) — Low to High (Ascending)</option>
+              <option value="name_asc">Sector Name (A to Z)</option>
+              <option value="mcap_desc">Total Market Cap (High to Low)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Main Sector YTD Performance Bar Chart -->
+        <div class="panel-card" style="margin-top: 20px;">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">
+                <i data-lucide="bar-chart-2" class="inline-icon text-cyan"></i>
+                All Sectors YTD Return Heatmap & Ranking (Sorted Descending)
+              </h2>
+              <p class="panel-subtitle">
+                Year-To-Date (YTD) performance across all industry sectors. Ranked descending from highest alpha generator to laggards.
+              </p>
+            </div>
+            <div class="sector-chart-legend">
+              <span class="legend-badge-item"><span class="legend-dot" style="background: #10b981;"></span> Positive YTD (&gt; 0%)</span>
+              <span class="legend-badge-item"><span class="legend-dot" style="background: #ef4444;"></span> Negative YTD (&lt; 0%)</span>
+            </div>
+          </div>
+          <div class="sectors-chart-container">
+            <canvas id="sectorsBarChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Sector Breakdown Grid / Cards -->
+        <div class="panel-card" style="margin-top: 24px;">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title" style="font-size: 1.05rem;">
+                <i data-lucide="layout-grid" class="inline-icon text-emerald"></i>
+                Sector Detail Ledger & Top Stock Leaders
+              </h3>
+              <p class="panel-subtitle">
+                Click any constituent stock chip to load comprehensive quantitative analytics, EPS growth forecasts, and valuation models.
+              </p>
+            </div>
+            <span class="badge badge-neutral" id="sectorCountBadge">12 Sectors Tracked (Sorted by YTD)</span>
+          </div>
+
+          <div class="sectors-grid-wrap" id="sectorsGridContainer">
+            <!-- Populated dynamically by sectors.js -->
           </div>
         </div>
       </section>

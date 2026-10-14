@@ -62,6 +62,14 @@ ApexQuant Terminal is an institutional-grade, responsive quantitative equity ana
 - **Real-Time Level 2 Market Depth (DOM)**: Live depth ladder displaying top bids, top asks, bid-ask spread, and order flow imbalance ratio.
 - **Commercial Contract Segments**: Revenue backlog breakdown across key business units and high-growth verticals.
 
+### 10. 🌐 All Sectors Dashboard (Ranked by YTD Return Descending)
+- **Top Navigation Bar Tab**: Dedicated navigation tab giving instant access to broad market sector rotation and performance.
+- **Sorted by YTD Descending**: All 12 primary market sectors strictly ranked from top alpha generator (Semiconductors & AI Hardware $+64.8\%$) to laggards (Real Estate $-2.8\%$).
+- **Ranked Horizontal Bar Chart**: Interactive Chart.js visualization mapping sector returns in vibrant green ($> 0\%$) and red ($< 0\%$) with on-bar data badges.
+- **Top Sector KPI Metrics**: Top Performing Sector, Median Sector YTD Return, Market Breadth (% of sectors in the green), and Laggard Sector.
+- **Market Filters & Sorting Options**: Quick toggle between **All Sectors (Global 🌐)**, **NSE India 🇮🇳**, and **US Equities 🇺🇸**, with sorting by YTD Change, Name, or Market Cap.
+- **Constituent Leaders & Direct Analysis**: Displays top constituent stocks with individual YTD returns and one-click navigation to immediately analyze any stock.
+
 ---
 
 ## 📐 Mathematical & Quantitative Formulas

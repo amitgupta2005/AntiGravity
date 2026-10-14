@@ -34,7 +34,14 @@ import {
   ArrowDownUp,
   BookOpen,
   ListOrdered,
-  BarChart2
+  BarChart2,
+  LayoutGrid,
+  Award,
+  TrendingDown,
+  Building2,
+  Flame,
+  Shield,
+  Filter
 } from 'lucide';
 
 import { STOCKS_DATA } from './data/stocks.js';
@@ -49,6 +56,7 @@ import {
 import { updateAllCharts } from './components/charts.js';
 import { renderNewsFeed } from './components/news.js';
 import { renderOrderBook, updateOrderBookTheme } from './components/orderbook.js';
+import { renderSectorsDashboard } from './components/sectors.js';
 import { renderScreenerTable, setupScreenerControls } from './components/screener.js';
 import { setupCustomStockModal } from './components/customStockModal.js';
 import { 
@@ -113,7 +121,14 @@ function refreshIcons() {
       ArrowDownUp,
       BookOpen,
       ListOrdered,
-      BarChart2
+      BarChart2,
+      LayoutGrid,
+      Award,
+      TrendingDown,
+      Building2,
+      Flame,
+      Shield,
+      Filter
     }
   });
 }
@@ -152,6 +167,14 @@ function setupThemeEngine() {
       updateAllCharts(currentStock, isDark);
       updateOrderBookTheme(isDark);
     }
+
+    const activeTab = document.querySelector('.tab-btn.active')?.getAttribute('data-tab');
+    if (activeTab === 'tab-sectors') {
+      renderSectorsDashboard(state.universe, (t) => {
+        loadStockRealtime(t);
+        document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
+      }, isDark);
+    }
   };
 
   applyTheme(state.isDarkMode);
@@ -188,21 +211,28 @@ function setupTabNavigation() {
         targetPane.classList.add('active');
       }
 
-      const stock = state.universe[state.currentTicker];
-      if (stock) {
-        if (targetId === 'tab-technicals' || targetId === 'tab-fundamentals') {
-          updateAllCharts(stock, state.isDarkMode);
-        } else if (targetId === 'tab-orderbook') {
-          renderOrderBook(stock, state.isDarkMode);
-        } else if (targetId === 'tab-sensitivity') {
-          updateReturnModel(stock);
-        } else if (targetId === 'tab-news') {
-          renderNewsFeed(stock, state.newsFilter);
-        } else if (targetId === 'tab-screener') {
-          renderScreenerTable(state.universe, (t) => {
-            loadStockRealtime(t);
-            document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
-          }, state.currentTicker);
+      if (targetId === 'tab-sectors') {
+        renderSectorsDashboard(state.universe, (t) => {
+          loadStockRealtime(t);
+          document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
+        }, state.isDarkMode);
+      } else {
+        const stock = state.universe[state.currentTicker];
+        if (stock) {
+          if (targetId === 'tab-technicals' || targetId === 'tab-fundamentals') {
+            updateAllCharts(stock, state.isDarkMode);
+          } else if (targetId === 'tab-orderbook') {
+            renderOrderBook(stock, state.isDarkMode);
+          } else if (targetId === 'tab-sensitivity') {
+            updateReturnModel(stock);
+          } else if (targetId === 'tab-news') {
+            renderNewsFeed(stock, state.newsFilter);
+          } else if (targetId === 'tab-screener') {
+            renderScreenerTable(state.universe, (t) => {
+              loadStockRealtime(t);
+              document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
+            }, state.currentTicker);
+          }
         }
       }
 
