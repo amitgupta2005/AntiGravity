@@ -255,6 +255,10 @@
         <i data-lucide="bar-chart-3" class="inline-icon"></i>
         <span>EPS Growth & Fundamentals</span>
       </button>
+      <button class="tab-btn" data-tab="tab-orderbook" role="tab" aria-selected="false">
+        <i data-lucide="layers" class="inline-icon"></i>
+        <span>Order Book & History</span>
+      </button>
       <button class="tab-btn" data-tab="tab-sensitivity" role="tab" aria-selected="false">
         <i data-lucide="grid" class="inline-icon"></i>
         <span>Lynch GARP & Sensitivity Matrix</span>
@@ -573,6 +577,165 @@
               <div style="display: flex; justify-content: space-between; padding: 8px; background: var(--bg-card); border-radius: var(--radius-sm);">
                 <span style="color: var(--text-muted);">Price / Sales:</span>
                 <span class="font-mono" id="fundPriceSales">35.2x</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: Order Book & Backlog History (Last 5 Years & Next 5 Years) -->
+      <section id="tab-orderbook" class="tab-pane" role="tabpanel">
+        <!-- Top KPI Metrics Row -->
+        <div class="orderbook-kpi-grid">
+          <div class="orderbook-kpi-card highlight-orderbook">
+            <span class="ob-kpi-label"><i data-lucide="layers" class="inline-icon text-cyan"></i> Total Order Book Backlog</span>
+            <span class="ob-kpi-val text-cyan" id="obCurrentBacklog">₹54,200 Cr</span>
+            <span class="ob-kpi-sub" id="obBacklogGrowth">+21.4% YoY Expansion • All-Time High</span>
+          </div>
+          <div class="orderbook-kpi-card">
+            <span class="ob-kpi-label"><i data-lucide="trending-up" class="inline-icon text-emerald"></i> Book-to-Bill Ratio</span>
+            <span class="ob-kpi-val text-emerald" id="obBookToBill">1.28x</span>
+            <span class="ob-kpi-sub" id="obBookToBillStatus">★ Expanding Pipeline (> 1.0x)</span>
+          </div>
+          <div class="orderbook-kpi-card">
+            <span class="ob-kpi-label"><i data-lucide="clock" class="inline-icon text-amber"></i> Revenue Visibility</span>
+            <span class="ob-kpi-val text-amber" id="obRevenueVisibility">3.2 Years</span>
+            <span class="ob-kpi-sub" id="obRevenueVisibilitySub">Backlog covers 3.2x annual run-rate</span>
+          </div>
+          <div class="orderbook-kpi-card">
+            <span class="ob-kpi-label"><i data-lucide="activity" class="inline-icon text-blue"></i> 5Y Forward Backlog CAGR</span>
+            <span class="ob-kpi-val text-blue" id="obBacklogCAGR">+19.8%</span>
+            <span class="ob-kpi-sub" id="obInflowRunRate">Inflow Run-Rate: ₹39,600 Cr/yr</span>
+          </div>
+        </div>
+
+        <!-- Main Order History Bar Graph Card -->
+        <div class="panel-card" style="margin-top: 20px;">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">
+                <i data-lucide="bar-chart-2" class="inline-icon text-cyan"></i>
+                10-Year Order Book & Execution History (Last 5 Years & Next 5 Years)
+              </h2>
+              <p class="panel-subtitle">
+                Annual Order Book Backlog, New Order Inflows, and Executed Revenue across 2020–2024 (Historical) and 2025–2029 (Projected).
+              </p>
+            </div>
+            <div class="orderbook-legend-badges">
+              <span class="legend-badge-item"><span class="legend-dot" style="background: #00f2fe;"></span> Order Book Backlog</span>
+              <span class="legend-badge-item"><span class="legend-dot" style="background: #3b82f6;"></span> New Order Inflows</span>
+              <span class="legend-badge-item"><span class="legend-dot" style="background: #10b981;"></span> Executed Revenue</span>
+            </div>
+          </div>
+
+          <!-- The 10-Year Bar Chart Canvas Container -->
+          <div class="orderbook-chart-container">
+            <canvas id="orderBookBarChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 2-Column Split: Detailed 10Y Breakdown Table + Real-Time Level 2 Market Depth -->
+        <div class="orderbook-details-grid" style="margin-top: 24px;">
+          <!-- Column 1: 10-Year Historical & Projected Data Table -->
+          <div class="panel-card">
+            <div class="panel-header">
+              <h3 class="panel-title" style="font-size: 1rem;">
+                <i data-lucide="file-spreadsheet" class="inline-icon text-emerald"></i>
+                10-Year Order Book Ledger (2020 – 2029)
+              </h3>
+              <span class="badge badge-neutral" id="obUnitBadge">Figures in ₹ Cr</span>
+            </div>
+            <div class="orderbook-table-wrap">
+              <table class="orderbook-table" id="orderBookTable">
+                <thead>
+                  <tr>
+                    <th>Year</th>
+                    <th>Period</th>
+                    <th>Order Book</th>
+                    <th>New Inflow</th>
+                    <th>Executed Rev.</th>
+                    <th>Book-to-Bill</th>
+                    <th>YoY %</th>
+                  </tr>
+                </thead>
+                <tbody id="orderBookTableBody">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Column 2: Real-time Level 2 Order Depth & Segment Breakdown -->
+          <div class="orderbook-side-col">
+            <!-- Real-time Level 2 Market Depth Ladder -->
+            <div class="panel-card">
+              <div class="panel-header">
+                <div>
+                  <h3 class="panel-title" style="font-size: 1rem;">
+                    <i data-lucide="list-ordered" class="inline-icon text-cyan"></i>
+                    Real-Time Market Depth (Level 2 Order Book)
+                  </h3>
+                  <p class="panel-subtitle">Live Bids vs Asks with order depth imbalance</p>
+                </div>
+                <span class="live-status-pill" id="l2LivePill" style="padding: 3px 8px; font-size: 0.68rem;"><span class="pulse-dot"></span> LIVE DOM</span>
+              </div>
+
+              <!-- Depth Visual Bar: Buyers vs Sellers -->
+              <div class="l2-depth-meter">
+                <div class="l2-meter-label-row">
+                  <span class="text-emerald" id="l2BidPercent">Buyers: 58%</span>
+                  <span class="text-rose" id="l2AskPercent">Sellers: 42%</span>
+                </div>
+                <div class="l2-meter-bar">
+                  <div class="l2-meter-bid" id="l2MeterBidBar" style="width: 58%;"></div>
+                  <div class="l2-meter-ask" id="l2MeterAskBar" style="width: 42%;"></div>
+                </div>
+                <div class="l2-spread-row">
+                  <span>Spread: <strong id="l2SpreadVal" class="text-cyan">0.15 (0.04%)</strong></span>
+                  <span>Order Flow: <strong id="l2ImbalanceVal" class="text-emerald">Buy Pressure (1.38x)</strong></span>
+                </div>
+              </div>
+
+              <!-- 2-Column Bids vs Asks Table -->
+              <div class="l2-ladder-grid">
+                <!-- Bids Column -->
+                <div class="l2-ladder-side bids-side">
+                  <div class="l2-side-header text-emerald">BIDS (BUY)</div>
+                  <div class="l2-side-titles">
+                    <span>Price</span>
+                    <span>Qty</span>
+                    <span>Orders</span>
+                  </div>
+                  <div class="l2-rows" id="l2BidsRows">
+                    <!-- Populated by JS -->
+                  </div>
+                </div>
+
+                <!-- Asks Column -->
+                <div class="l2-ladder-side asks-side">
+                  <div class="l2-side-header text-rose">ASKS (SELL)</div>
+                  <div class="l2-side-titles">
+                    <span>Price</span>
+                    <span>Qty</span>
+                    <span>Orders</span>
+                  </div>
+                  <div class="l2-rows" id="l2AsksRows">
+                    <!-- Populated by JS -->
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Segment Backlog Contribution -->
+            <div class="panel-card">
+              <div class="panel-header">
+                <h3 class="panel-title" style="font-size: 1rem;">
+                  <i data-lucide="pie-chart" class="inline-icon text-amber"></i>
+                  Order Book Segment Distribution
+                </h3>
+              </div>
+              <div class="ob-segments-list" id="obSegmentsList">
+                <!-- Populated by JS -->
               </div>
             </div>
           </div>

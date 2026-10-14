@@ -31,7 +31,10 @@ import {
   RefreshCw,
   Zap,
   X,
-  ArrowDownUp
+  ArrowDownUp,
+  BookOpen,
+  ListOrdered,
+  BarChart2
 } from 'lucide';
 
 import { STOCKS_DATA } from './data/stocks.js';
@@ -45,6 +48,7 @@ import {
 } from './quant/engine.js';
 import { updateAllCharts } from './components/charts.js';
 import { renderNewsFeed } from './components/news.js';
+import { renderOrderBook, updateOrderBookTheme } from './components/orderbook.js';
 import { renderScreenerTable, setupScreenerControls } from './components/screener.js';
 import { setupCustomStockModal } from './components/customStockModal.js';
 import { 
@@ -143,6 +147,7 @@ function setupThemeEngine() {
     const currentStock = state.universe[state.currentTicker];
     if (currentStock) {
       updateAllCharts(currentStock, isDark);
+      updateOrderBookTheme(isDark);
     }
   };
 
@@ -184,6 +189,8 @@ function setupTabNavigation() {
       if (stock) {
         if (targetId === 'tab-technicals' || targetId === 'tab-fundamentals') {
           updateAllCharts(stock, state.isDarkMode);
+        } else if (targetId === 'tab-orderbook') {
+          renderOrderBook(stock, state.isDarkMode);
         } else if (targetId === 'tab-sensitivity') {
           updateReturnModel(stock);
         } else if (targetId === 'tab-news') {
@@ -585,7 +592,10 @@ export async function loadStockRealtime(ticker, notify = true) {
     // 5. Update Technical & Fundamental Charts
     updateAllCharts(liveData, state.isDarkMode);
 
-    // 6. Update Real-Time GARP Radar Table highlighting active stock
+    // 6. Render Order Book & Backlog History
+    renderOrderBook(liveData, state.isDarkMode);
+
+    // 7. Update Real-Time GARP Radar Table highlighting active stock
     renderScreenerTable(state.universe, (t) => {
       loadStockRealtime(t);
       document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
@@ -615,6 +625,7 @@ export async function loadStockRealtime(ticker, notify = true) {
       updateReturnModel(stock);
       renderNewsFeed(stock, state.newsFilter);
       updateAllCharts(stock, state.isDarkMode);
+      renderOrderBook(stock, state.isDarkMode);
       renderScreenerTable(state.universe, (t) => {
         loadStockRealtime(t);
       }, state.currentTicker);

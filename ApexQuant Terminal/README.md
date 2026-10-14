@@ -53,6 +53,13 @@ ApexQuant Terminal is an institutional-grade, responsive quantitative equity ana
 - High-contrast institutional dark theme with glassmorphism cards and vibrant data visualizations.
 - Streaming top market indices ticker tape: **NIFTY 50**, **SENSEX**, **S&P 500**, and **NASDAQ Composite**.
 
+### 9. 📚 Real-Time Order Book & 10-Year Order History (Last 5 Years & Next 5 Years)
+- **10-Year Order History Bar Graph**: Interactive Chart.js grouped bar visualization comparing **Order Book Backlog**, **New Order Inflows**, and **Executed Revenue** across 2020–2024 (Historical) and 2025–2029 (Forward Projections).
+- **KPI Metrics**: Total Current Backlog, Book-to-Bill Ratio ($Inflows \div Revenue$), Revenue Visibility (Years of execution locked in), and 5-Year Forward Backlog CAGR.
+- **10-Year Order Book Ledger Table**: Full multi-column data table with status badges and YoY growth rates.
+- **Real-Time Level 2 Market Depth (DOM)**: Live depth ladder displaying top bids, top asks, bid-ask spread, and order flow imbalance ratio.
+- **Commercial Contract Segments**: Revenue backlog breakdown across key business units and high-growth verticals.
+
 ---
 
 ## 📐 Mathematical & Quantitative Formulas
@@ -64,6 +71,8 @@ ApexQuant Terminal is an institutional-grade, responsive quantitative equity ana
 | **Peter Lynch Fair Value** | $V_{\text{Lynch}} = EPS_{\text{forward}} \times \min(g_{\text{EPS}}, 25)$ | Classic fair value rule of thumb for growth equities. |
 | **Target Price (Year $N$)** | $P_{\text{target}} = EPS_{\text{base}} \times (1 + g)^N \times P/E_{\text{exit}}$ | Terminal equity valuation at horizon year $N$. |
 | **Projected CAGR** | $\text{CAGR} = \left(\frac{P_{\text{target}}}{P_{\text{current}}}\right)^{1/N} - 1$ | Annualized expected return from current price. |
+| **Book-to-Bill Ratio** | $\text{Book-to-Bill} = \frac{\text{New Order Inflows}}{\text{Executed Revenue}}$ | Values $> 1.0\times$ indicate expanding order backlog and pipeline. |
+| **Revenue Visibility** | $\text{Visibility (Yrs)} = \frac{\text{Current Order Backlog}}{\text{Annual Revenue Execution}}$ | Number of forward years of revenue secured by existing contracts. |
 | **14-Day RSI** | $RSI = 100 - \frac{100}{1 + RS}$ where $RS = \frac{\overline{Gain}_{14}}{\overline{Loss}_{14}}$ | Wilder's smoothed relative strength index. |
 
 ---
