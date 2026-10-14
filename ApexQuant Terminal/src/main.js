@@ -110,7 +110,10 @@ function refreshIcons() {
       RefreshCw,
       Zap,
       X,
-      ArrowDownUp
+      ArrowDownUp,
+      BookOpen,
+      ListOrdered,
+      BarChart2
     }
   });
 }
