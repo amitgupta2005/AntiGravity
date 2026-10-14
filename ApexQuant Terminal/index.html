@@ -890,8 +890,8 @@
             <!-- Populated dynamically with 3 rich Quant Stock Cards -->
           </div>
 
-          <!-- Top 3 Stocks Order Book & Backlog History Section -->
-          <div class="sector-orderbook-section" id="sectorOrderBookSection" style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border-subtle);">
+          <!-- Top 3 Stocks Order Book & Backlog History Section (Shown only when 'View 10-Year Order History & Depth' is clicked) -->
+          <div class="sector-orderbook-section" id="sectorOrderBookSection" style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border-subtle); display: none;">
             <div class="sector-ob-header-row" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
               <div>
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
@@ -912,9 +912,15 @@
                 </p>
               </div>
 
-              <!-- Top 3 Stocks Order Book Selector Tabs -->
-              <div class="sector-ob-tabs" id="sectorObTabs">
-                <!-- Dynamically populated with Stock 1, Stock 2, Stock 3, and Compare All -->
+              <!-- Top 3 Stocks Order Book Selector Tabs & Close Button -->
+              <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <div class="sector-ob-tabs" id="sectorObTabs">
+                  <!-- Dynamically populated with Stock 1, Stock 2, Stock 3, and Compare All -->
+                </div>
+                <button id="sectorObCloseBtn" class="btn btn-outline btn-sm btn-hide-ob" title="Hide 10-Year Order Book Section">
+                  <i data-lucide="x" class="inline-icon" style="width: 14px; height: 14px;"></i>
+                  <span>Hide</span>
+                </button>
               </div>
             </div>
 

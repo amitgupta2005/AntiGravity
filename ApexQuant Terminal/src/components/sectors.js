@@ -12,6 +12,7 @@ import { getOrGenerateOrderBook } from './orderbook.js';
 let sectorsChartInstance = null;
 let sectorOrderBookChartInstance = null;
 let activeSectorObTicker = null;
+let isSectorObVisible = false;
 let currentSortMode = 'ytd_desc';
 let currentMarketFilter = 'ALL';
 let selectedSectorId = 'semi'; // Default to #1 sector
@@ -2109,6 +2110,11 @@ export function renderSectorsDashboard(universe, onSelectStock, isDarkMode) {
  */
 export function selectSector(sectorId, onSelectStock, sortedSectors = SECTORS_DATA, isDarkMode = null) {
   selectedSectorId = sectorId;
+  isSectorObVisible = false;
+  activeSectorObTicker = null;
+  const section = document.getElementById('sectorOrderBookSection');
+  if (section) section.style.display = 'none';
+
   const sector = SECTORS_DATA.find(s => s.id === sectorId) || SECTORS_DATA[0];
 
   renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors, isDarkMode);
@@ -2317,8 +2323,43 @@ function renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors, 
     });
   });
 
-  // Render Order Book & 10-Year Order History for the Top 3 stocks of the selected sector
-  renderSectorTopStocksOrderBook(quantStocks, sector, isDarkMode, onSelectStock);
+  // Attach "View 10-Year Order History & Depth" click listeners to Top 3 cards
+  container.querySelectorAll('.btn-view-stock-ob').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const ticker = btn.getAttribute('data-ticker');
+      if (!ticker) return;
+
+      const section = document.getElementById('sectorOrderBookSection');
+      if (!section) return;
+
+      // If already visible on this stock, toggle hide
+      if (isSectorObVisible && activeSectorObTicker === ticker) {
+        isSectorObVisible = false;
+        section.style.display = 'none';
+        updateViewObButtonStates();
+        return;
+      }
+
+      // Otherwise show Order Book section for this specific stock
+      isSectorObVisible = true;
+      activeSectorObTicker = ticker;
+      renderSectorTopStocksOrderBook(quantStocks, sector, isDarkMode, onSelectStock);
+      updateViewObButtonStates();
+
+      // Smooth scroll to the Order Book section
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  // Render Order Book only if already explicitly toggled visible, otherwise keep hidden
+  if (isSectorObVisible) {
+    renderSectorTopStocksOrderBook(quantStocks, sector, isDarkMode, onSelectStock);
+  } else {
+    const section = document.getElementById('sectorOrderBookSection');
+    if (section) section.style.display = 'none';
+  }
+  updateViewObButtonStates();
 
   // Asynchronously fetch live quotes for displayed quant stocks in background
   const displayedTickers = quantStocks.map(s => s.ticker);
@@ -2339,7 +2380,7 @@ export function renderSectorTopStocksOrderBook(quantStocks, sector, isDarkMode, 
   const section = document.getElementById('sectorOrderBookSection');
   if (!section) return;
 
-  if (!quantStocks || quantStocks.length === 0) {
+  if (!isSectorObVisible || !quantStocks || quantStocks.length === 0) {
     section.style.display = 'none';
     return;
   }
@@ -2351,6 +2392,20 @@ export function renderSectorTopStocksOrderBook(quantStocks, sector, isDarkMode, 
   // Sector title
   const sectorNameEl = document.getElementById('sectorObSectorName');
   if (sectorNameEl) sectorNameEl.textContent = sector.name;
+
+  // Setup Close/Hide Button
+  const closeBtn = document.getElementById('sectorObCloseBtn');
+  if (closeBtn) {
+    closeBtn.onclick = () => {
+      isSectorObVisible = false;
+      section.style.display = 'none';
+      updateViewObButtonStates();
+      const quantContainer = document.getElementById('topThreeQuantContainer');
+      if (quantContainer) {
+        quantContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+  }
 
   // Prepare Order Book data for all 3 stocks
   const stockItems = quantStocks.map(stock => {
@@ -2413,6 +2468,7 @@ export function renderSectorTopStocksOrderBook(quantStocks, sector, isDarkMode, 
         if (t) {
           activeSectorObTicker = t;
           renderSectorTopStocksOrderBook(quantStocks, sector, isDark, onSelectStock);
+          updateViewObButtonStates();
         }
       });
     });
@@ -2476,6 +2532,7 @@ export function renderSectorTopStocksOrderBook(quantStocks, sector, isDarkMode, 
         if (t) {
           activeSectorObTicker = t;
           renderSectorTopStocksOrderBook(quantStocks, sector, isDark, onSelectStock);
+          updateViewObButtonStates();
         }
       });
     });
@@ -2491,20 +2548,26 @@ export function renderSectorTopStocksOrderBook(quantStocks, sector, isDarkMode, 
   // 5. Render Real-time Level 2 Market Depth (Bids vs Asks)
   renderSectorOrderBookDepth(activeItem);
 
-  // Attach view buttons from the cards above
-  document.querySelectorAll('.btn-view-stock-ob').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const t = btn.getAttribute('data-ticker');
-      if (t) {
-        activeSectorObTicker = t;
-        renderSectorTopStocksOrderBook(quantStocks, sector, isDark, onSelectStock);
-        document.getElementById('sectorOrderBookSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    });
-  });
+  updateViewObButtonStates();
 
   if (window.refreshIcons) window.refreshIcons();
+}
+
+/**
+ * Synchronize visual active state across all "View 10-Year Order History" buttons
+ */
+function updateViewObButtonStates() {
+  document.querySelectorAll('.btn-view-stock-ob').forEach(btn => {
+    const ticker = btn.getAttribute('data-ticker');
+    const span = btn.querySelector('span');
+    if (isSectorObVisible && activeSectorObTicker === ticker) {
+      btn.classList.add('active');
+      if (span) span.innerHTML = `Viewing 10-Year Order History &amp; Depth ✓`;
+    } else {
+      btn.classList.remove('active');
+      if (span) span.innerHTML = `View 10-Year Order History &amp; Depth ↓`;
+    }
+  });
 }
 
 /**
@@ -3296,6 +3359,8 @@ function setupSectorsControls(universe, onSelectStock, isDarkMode, sortedSectors
   mainFilterChips.forEach(chip => {
     chip.addEventListener('click', () => {
       currentMarketFilter = chip.getAttribute('data-market-filter') || 'ALL';
+      isSectorObVisible = false;
+      activeSectorObTicker = null;
       renderSectorsDashboard(universe, onSelectStock, isDarkMode);
     });
   });
@@ -3304,6 +3369,8 @@ function setupSectorsControls(universe, onSelectStock, isDarkMode, sortedSectors
   showcaseFilterChips.forEach(chip => {
     chip.addEventListener('click', () => {
       currentMarketFilter = chip.getAttribute('data-showcase-market') || 'ALL';
+      isSectorObVisible = false;
+      activeSectorObTicker = null;
       renderSectorsDashboard(universe, onSelectStock, isDarkMode);
     });
   });

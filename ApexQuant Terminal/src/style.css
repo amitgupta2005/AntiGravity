@@ -2828,6 +2828,33 @@ input[type="range"]::-webkit-slider-thumb:hover {
   border-color: var(--cyan-primary);
 }
 
+.btn-view-stock-ob.active {
+  background: rgba(0, 242, 254, 0.2);
+  border-color: var(--cyan-primary);
+  border-style: solid;
+  color: #fff;
+  box-shadow: 0 0 14px rgba(0, 242, 254, 0.3);
+}
+
+.btn-hide-ob {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.76rem;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.04);
+  transition: all var(--transition-fast);
+}
+
+.btn-hide-ob:hover {
+  color: var(--rose-loss);
+  border-color: rgba(244, 63, 94, 0.4);
+  background: rgba(244, 63, 94, 0.1);
+}
+
 @media (max-width: 900px) {
   .sector-ob-details-grid {
     grid-template-columns: 1fr !important;
