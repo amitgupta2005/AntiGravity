@@ -64,6 +64,7 @@ ApexQuant Terminal is an institutional-grade, responsive quantitative equity ana
 
 ### 10. 🌐 All Sectors Dashboard (Ranked by YTD Return Descending)
 - **Top Navigation Bar Menu Item**: Positioned prominently in the top application header right where `+ Custom Model` is located, giving instant one-click access to broad market sector rotation and performance.
+- **Dedicated Sector Full-View Mode**: Automatically hides the Stock Card (`#stockHeroCard`), Quick Watch Chips, and stock-specific Nav Tabs (`.nav-tabs`) when the Sector Dashboard is selected, dedicating 100% of the viewport to macro sector rotation, quant leaders, and order backlog analytics. Includes an interactive "← Back to Stock Terminal" button and top nav toggle to smoothly return to stock analysis.
 - **Sorted by YTD Descending**: All 12 primary market sectors strictly ranked from top alpha generator (Semiconductors & AI Hardware $+64.8\%$) to laggards (Real Estate $-2.8\%$).
 - **Market Filter Over Quant Analysis & Performance Leaders**:
   - Dedicated market filter control group positioned directly **over** the Quant Analysis & Performance Leaders showcase cards.

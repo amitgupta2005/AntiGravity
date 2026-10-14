@@ -176,8 +176,8 @@ function setupThemeEngine() {
     const isSectorsActive = document.getElementById('tab-sectors')?.classList.contains('active');
     if (isSectorsActive) {
       renderSectorsDashboard(state.universe, (t) => {
+        if (window.exitSectorDashboard) window.exitSectorDashboard('tab-return-model');
         loadStockRealtime(t);
-        document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
       }, isDark);
     }
   };
@@ -198,8 +198,28 @@ function setupTabNavigation() {
   const tabBtns = document.querySelectorAll('.tab-btn');
   const tabPanes = document.querySelectorAll('.tab-pane');
   const topNavSectorBtn = document.getElementById('topNavSectorDashboardBtn');
+  const exitSectorBtn = document.getElementById('exitSectorDashboardBtn');
+
+  let previousStockTabId = 'tab-return-model';
+
+  const handleStockSelectionFromSector = (ticker) => {
+    exitSectorDashboard('tab-return-model');
+    loadStockRealtime(ticker);
+  };
 
   const openSectorDashboard = () => {
+    // Save currently active stock tab so user returns to it seamlessly
+    const activeStockBtn = document.querySelector('.nav-tabs .tab-btn.active');
+    if (activeStockBtn) {
+      const activeId = activeStockBtn.getAttribute('data-tab');
+      if (activeId && activeId !== 'tab-sectors') {
+        previousStockTabId = activeId;
+      }
+    }
+
+    // Enter Sector Dashboard Full-View Mode (Hides Stock Card & Nav Tabs)
+    document.body.classList.add('view-sector-dashboard');
+
     tabBtns.forEach(b => {
       b.classList.remove('active');
       b.setAttribute('aria-selected', 'false');
@@ -214,18 +234,61 @@ function setupTabNavigation() {
       topNavSectorBtn.classList.add('active');
     }
 
-    renderSectorsDashboard(state.universe, (t) => {
-      loadStockRealtime(t);
-      document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
-    }, state.isDarkMode);
+    // Update exit button label with active stock ticker
+    const exitLabel = document.getElementById('exitSectorDashboardLabel');
+    if (exitLabel && state.currentTicker) {
+      exitLabel.textContent = `Back to Stock Terminal (${state.currentTicker})`;
+    }
 
-    sectorsPane?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    renderSectorsDashboard(state.universe, handleStockSelectionFromSector, state.isDarkMode);
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     refreshIcons();
   };
 
+  const exitSectorDashboard = (targetTabId = null) => {
+    // Exit Sector Dashboard Mode (Unhides Stock Card & Nav Tabs)
+    document.body.classList.remove('view-sector-dashboard');
+
+    if (topNavSectorBtn) {
+      topNavSectorBtn.classList.remove('active');
+    }
+
+    const sectorsPane = document.getElementById('tab-sectors');
+    if (sectorsPane) {
+      sectorsPane.classList.remove('active');
+    }
+
+    const tabToActivate = targetTabId || previousStockTabId || 'tab-return-model';
+    const targetBtn = document.querySelector(`.tab-btn[data-tab="${tabToActivate}"]`) || document.querySelector('.tab-btn[data-tab="tab-return-model"]');
+    if (targetBtn) {
+      targetBtn.click();
+    } else {
+      const pane = document.getElementById(tabToActivate);
+      if (pane) pane.classList.add('active');
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    refreshIcons();
+  };
+
+  // Expose methods globally for seamless transitions
+  window.openSectorDashboard = openSectorDashboard;
+  window.exitSectorDashboard = exitSectorDashboard;
+
   if (topNavSectorBtn) {
     topNavSectorBtn.addEventListener('click', () => {
-      openSectorDashboard();
+      if (document.body.classList.contains('view-sector-dashboard')) {
+        exitSectorDashboard();
+      } else {
+        openSectorDashboard();
+      }
+    });
+  }
+
+  if (exitSectorBtn) {
+    exitSectorBtn.addEventListener('click', () => {
+      exitSectorDashboard();
     });
   }
 
@@ -233,6 +296,10 @@ function setupTabNavigation() {
     btn.addEventListener('click', () => {
       const targetId = btn.getAttribute('data-tab');
 
+      // Clicking any stock tab exits Sector Dashboard mode
+      if (document.body.classList.contains('view-sector-dashboard')) {
+        document.body.classList.remove('view-sector-dashboard');
+      }
       if (topNavSectorBtn) {
         topNavSectorBtn.classList.remove('active');
       }
@@ -245,6 +312,7 @@ function setupTabNavigation() {
 
       btn.classList.add('active');
       btn.setAttribute('aria-selected', 'true');
+      previousStockTabId = targetId;
 
       const targetPane = document.getElementById(targetId);
       if (targetPane) {
@@ -252,11 +320,7 @@ function setupTabNavigation() {
       }
 
       if (targetId === 'tab-sectors') {
-        if (topNavSectorBtn) topNavSectorBtn.classList.add('active');
-        renderSectorsDashboard(state.universe, (t) => {
-          loadStockRealtime(t);
-          document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
-        }, state.isDarkMode);
+        openSectorDashboard();
       } else {
         const stock = state.universe[state.currentTicker];
         if (stock) {
@@ -297,6 +361,11 @@ function renderStockHero(stock) {
   document.getElementById('heroMarketCap').textContent = `Cap: ${stock.marketCap}`;
   document.getElementById('heroBeta').textContent = `Beta: ${stock.beta}`;
   document.getElementById('hero52Range').textContent = `52W Range: ${curr}${stock.week52Low.toFixed(2)} - ${curr}${stock.week52High.toFixed(2)}`;
+
+  const exitLabel = document.getElementById('exitSectorDashboardLabel');
+  if (exitLabel) {
+    exitLabel.textContent = `Back to Stock Terminal (${stock.ticker})`;
+  }
 
   const sessionStatus = document.getElementById('heroSessionStatus');
   if (sessionStatus) {
@@ -743,6 +812,9 @@ function setupOmnibarSearch() {
       dropdown.classList.remove('active');
       dropdown.innerHTML = '';
       if (resolvedSym) {
+        if (window.exitSectorDashboard && document.body.classList.contains('view-sector-dashboard')) {
+          window.exitSectorDashboard('tab-return-model');
+        }
         searchInput.value = resolvedSym;
         await loadStockRealtime(resolvedSym);
       }
@@ -811,6 +883,9 @@ function setupOmnibarSearch() {
           evt.preventDefault();
           const sym = item.getAttribute('data-symbol');
           if (sym) {
+            if (window.exitSectorDashboard && document.body.classList.contains('view-sector-dashboard')) {
+              window.exitSectorDashboard('tab-return-model');
+            }
             searchInput.value = sym;
             dropdown.classList.remove('active');
             dropdown.innerHTML = '';
@@ -829,6 +904,9 @@ function setupOmnibarSearch() {
       if (dropdown.classList.contains('active') && firstItem) {
         const sym = firstItem.getAttribute('data-symbol');
         if (sym) {
+          if (window.exitSectorDashboard && document.body.classList.contains('view-sector-dashboard')) {
+            window.exitSectorDashboard('tab-return-model');
+          }
           searchInput.value = sym;
           dropdown.classList.remove('active');
           dropdown.innerHTML = '';
@@ -923,6 +1001,9 @@ function setupQuickChips() {
     btn.addEventListener('click', () => {
       const ticker = btn.getAttribute('data-ticker');
       if (ticker) {
+        if (window.exitSectorDashboard && document.body.classList.contains('view-sector-dashboard')) {
+          window.exitSectorDashboard('tab-return-model');
+        }
         const searchInput = document.getElementById('stockSearchInput');
         if (searchInput) searchInput.value = ticker;
         loadStockRealtime(ticker);
@@ -1016,8 +1097,8 @@ function startRealtimePolling() {
       const isSectorsActive = document.getElementById('tab-sectors')?.classList.contains('active');
       if (isSectorsActive) {
         renderSectorsDashboard(state.universe, (t) => {
+          if (window.exitSectorDashboard) window.exitSectorDashboard('tab-return-model');
           loadStockRealtime(t);
-          document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
         }, state.isDarkMode);
       }
 
@@ -1076,8 +1157,8 @@ function setupRefreshButton() {
         const isSectorsActive = document.getElementById('tab-sectors')?.classList.contains('active');
         if (isSectorsActive) {
           renderSectorsDashboard(state.universe, (t) => {
+            if (window.exitSectorDashboard) window.exitSectorDashboard('tab-return-model');
             loadStockRealtime(t);
-            document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
           }, state.isDarkMode);
         }
 
@@ -1174,6 +1255,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const selector = document.getElementById('stockSelector');
   if (selector) {
     selector.addEventListener('change', (e) => {
+      if (window.exitSectorDashboard && document.body.classList.contains('view-sector-dashboard')) {
+        window.exitSectorDashboard('tab-return-model');
+      }
       loadStockRealtime(e.target.value);
     });
   }
