@@ -113,19 +113,23 @@ ApexQuant Terminal is an institutional-grade, responsive quantitative equity ana
   - Detailed 13F and SEBI institutional disclosures for marquee super-investors and fund managers:
     - **US Super-Investors & Hedge Funds**: Warren Buffett (Berkshire Hathaway), Stanley Druckenmiller (Duquesne Family Office), Michael Burry (Scion Asset Management), David Tepper (Appaloosa Management), Bill Ackman (Pershing Square), Ray Dalio (Bridgewater Associates), Philippe Laffont (Coatue Management), Ken Griffin (Citadel Advisors), Vanguard, BlackRock.
     - **Indian Marquee Super-Investors & DII/FII Giants**: Rekha Jhunjhunwala (Rare Enterprises), Ashish Kacholia (Lucky Investment Managers), Vijay Kedia (Kedia Securities), Radhakishan Damani (Bright Star / DMart), Mukul Agrawal, SBI Mutual Fund, HDFC Mutual Fund, ICICI Prudential MF, Life Insurance Corporation (LIC), Norges Bank Sovereign Wealth Fund.
-- **Selected Stock Adding or Removing Status**:
+- **Selected Stock Adding or Removing Status (Real-Time Live Valuation)**:
   - Highlights whether marquee fund managers are **Aggressively Buying / Adding**, **Accumulating**, **Opening New Positions**, **Holding**, or **Trimming / Exiting**.
-  - Displays Exact Shares Held, Total Valuation (in `$B/$M` or `₹ Cr`), Portfolio Stake %, Q/Q Stake Change, Average Cost Basis, and Unrealized P&L.
+  - **Dynamic Real-Time Valuation**: Holding values ($\text{Shares} \times P_{\text{live}}$), cost basis, and unrealized gain/loss % dynamically recalculate against live streaming stock prices.
   - Interactive Filter Chips: `All Sharks`, `Adding / Buying`, `New Positions`, `Holding`, `Trimming / Exited`.
   - Detailed Institutional Conviction Thesis for every whale holding.
+- **Real-Time Institutional Live Sync Toolbar**:
+  - Dedicated live stream toolbar with pulsating green indicator (`● Real-Time 13F & SEBI Stream Active`) and real-time sync timestamp.
+  - Interactive **Live Sync** button (`#sharkLiveSyncBtn`) with spinning indicator that fetches live quotes and re-evaluates all positions on demand.
 - **1-Year Institutional Whale Flow & Ownership Trend (Trailing 4 Quarters)**:
-  - Interactive Chart.js dual-axis visualization mapping **Quarterly Inflows** (emerald green bars) vs **Quarterly Outflows** (rose red bars) on the primary left axis and **Total Institutional Ownership %** (cyan spline curve) on the secondary right axis across the trailing 4 quarters (`Q4 2023`, `Q1 2024`, `Q2 2024`, `Q3 2024`).
+  - Interactive Chart.js dual-axis visualization mapping **Quarterly Inflows** (emerald green bars) vs **Quarterly Outflows** (rose red bars) on the primary left axis and **Total Institutional Ownership %** (cyan spline curve) on the secondary right axis across the trailing 4 calendar quarters relative to the real-time calendar (e.g. `Q1 2026`, `Q2 2026`, `Q3 2026`, `Q4 2026 (Latest)`).
   - Top KPI strip: Shark Sentiment Verdict, Shark Conviction Score (out of 100), Net 1-Year Whale Flow ($ or ₹), Institutional Ownership %, YoY Stake Shift, and Active Add vs Trim Ratio.
-- **Macro Whale Radar: What Fund Managers are Buying & Looking to Add / Remove**:
-  - Market-wide institutional consensus intelligence:
-    - **🔥 Aggressive Whale Buys**: Stocks fund managers are heavily buying and adding with institutional net capital inflows and catalysts.
+- **Macro Whale Radar: Real-Time Streaming Prices (What Fund Managers are Buying & Looking to Add / Remove)**:
+  - Market-wide institutional consensus intelligence streaming real-time prices directly from global exchanges:
+    - **🔥 Aggressive Whale Buys**: Stocks fund managers are heavily buying and adding with live prices, day change %, and institutional catalysts.
     - **👁️ "Looking to Add" Accumulation Radar**: Emerging high-conviction accumulation targets, breakout candidates, and 13F new initiations.
     - **🔻 Heavy Sells & Institutional Trims**: Stocks fund managers are liquidating, profit-taking, or exiting due to multiple compression or thesis degradation.
+  - Real-time live exchange indicators (`● LIVE`) with daily change % in emerald or rose.
   - Interactive Market Filters: Filter consensus radar by **All Markets 🌐**, **NSE India 🇮🇳**, and **US Equities 🇺🇸**.
   - One-Click Terminal Analysis: Every stock in the macro radar features an **"Analyze"** button that immediately loads the stock into the core valuation engine and technical terminal.
 

@@ -44,8 +44,15 @@ export function getOrGenerateOrderBook(stock) {
   const ttmBacklog = Number((baseRevNum * backlogMultiple).toFixed(1));
   const ttmInflows = Number((baseRevNum * 1.28).toFixed(1));
 
-  // 1. Build Historical 5 Years (2020 - 2024 TTM)
-  const historicalYears = ['2020', '2021', '2022', '2023', '2024 (TTM)'];
+  // 1. Build Historical 5 Years dynamically based on real-time calendar
+  const currentYear = new Date().getFullYear();
+  const historicalYears = [
+    `${currentYear - 4}`,
+    `${currentYear - 3}`,
+    `${currentYear - 2}`,
+    `${currentYear - 1}`,
+    `${currentYear} (TTM)`
+  ];
   const histFactors = [0.52, 0.62, 0.74, 0.86, 1.0];
 
   const historical5Y = historicalYears.map((year, idx) => {
@@ -70,8 +77,8 @@ export function getOrGenerateOrderBook(stock) {
     };
   });
 
-  // 2. Build Next 5 Years Projections (2025 FY1 - 2029 FY5)
-  const projectedYears = ['2025 (FY1)', '2026 (FY2)', '2027 (FY3)', '2028 (FY4)', '2029 (FY5)'];
+  // 2. Build Next 5 Years Projections dynamically
+  const projectedYears = [1, 2, 3, 4, 5].map(offset => `${currentYear + offset} (FY${offset})`);
   let lastBacklog = ttmBacklog;
   let lastRev = baseRevNum;
 

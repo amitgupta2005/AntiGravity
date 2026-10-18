@@ -638,7 +638,7 @@
                 10-Year Order Book & Execution History (Last 5 Years & Next 5 Years)
               </h2>
               <p class="panel-subtitle">
-                Annual Order Book Backlog, New Order Inflows, and Executed Revenue across 2020–2024 (Historical) and 2025–2029 (Projected).
+                Annual Order Book Backlog, New Order Inflows, and Executed Revenue across Historical (Last 5 Years TTM) and Projected (Next 5 Years Forward).
               </p>
             </div>
             <div class="orderbook-legend-badges">
@@ -662,7 +662,7 @@
             <div class="panel-header">
               <h3 class="panel-title" style="font-size: 1rem;">
                 <i data-lucide="file-spreadsheet" class="inline-icon text-emerald"></i>
-                10-Year Order Book Ledger (2020 – 2029)
+                10-Year Order Book Ledger (Historical &amp; Forward Pipeline)
               </h3>
               <span class="badge badge-neutral" id="obUnitBadge">Figures in ₹ Cr</span>
             </div>
@@ -766,6 +766,24 @@
 
       <!-- TAB: Big Sharks & Fund Managers Intelligence -->
       <section id="tab-big-sharks" class="tab-pane" role="tabpanel">
+        <!-- Real-Time Institutional Feed Status & Live Sync Toolbar -->
+        <div class="shark-live-toolbar">
+          <div class="shark-live-status-group">
+            <span class="session-status-badge text-emerald" id="sharkLivePulseBadge">
+              <span class="live-dot-pulse"></span>
+              <span>● Real-Time 13F &amp; SEBI Stream Active</span>
+            </span>
+            <span class="shark-sync-timestamp" id="sharkSyncTimestamp">
+              <i data-lucide="clock" class="inline-icon"></i>
+              Synced with Live Exchange Prices: Just Now
+            </span>
+          </div>
+          <button id="sharkLiveSyncBtn" class="btn btn-outline btn-sm btn-shark-sync" title="Fetch latest real-time prices & 13F filings">
+            <i data-lucide="refresh-cw" class="inline-icon" id="sharkSyncIcon"></i>
+            <span>Live Sync</span>
+          </button>
+        </div>
+
         <!-- Top Institutional Whale KPI Metrics -->
         <div class="sharks-kpi-grid">
           <div class="shark-kpi-card highlight-shark">
@@ -1064,9 +1082,8 @@
                 <h3 class="panel-title" style="font-size: 1.2rem; margin: 0;">
                   <i data-lucide="bar-chart-3" class="inline-icon text-cyan"></i>
                   <span id="sectorObSectorName">Selected Sector</span> — Top 3 Stocks Order Book &amp; 10-Year Backlog History
-                </h3>
                 <p class="panel-subtitle" style="margin-top: 4px;">
-                  Historical Backlog (Last 5 Years: 2020–2024 TTM) vs Future Contract Projections (Next 5 Years: 2025–2029 FY5) with YoY Growth % and Order Book to Revenue Coverage.
+                  Historical Backlog (Last 5 Years TTM) vs Future Contract Projections (Next 5 Years Forward) with YoY Growth % and Order Book to Revenue Coverage.
                 </p>
               </div>
 

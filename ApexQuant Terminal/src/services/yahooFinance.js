@@ -651,17 +651,18 @@ export async function fetchLiveStockData(ticker) {
     projectedEPSGrowth = isINR ? 20.0 : 22.5;
     forwardEPS = Number((ttmEPS * (1 + projectedEPSGrowth / 100)).toFixed(2));
 
+    const currentYear = now.getFullYear();
     historicalEPS = [
-      { year: '2022', eps: Number((ttmEPS * 0.72).toFixed(2)), rev: isINR ? 28000 : 25.0 },
-      { year: '2023', eps: Number((ttmEPS * 0.86).toFixed(2)), rev: isINR ? 36000 : 32.0 },
-      { year: '2024 (TTM)', eps: ttmEPS, rev: isINR ? 48000 : 40.0 }
+      { year: `${currentYear - 2}`, eps: Number((ttmEPS * 0.72).toFixed(2)), rev: isINR ? 28000 : 25.0 },
+      { year: `${currentYear - 1}`, eps: Number((ttmEPS * 0.86).toFixed(2)), rev: isINR ? 36000 : 32.0 },
+      { year: `${currentYear} (TTM)`, eps: ttmEPS, rev: isINR ? 48000 : 40.0 }
     ];
 
     projectedEPS = [
-      { year: '2025 (FY1)', eps: forwardEPS, rev: isINR ? 58000 : 49.0, growth: projectedEPSGrowth },
-      { year: '2026 (FY2)', eps: Number((forwardEPS * 1.22).toFixed(2)), rev: isINR ? 70000 : 59.8, growth: 22.0 },
-      { year: '2027 (FY3)', eps: Number((forwardEPS * 1.22 * 1.20).toFixed(2)), rev: isINR ? 84000 : 71.8, growth: 20.0 },
-      { year: '2028 (FY4)', eps: Number((forwardEPS * 1.22 * 1.20 * 1.18).toFixed(2)), rev: isINR ? 99000 : 84.7, growth: 18.0 }
+      { year: `${currentYear + 1} (FY1)`, eps: forwardEPS, rev: isINR ? 58000 : 49.0, growth: projectedEPSGrowth },
+      { year: `${currentYear + 2} (FY2)`, eps: Number((forwardEPS * 1.22).toFixed(2)), rev: isINR ? 70000 : 59.8, growth: 22.0 },
+      { year: `${currentYear + 3} (FY3)`, eps: Number((forwardEPS * 1.22 * 1.20).toFixed(2)), rev: isINR ? 84000 : 71.8, growth: 20.0 },
+      { year: `${currentYear + 4} (FY4)`, eps: Number((forwardEPS * 1.22 * 1.20 * 1.18).toFixed(2)), rev: isINR ? 99000 : 84.7, growth: 18.0 }
     ];
   }
 

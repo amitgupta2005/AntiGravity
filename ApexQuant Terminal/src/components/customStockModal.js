@@ -129,15 +129,15 @@ export function setupCustomStockModal(onAddCustomStock) {
       resistance: Number((price * 1.15).toFixed(2)),
       technicalTrend: 'User Custom Simulation',
       historicalEPS: [
-        { year: '2022', eps: Number((ttmEPS * 0.7).toFixed(2)), rev: 14.0 },
-        { year: '2023', eps: Number((ttmEPS * 0.85).toFixed(2)), rev: 17.0 },
-        { year: '2024 (TTM)', eps: ttmEPS, rev: 20.0 }
+        { year: `${new Date().getFullYear() - 2}`, eps: Number((ttmEPS * 0.7).toFixed(2)), rev: 14.0 },
+        { year: `${new Date().getFullYear() - 1}`, eps: Number((ttmEPS * 0.85).toFixed(2)), rev: 17.0 },
+        { year: `${new Date().getFullYear()} (TTM)`, eps: ttmEPS, rev: 20.0 }
       ],
       projectedEPS: [
-        { year: '2025 (FY1)', eps: forwardEPS, rev: 24.0, growth: projectedEPSGrowth },
-        { year: '2026 (FY2)', eps: Number((forwardEPS * (1 + projectedEPSGrowth / 100)).toFixed(2)), rev: 28.5, growth: projectedEPSGrowth },
-        { year: '2027 (FY3)', eps: Number((forwardEPS * Math.pow(1 + projectedEPSGrowth / 100, 2)).toFixed(2)), rev: 34.0, growth: projectedEPSGrowth },
-        { year: '2028 (FY4)', eps: Number((forwardEPS * Math.pow(1 + projectedEPSGrowth / 100, 3)).toFixed(2)), rev: 40.0, growth: projectedEPSGrowth }
+        { year: `${new Date().getFullYear() + 1} (FY1)`, eps: forwardEPS, rev: 24.0, growth: projectedEPSGrowth },
+        { year: `${new Date().getFullYear() + 2} (FY2)`, eps: Number((forwardEPS * (1 + projectedEPSGrowth / 100)).toFixed(2)), rev: 28.5, growth: projectedEPSGrowth },
+        { year: `${new Date().getFullYear() + 3} (FY3)`, eps: Number((forwardEPS * Math.pow(1 + projectedEPSGrowth / 100, 2)).toFixed(2)), rev: 34.0, growth: projectedEPSGrowth },
+        { year: `${new Date().getFullYear() + 4} (FY4)`, eps: Number((forwardEPS * Math.pow(1 + projectedEPSGrowth / 100, 3)).toFixed(2)), rev: 40.0, growth: projectedEPSGrowth }
       ],
       news: [
         {
