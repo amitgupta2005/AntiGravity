@@ -2946,3 +2946,429 @@ body.view-sector-dashboard .quick-stock-chips-row {
   }
 }
 
+/* ==========================================================================
+   Big Sharks & Fund Managers Intelligence Component Styling
+   ========================================================================== */
+
+.hero-shark-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 242, 254, 0.08);
+  border: 1px solid rgba(0, 242, 254, 0.25);
+  color: var(--cyan-primary);
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.hero-shark-pill:hover {
+  background: rgba(0, 242, 254, 0.16);
+  border-color: var(--cyan-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 0 12px rgba(0, 242, 254, 0.25);
+}
+
+.hero-shark-pill.shark-pill-bull {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: var(--emerald-primary);
+}
+
+.hero-shark-pill.shark-pill-bear {
+  background: rgba(244, 63, 94, 0.1);
+  border-color: rgba(244, 63, 94, 0.3);
+  color: var(--rose-primary);
+}
+
+.sharks-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.shark-kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+}
+
+.shark-kpi-card:hover {
+  border-color: var(--border-bright);
+  box-shadow: var(--shadow-md);
+}
+
+.shark-kpi-card.highlight-shark {
+  border-color: rgba(0, 242, 254, 0.4);
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.05) 0%, rgba(16, 185, 129, 0.03) 100%);
+}
+
+.shark-kpi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.shark-kpi-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shark-conviction-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--amber-primary);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.shark-kpi-stock-name {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-main);
+  margin-top: 4px;
+}
+
+.shark-kpi-val {
+  font-size: 1.85rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.shark-kpi-sub {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.shark-chart-container {
+  position: relative;
+  width: 100%;
+  height: 340px;
+  margin-top: 16px;
+}
+
+.shark-filter-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.shark-filter-btn {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.shark-filter-btn:hover {
+  color: var(--text-main);
+  border-color: var(--border-bright);
+}
+
+.shark-filter-btn.active {
+  background: var(--cyan-primary);
+  color: #030712;
+  font-weight: 700;
+  border-color: var(--cyan-primary);
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
+}
+
+/* Shark Action Badges */
+.shark-action-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.shark-action-buy {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--emerald-primary);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.shark-action-new {
+  background: rgba(0, 242, 254, 0.12);
+  color: var(--cyan-primary);
+  border: 1px solid rgba(0, 242, 254, 0.4);
+}
+
+.shark-action-hold {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--amber-primary);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.shark-action-sell, .shark-action-trim {
+  background: rgba(244, 63, 94, 0.12);
+  color: var(--rose-primary);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+}
+
+/* Trailing 4 Quarters Trend Visual */
+.shark-trend-pills {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.shark-trend-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+}
+
+.shark-trend-dot.dot-add {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--emerald-primary);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.shark-trend-dot.dot-trim {
+  background: rgba(244, 63, 94, 0.2);
+  color: var(--rose-primary);
+  border: 1px solid rgba(244, 63, 94, 0.4);
+}
+
+.shark-trend-dot.dot-hold {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-dim);
+  border: 1px solid var(--border-subtle);
+}
+
+/* Macro Radar Component Styling */
+.macro-market-filter-group {
+  display: flex;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 3px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.macro-market-btn {
+  font-size: 0.75rem;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-dim);
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.macro-market-btn:hover {
+  color: var(--text-main);
+}
+
+.macro-market-btn.active {
+  background: var(--bg-card);
+  color: var(--cyan-primary);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.macro-category-tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.macro-category-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.macro-category-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+  border-color: var(--border-bright);
+}
+
+.macro-category-btn.active {
+  background: rgba(0, 242, 254, 0.08);
+  border-color: var(--cyan-primary);
+  color: var(--cyan-primary);
+  box-shadow: 0 0 12px rgba(0, 242, 254, 0.15);
+}
+
+.macro-radar-table {
+  width: 100%;
+}
+
+.macro-radar-row {
+  transition: background var(--transition-fast);
+}
+
+.macro-radar-row:hover {
+  background: rgba(0, 242, 254, 0.04);
+}
+
+.btn-analyze-shark-stock {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--cyan-primary);
+  background: rgba(0, 242, 254, 0.06);
+  border: 1px solid rgba(0, 242, 254, 0.3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-analyze-shark-stock:hover {
+  background: rgba(0, 242, 254, 0.18);
+  border-color: var(--cyan-primary);
+  transform: translateX(2px);
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
+}
+
+/* Shark Table Custom Elements */
+.shark-table-row {
+  transition: background var(--transition-fast);
+}
+
+.shark-table-row:hover {
+  background: rgba(0, 242, 254, 0.03);
+}
+
+.shark-manager-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.shark-manager-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 242, 254, 0.08);
+  border: 1px solid rgba(0, 242, 254, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.shark-manager-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.shark-firm-name {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.shark-manager-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.shark-val-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.shark-val-cell .val {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.shark-val-cell .sub {
+  font-size: 0.70rem;
+}
+
+.trend-quarter-dot {
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-dim);
+}
+
+.trend-quarter-dot.dot-active {
+  background: rgba(0, 242, 254, 0.12);
+  border-color: rgba(0, 242, 254, 0.4);
+  color: var(--cyan-primary);
+  font-weight: 700;
+}
+
+.shark-inline-thesis {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(0, 242, 254, 0.03);
+  border-left: 2px solid var(--cyan-primary);
+  padding: 8px 12px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.shark-inline-thesis strong {
+  color: var(--text-main);
+}
+
+

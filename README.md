@@ -32,6 +32,7 @@ flowchart TD
             TabValuation["Peter Lynch GARP Valuation<br/>& 2D Sensitivity Matrix"]
             TabMomentum["Technical Momentum & Candlesticks<br/>(SMA 50/200, RSI 14, Pivots)"]
             TabOrderBook["Order Book & 10Y History<br/>(OB/Rev Ratio > 1.0x & Level 2 Depth)"]
+            TabSharks["Big Sharks & 13F Trends<br/>(Adding/Removing, 1Y Trend & Macro Radar)"]
             TabNews["Financial News Feed<br/>& NLP Sentiment Classifier"]
             TabScreener["Global GARP Radar Screener<br/>(NSE India / US Markets)"]
             TabSectors["Sector Rotation Dashboard<br/>& Top 3 Quant Leaders"]
@@ -45,6 +46,7 @@ flowchart TD
         QuantEngine["Quantitative Valuation Engine<br/>(src/quant/engine.js)<br/>• Peter Lynch Fair Value<br/>• PEG Ratio<br/>• 3-Scenario Stress Test<br/>• 2D Sensitivity Matrix"]
         SectorEngine["Sector Rotation & Screener Engine<br/>(src/components/sectors.js)<br/>• YTD Performance Ranking<br/>• Top 3 Quant Leaders Isolation<br/>• Market Filter (NSE / US / Global)"]
         OrderBookEngine["Contract Backlog & Order Book Engine<br/>(src/components/orderbook.js)<br/>• 10-Year Backlog Ledger (2020-2029)<br/>• OB / Revenue Ratio (> 1.0x Green)<br/>• Level 2 Market Depth Simulator"]
+        SharkEngine["Big Sharks & 13F Flow Engine<br/>(src/components/sharks.js)<br/>• Marquee Whales Roster (US & NSE)<br/>• 1Y Inflow/Outflow Dual-Axis Flow<br/>• Macro Accumulation & Dump Radar"]
         ChartEngine["Visualizations & Rendering Engine<br/>(src/components/charts.js)<br/>• Chart.js Dual-Axis Renderers<br/>• YoY Growth DataLabels Plugin"]
         NewsEngine["Financial NLP Sentiment Classifier<br/>(src/components/news.js)"]
         ScreenerEngine["GARP Radar Screener Controller<br/>(src/components/screener.js)"]
@@ -76,6 +78,7 @@ flowchart TD
     DataService -->|"Normalized Stock DTO"| MainOrchestrator
     MainOrchestrator -->|"Stock Profile"| QuantEngine
     MainOrchestrator -->|"Stock Profile"| OrderBookEngine
+    MainOrchestrator -->|"Stock Profile & Price"| SharkEngine
     MainOrchestrator -->|"Constituents & Benchmarks"| SectorEngine
     MainOrchestrator -->|"Historical Daily Series"| ChartEngine
     MainOrchestrator -->|"Raw News Headlines"| NewsEngine
@@ -83,6 +86,7 @@ flowchart TD
     QuantEngine -->|"Valuation Models & Scenarios"| TabValuation
     ChartEngine -->|"Momentum Visualizations"| TabMomentum
     OrderBookEngine -->|"10Y History & Level 2 Depth"| TabOrderBook
+    SharkEngine -->|"Whale Flows, 1Y Trend & Radar"| TabSharks
     NewsEngine -->|"NLP Scored News Stream"| TabNews
     ScreenerEngine -->|"Live GARP Grid"| TabScreener
     SectorEngine -->|"Ranked Sectors & Top 3 Picks"| TabSectors
@@ -92,8 +96,8 @@ flowchart TD
 
 | Tier | Primary Responsibilities | Core Technologies |
 | :--- | :--- | :--- |
-| **1. Client Presentation Tier** | Renders high-contrast dark/light glassmorphism UI, universal omnibar search, streaming ticker tape, and 5 interactive analytical views. Dispatches user interaction events to the orchestrator. | HTML5, Vanilla CSS Design System, Lucide SVG Icons |
-| **2. Core Application Engines Tier** | Computes quantitative valuations (PEG, Peter Lynch Fair Value, 3-Scenario stress tests), generates 10-year order book timelines with YoY growth %, simulates Level 2 market depth, calculates sector rotation rankings, and scores financial news headlines. | ES6+ Vanilla JavaScript Modules, Chart.js 4.x |
+| **1. Client Presentation Tier** | Renders high-contrast dark/light glassmorphism UI, universal omnibar search, streaming ticker tape, and 6 interactive analytical views. Dispatches user interaction events to the orchestrator. | HTML5, Vanilla CSS Design System, Lucide SVG Icons |
+| **2. Core Application Engines Tier** | Computes quantitative valuations (PEG, Peter Lynch Fair Value, 3-Scenario stress tests), generates 10-year order book timelines with YoY growth %, simulates Level 2 market depth, calculates sector rotation rankings, tracks Big Sharks & institutional fund manager positions with 1-year flow trends, and scores financial news headlines. | ES6+ Vanilla JavaScript Modules, Chart.js 4.x |
 | **3. API Gateway & Resilience Tier** | Bypasses CORS and origin restrictions via Vite development middleware, manages User-Agent headers, routes live streaming quote and historical candle requests, and executes multi-tier failovers. | Vite Node.js Proxy, Fetch API, Failover Handlers |
 | **4. External Market Feeds Tier** | Authoritative market data source supplying real-time stock quotes, bid/ask ticks, 1-year daily candlestick series, and breaking corporate news across NSE India and US exchanges. | Yahoo Finance Query APIs (v8 Chart, v1 Search, v6 Quote) |
 
@@ -126,6 +130,7 @@ flowchart TD
         QuantEngineJS["src/quant/engine.js<br/>• calculatePE()<br/>• calculatePEG()<br/>• calculateLynchFairValue()<br/>• generateScenarios()<br/>• generateSensitivityMatrix()<br/>• calculateQuantScore()"]
         SectorJS["src/components/sectors.js<br/>• SECTORS_DATA (12 Sectors)<br/>• initSectorDashboard()<br/>• fetchRealtimeSectorQuotes()<br/>• renderSectorTopStocksOrderBook()<br/>• renderSectorOrderBookChart()<br/>• renderSectorOrderBookTable()<br/>• renderSectorOrderBookDepth()"]
         OrderBookJS["src/components/orderbook.js<br/>• getOrGenerateOrderBook()<br/>• renderOrderBook()<br/>• renderOrderBookChart()<br/>• renderLevel2DOM()<br/>• updateOrderBookTheme()"]
+        SharkJS["src/components/sharks.js<br/>• SHARK_PROFILES (US & NSE Whales)<br/>• CURATED_STOCK_SHARKS<br/>• MACRO_SHARK_TRENDS<br/>• getOrGenerateSharkData()<br/>• renderBigSharksView()<br/>• renderShark1YearTrendChart()<br/>• renderMacroSharkRadar()"]
         ChartsJS["src/components/charts.js<br/>• renderStockChart()<br/>• renderEPSChart()<br/>• updateChartTheme()"]
         ScreenerJS["src/components/screener.js<br/>• initScreener()<br/>• renderScreenerTable()<br/>• filterScreener()"]
         NewsJS["src/components/news.js<br/>• renderNewsFeed()<br/>• scoreSentimentNLP()"]
@@ -144,6 +149,7 @@ flowchart TD
     MainJS --> QuantEngineJS
     MainJS --> SectorJS
     MainJS --> OrderBookJS
+    MainJS --> SharkJS
     MainJS --> ChartsJS
     MainJS --> ScreenerJS
     MainJS --> NewsJS
@@ -152,6 +158,7 @@ flowchart TD
     SectorJS --> YahooServiceJS
     SectorJS --> OrderBookJS
     SectorJS --> QuantEngineJS
+    SharkJS --> ChartsJS
     OrderBookJS --> BaselineDataJS
     ScreenerJS --> BaselineDataJS
     ScreenerJS --> YahooServiceJS

@@ -43,7 +43,8 @@ import {
   Shield,
   Filter,
   Sparkles,
-  ChevronDown
+  ChevronDown,
+  Anchor
 } from 'lucide';
 
 import { STOCKS_DATA } from './data/stocks.js';
@@ -59,6 +60,7 @@ import { updateAllCharts } from './components/charts.js';
 import { renderNewsFeed } from './components/news.js';
 import { renderOrderBook, updateOrderBookTheme } from './components/orderbook.js';
 import { renderSectorsDashboard } from './components/sectors.js';
+import { renderBigSharksView, updateSharkChartTheme, getOrGenerateSharkData } from './components/sharks.js';
 import { renderScreenerTable, setupScreenerControls } from './components/screener.js';
 import { setupCustomStockModal } from './components/customStockModal.js';
 import { 
@@ -132,7 +134,8 @@ function refreshIcons() {
       Shield,
       Filter,
       Sparkles,
-      ChevronDown
+      ChevronDown,
+      Anchor
     }
   });
 }
@@ -171,6 +174,7 @@ function setupThemeEngine() {
     if (currentStock) {
       updateAllCharts(currentStock, isDark);
       updateOrderBookTheme(isDark);
+      updateSharkChartTheme(isDark);
     }
 
     const isSectorsActive = document.getElementById('tab-sectors')?.classList.contains('active');
@@ -328,6 +332,10 @@ function setupTabNavigation() {
             updateAllCharts(stock, state.isDarkMode);
           } else if (targetId === 'tab-orderbook') {
             renderOrderBook(stock, state.isDarkMode);
+          } else if (targetId === 'tab-big-sharks') {
+            renderBigSharksView(stock, state.isDarkMode, (t) => {
+              loadStockRealtime(t);
+            });
           } else if (targetId === 'tab-sensitivity') {
             updateReturnModel(stock);
           } else if (targetId === 'tab-news') {
@@ -344,6 +352,14 @@ function setupTabNavigation() {
       refreshIcons();
     });
   });
+
+  const heroSharkTag = document.getElementById('heroSharkActivityTag');
+  if (heroSharkTag) {
+    heroSharkTag.addEventListener('click', () => {
+      const sharkTabBtn = document.querySelector('.tab-btn[data-tab="tab-big-sharks"]');
+      if (sharkTabBtn) sharkTabBtn.click();
+    });
+  }
 }
 
 /**
@@ -376,6 +392,16 @@ function renderStockHero(stock) {
       sessionStatus.className = 'session-status-badge text-amber';
       sessionStatus.innerHTML = `<i data-lucide="clock" class="inline-icon"></i> ${stock.marketSession || 'Market Closed'}`;
     }
+  }
+
+  const heroSharkTag = document.getElementById('heroSharkActivityTag');
+  const heroSharkText = document.getElementById('heroSharkActivityText');
+  if (heroSharkTag && heroSharkText) {
+    const sharkData = getOrGenerateSharkData(stock);
+    const isAdding = sharkData.convictionScore >= 70;
+    const isTrimming = sharkData.convictionScore < 45;
+    heroSharkTag.className = `hero-shark-pill ${isAdding ? 'shark-pill-bull' : isTrimming ? 'shark-pill-bear' : 'shark-pill-neutral'}`;
+    heroSharkText.textContent = `Whales: ${sharkData.sentiment}`;
   }
 
   document.getElementById('heroPrice').textContent = `${curr}${stock.price.toFixed(2)}`;
@@ -740,7 +766,12 @@ export async function loadStockRealtime(ticker, notify = true) {
     // 6. Render Order Book & Backlog History
     renderOrderBook(liveData, state.isDarkMode);
 
-    // 7. Update Real-Time GARP Radar Table highlighting active stock
+    // 7. Render Big Sharks & Institutional Fund Managers Intelligence
+    renderBigSharksView(liveData, state.isDarkMode, (t) => {
+      loadStockRealtime(t);
+    });
+
+    // 8. Update Real-Time GARP Radar Table highlighting active stock
     renderScreenerTable(state.universe, (t) => {
       loadStockRealtime(t);
       document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
@@ -771,6 +802,9 @@ export async function loadStockRealtime(ticker, notify = true) {
       renderNewsFeed(stock, state.newsFilter);
       updateAllCharts(stock, state.isDarkMode);
       renderOrderBook(stock, state.isDarkMode);
+      renderBigSharksView(stock, state.isDarkMode, (t) => {
+        loadStockRealtime(t);
+      });
       renderScreenerTable(state.universe, (t) => {
         loadStockRealtime(t);
       }, state.currentTicker);

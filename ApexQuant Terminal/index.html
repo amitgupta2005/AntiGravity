@@ -172,6 +172,11 @@
               <span id="hero52Range">52W Range: $45.20 - $140.76</span>
               <span>•</span>
               <span id="heroSessionStatus" class="session-status-badge text-cyan"><i data-lucide="clock" class="inline-icon"></i> Live Market Session</span>
+              <span>•</span>
+              <button id="heroSharkActivityTag" class="hero-shark-pill" title="View Big Sharks & Fund Manager Holdings">
+                <i data-lucide="anchor" class="inline-icon text-cyan"></i>
+                <span id="heroSharkActivityText">Big Sharks: Aggressive Accumulation</span>
+              </button>
             </div>
           </div>
         </div>
@@ -264,6 +269,10 @@
       <button class="tab-btn" data-tab="tab-orderbook" role="tab" aria-selected="false">
         <i data-lucide="layers" class="inline-icon"></i>
         <span>Order Book & History</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-big-sharks" role="tab" aria-selected="false">
+        <i data-lucide="anchor" class="inline-icon text-cyan"></i>
+        <span>Big Sharks & 13F Trends</span>
       </button>
       <button class="tab-btn" data-tab="tab-sensitivity" role="tab" aria-selected="false">
         <i data-lucide="grid" class="inline-icon"></i>
@@ -751,6 +760,155 @@
                 <!-- Populated by JS -->
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: Big Sharks & Fund Managers Intelligence -->
+      <section id="tab-big-sharks" class="tab-pane" role="tabpanel">
+        <!-- Top Institutional Whale KPI Metrics -->
+        <div class="sharks-kpi-grid">
+          <div class="shark-kpi-card highlight-shark">
+            <div class="shark-kpi-header">
+              <span class="shark-kpi-label"><i data-lucide="anchor" class="inline-icon text-cyan"></i> Shark Sentiment Verdict</span>
+              <span class="badge badge-strong-buy" id="sharkSentimentVerdict">AGGRESSIVE ACCUMULATION</span>
+            </div>
+            <div class="shark-kpi-stock-name">
+              <span class="font-bold text-main" id="sharkStockTicker">NVDA</span> — <span id="sharkStockName">NVIDIA Corporation</span>
+            </div>
+            <div class="shark-kpi-sub" id="sharkAddTrimRatio">16 Adding • 4 Trimming</div>
+          </div>
+
+          <div class="shark-kpi-card">
+            <div class="shark-kpi-header">
+              <span class="shark-kpi-label"><i data-lucide="award" class="inline-icon text-amber"></i> Shark Conviction Score</span>
+              <span class="shark-conviction-badge">Quant 13F / SEBI</span>
+            </div>
+            <div class="shark-kpi-val text-amber" id="sharkConvictionScore">92/100</div>
+            <div class="shark-kpi-sub text-emerald font-bold">★ High Institutional Accumulation</div>
+          </div>
+
+          <div class="shark-kpi-card">
+            <div class="shark-kpi-header">
+              <span class="shark-kpi-label"><i data-lucide="trending-up" class="inline-icon text-emerald"></i> Net 1-Year Whale Flow</span>
+            </div>
+            <div class="shark-kpi-val text-emerald" id="sharkNet1YFlow">+$8.45 $B</div>
+            <div class="shark-kpi-sub" id="sharkNet1YFlowSub">Trailing 4 Quarters Net Capital Flow</div>
+          </div>
+
+          <div class="shark-kpi-card">
+            <div class="shark-kpi-header">
+              <span class="shark-kpi-label"><i data-lucide="shield" class="inline-icon text-blue"></i> Institutional Ownership</span>
+            </div>
+            <div class="shark-kpi-val text-blue" id="sharkInstOwnership">74.2%</div>
+            <div class="shark-kpi-sub text-emerald font-bold" id="sharkOwnershipChange">+5.4% YoY Stake Shift</div>
+          </div>
+        </div>
+
+        <!-- 1-Year Quarterly Trend Chart: Inflow vs Outflow & Ownership % -->
+        <div class="panel-card" style="margin-top: 20px;">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">
+                <i data-lucide="bar-chart-2" class="inline-icon text-cyan"></i>
+                1-Year Institutional Whale Flow & Ownership Trend (Trailing 4 Quarters)
+              </h2>
+              <p class="panel-subtitle">
+                Quarterly institutional capital inflows (green), outflows (rose), and net ownership trajectory (cyan curve) across 13F & SEBI disclosures.
+              </p>
+            </div>
+            <div class="orderbook-legend-badges">
+              <span class="legend-badge-item"><span class="legend-dot" style="background: #10b981;"></span> Institutional Inflow</span>
+              <span class="legend-badge-item"><span class="legend-dot" style="background: #f43f5e;"></span> Institutional Outflow</span>
+              <span class="legend-badge-item"><span class="legend-dot" style="background: #00f2fe;"></span> Total Ownership %</span>
+            </div>
+          </div>
+
+          <div class="shark-chart-container">
+            <canvas id="sharkTrendChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Selected Stock Sharks Roster Table -->
+        <div class="panel-card" style="margin-top: 24px;">
+          <div class="panel-header" style="flex-wrap: wrap; gap: 12px;">
+            <div>
+              <h3 class="panel-title" style="font-size: 1.05rem;">
+                <i data-lucide="shield-check" class="inline-icon text-emerald"></i>
+                Fund Managers & Super-Investors in Selected Stock
+              </h3>
+              <p class="panel-subtitle">Detailed 13F & institutional holdings, latest quarterly transaction, 1-year trailing trend, and investment thesis.</p>
+            </div>
+            <!-- Filter Pills -->
+            <div class="shark-filter-group">
+              <button class="btn btn-xs shark-filter-btn active" data-filter="ALL">All Sharks</button>
+              <button class="btn btn-xs shark-filter-btn" data-filter="BUY">Adding / Buying</button>
+              <button class="btn btn-xs shark-filter-btn" data-filter="NEW">New Positions</button>
+              <button class="btn btn-xs shark-filter-btn" data-filter="HOLD">Holding</button>
+              <button class="btn btn-xs shark-filter-btn" data-filter="SELL">Trimming / Exited</button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Super-Investor / Whale Fund</th>
+                  <th>Latest Action</th>
+                  <th>Shares &amp; Stake %</th>
+                  <th>Holding Value</th>
+                  <th>1-Year Trend (4 Quarters)</th>
+                  <th>Avg Cost &amp; Unrealized P&amp;L</th>
+                  <th>Filing / Disclosure</th>
+                </tr>
+              </thead>
+              <tbody id="sharkHoldingsTableBody">
+                <!-- Populated dynamically by sharks.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Macro Consensus Radar: What Fund Managers are Buying, Looking to Add, and Selling -->
+        <div class="panel-card" style="margin-top: 24px;">
+          <div class="panel-header" style="flex-wrap: wrap; gap: 12px;">
+            <div>
+              <h2 class="panel-title" style="font-size: 1.15rem;">
+                <i data-lucide="radar" class="inline-icon text-cyan"></i>
+                Macro Whale Radar: What Fund Managers are Buying & Looking to Add / Remove
+              </h2>
+              <p class="panel-subtitle">
+                Market-wide institutional consensus tracking aggressive additions, pre-breakout accumulation radars, and heavy liquidation dumps.
+              </p>
+            </div>
+
+            <!-- Market Filter Pills (All / NSE / US) -->
+            <div class="macro-market-filter-group">
+              <button class="btn btn-xs macro-market-btn active" data-macro-market="ALL">All Markets 🌐</button>
+              <button class="btn btn-xs macro-market-btn" data-macro-market="NSE">NSE India 🇮🇳</button>
+              <button class="btn btn-xs macro-market-btn" data-macro-market="US">US Equities 🇺🇸</button>
+            </div>
+          </div>
+
+          <!-- Radar Subcategory Tabs (Buys, Looking to Add, Sells) -->
+          <div class="macro-category-tabs">
+            <button class="macro-category-btn active" data-macro-category="BUYS">
+              <i data-lucide="trending-up" class="inline-icon text-emerald"></i>
+              <span>🔥 Aggressive Whale Buys</span>
+            </button>
+            <button class="macro-category-btn" data-macro-category="LOOKING_TO_ADD">
+              <i data-lucide="eye" class="inline-icon text-cyan"></i>
+              <span>👁️ "Looking to Add" Accumulation Radar</span>
+            </button>
+            <button class="macro-category-btn" data-macro-category="SELLS">
+              <i data-lucide="trending-down" class="inline-icon text-rose"></i>
+              <span>🔻 Heavy Sells & Institutional Trims</span>
+            </button>
+          </div>
+
+          <!-- Macro Radar Dynamic Content Container -->
+          <div id="macroSharkRadarContent" style="margin-top: 16px;">
+            <!-- Rendered by sharks.js -->
           </div>
         </div>
       </section>

@@ -108,6 +108,27 @@ ApexQuant Terminal is an institutional-grade, responsive quantitative equity ana
   - **10-Year Backlog Ledger Table**: Full tabular audit including Period, Ending Backlog, Inflow Run-Rate, Executed Revenue, Book-to-Bill, OB/Rev ratio, and YoY Growth (%) pill badges.
   - **Real-Time Level 2 Market Depth (Bids vs Asks)**: DOM ladder showing top 5 bids vs top 5 asks around current live price with volumetric bars and depth imbalance ratio.
 
+### 12. 🦈 Big Sharks & Fund Managers Intelligence (Adding / Removing, 1-Year Trend & Macro Consensus Radar)
+- **Top Super-Investors & Institutional Whales Roster**:
+  - Detailed 13F and SEBI institutional disclosures for marquee super-investors and fund managers:
+    - **US Super-Investors & Hedge Funds**: Warren Buffett (Berkshire Hathaway), Stanley Druckenmiller (Duquesne Family Office), Michael Burry (Scion Asset Management), David Tepper (Appaloosa Management), Bill Ackman (Pershing Square), Ray Dalio (Bridgewater Associates), Philippe Laffont (Coatue Management), Ken Griffin (Citadel Advisors), Vanguard, BlackRock.
+    - **Indian Marquee Super-Investors & DII/FII Giants**: Rekha Jhunjhunwala (Rare Enterprises), Ashish Kacholia (Lucky Investment Managers), Vijay Kedia (Kedia Securities), Radhakishan Damani (Bright Star / DMart), Mukul Agrawal, SBI Mutual Fund, HDFC Mutual Fund, ICICI Prudential MF, Life Insurance Corporation (LIC), Norges Bank Sovereign Wealth Fund.
+- **Selected Stock Adding or Removing Status**:
+  - Highlights whether marquee fund managers are **Aggressively Buying / Adding**, **Accumulating**, **Opening New Positions**, **Holding**, or **Trimming / Exiting**.
+  - Displays Exact Shares Held, Total Valuation (in `$B/$M` or `₹ Cr`), Portfolio Stake %, Q/Q Stake Change, Average Cost Basis, and Unrealized P&L.
+  - Interactive Filter Chips: `All Sharks`, `Adding / Buying`, `New Positions`, `Holding`, `Trimming / Exited`.
+  - Detailed Institutional Conviction Thesis for every whale holding.
+- **1-Year Institutional Whale Flow & Ownership Trend (Trailing 4 Quarters)**:
+  - Interactive Chart.js dual-axis visualization mapping **Quarterly Inflows** (emerald green bars) vs **Quarterly Outflows** (rose red bars) on the primary left axis and **Total Institutional Ownership %** (cyan spline curve) on the secondary right axis across the trailing 4 quarters (`Q4 2023`, `Q1 2024`, `Q2 2024`, `Q3 2024`).
+  - Top KPI strip: Shark Sentiment Verdict, Shark Conviction Score (out of 100), Net 1-Year Whale Flow ($ or ₹), Institutional Ownership %, YoY Stake Shift, and Active Add vs Trim Ratio.
+- **Macro Whale Radar: What Fund Managers are Buying & Looking to Add / Remove**:
+  - Market-wide institutional consensus intelligence:
+    - **🔥 Aggressive Whale Buys**: Stocks fund managers are heavily buying and adding with institutional net capital inflows and catalysts.
+    - **👁️ "Looking to Add" Accumulation Radar**: Emerging high-conviction accumulation targets, breakout candidates, and 13F new initiations.
+    - **🔻 Heavy Sells & Institutional Trims**: Stocks fund managers are liquidating, profit-taking, or exiting due to multiple compression or thesis degradation.
+  - Interactive Market Filters: Filter consensus radar by **All Markets 🌐**, **NSE India 🇮🇳**, and **US Equities 🇺🇸**.
+  - One-Click Terminal Analysis: Every stock in the macro radar features an **"Analyze"** button that immediately loads the stock into the core valuation engine and technical terminal.
+
 ---
 
 ## 📐 Mathematical & Quantitative Formulas
@@ -145,6 +166,7 @@ flowchart TD
             TabValuation["Peter Lynch GARP Valuation<br/>& 2D Sensitivity Matrix"]
             TabMomentum["Technical Momentum & Candlesticks<br/>(SMA 50/200, RSI 14, Pivots)"]
             TabOrderBook["Order Book & 10Y History<br/>(OB/Rev Ratio > 1.0x & Level 2 Depth)"]
+            TabSharks["Big Sharks & 13F Trends<br/>(Adding/Removing, 1Y Trend & Macro Radar)"]
             TabNews["Financial News Feed<br/>& NLP Sentiment Classifier"]
             TabScreener["Global GARP Radar Screener<br/>(NSE India / US Markets)"]
             TabSectors["Sector Rotation Dashboard<br/>& Top 3 Quant Leaders"]
@@ -156,6 +178,7 @@ flowchart TD
         QuantEngine["Quantitative Valuation Engine<br/>(src/quant/engine.js)<br/>• Peter Lynch Fair Value<br/>• PEG Ratio<br/>• 3-Scenario Stress Test<br/>• 2D Sensitivity Matrix"]
         SectorEngine["Sector Rotation & Screener Engine<br/>(src/components/sectors.js)<br/>• YTD Performance Ranking<br/>• Top 3 Quant Leaders Isolation<br/>• Market Filter (NSE / US / Global)"]
         OrderBookEngine["Contract Backlog & Order Book Engine<br/>(src/components/orderbook.js)<br/>• 10-Year Backlog Ledger (2020-2029)<br/>• OB / Revenue Ratio (> 1.0x Green)<br/>• Level 2 Market Depth Simulator"]
+        SharkEngine["Big Sharks & 13F Flow Engine<br/>(src/components/sharks.js)<br/>• Marquee Whales Roster (US & NSE)<br/>• 1Y Inflow/Outflow Dual-Axis Flow<br/>• Macro Accumulation & Dump Radar"]
         ChartEngine["Visualizations & Rendering Engine<br/>(src/components/charts.js)<br/>• Chart.js Dual-Axis Renderers<br/>• YoY Growth DataLabels Plugin"]
         NewsEngine["Financial NLP Sentiment Classifier<br/>(src/components/news.js)"]
         ScreenerEngine["GARP Radar Screener Controller<br/>(src/components/screener.js)"]
@@ -187,6 +210,7 @@ flowchart TD
     DataService -->|"Normalized Stock DTO"| MainOrchestrator
     MainOrchestrator -->|"Stock Profile"| QuantEngine
     MainOrchestrator -->|"Stock Profile"| OrderBookEngine
+    MainOrchestrator -->|"Stock Profile & Price"| SharkEngine
     MainOrchestrator -->|"Constituents & Benchmarks"| SectorEngine
     MainOrchestrator -->|"Historical Daily Series"| ChartEngine
     MainOrchestrator -->|"Raw News Headlines"| NewsEngine
@@ -194,6 +218,7 @@ flowchart TD
     QuantEngine -->|"Valuation Models & Scenarios"| TabValuation
     ChartEngine -->|"Momentum Visualizations"| TabMomentum
     OrderBookEngine -->|"10Y History & Level 2 Depth"| TabOrderBook
+    SharkEngine -->|"Whale Flows, 1Y Trend & Radar"| TabSharks
     NewsEngine -->|"NLP Scored News Stream"| TabNews
     ScreenerEngine -->|"Live GARP Grid"| TabScreener
     SectorEngine -->|"Ranked Sectors & Top 3 Picks"| TabSectors
@@ -203,8 +228,8 @@ flowchart TD
 
 | Tier | Primary Responsibilities | Core Technologies |
 | :--- | :--- | :--- |
-| **1. Client Presentation Tier** | Renders high-contrast dark/light glassmorphism UI, universal omnibar search, streaming ticker tape, and 5 interactive analytical views. Dispatches user interaction events to the orchestrator. | HTML5, Vanilla CSS Design System, Lucide SVG Icons |
-| **2. Core Application Engines Tier** | Computes quantitative valuations (PEG, Peter Lynch Fair Value, 3-Scenario stress tests), generates 10-year order book timelines with YoY growth %, simulates Level 2 market depth, calculates sector rotation rankings, and scores financial news headlines. | ES6+ Vanilla JavaScript Modules, Chart.js 4.x |
+| **1. Client Presentation Tier** | Renders high-contrast dark/light glassmorphism UI, universal omnibar search, streaming ticker tape, and 6 interactive analytical views. Dispatches user interaction events to the orchestrator. | HTML5, Vanilla CSS Design System, Lucide SVG Icons |
+| **2. Core Application Engines Tier** | Computes quantitative valuations (PEG, Peter Lynch Fair Value, 3-Scenario stress tests), generates 10-year order book timelines with YoY growth %, simulates Level 2 market depth, calculates sector rotation rankings, tracks Big Sharks & institutional fund manager positions with 1-year flow trends, and scores financial news headlines. | ES6+ Vanilla JavaScript Modules, Chart.js 4.x |
 | **3. API Gateway & Resilience Tier** | Bypasses CORS and origin restrictions via Vite development middleware, manages User-Agent headers, routes live streaming quote and historical candle requests, and executes multi-tier failovers. | Vite Node.js Proxy, Fetch API, Failover Handlers |
 | **4. External Market Feeds Tier** | Authoritative market data source supplying real-time stock quotes, bid/ask ticks, 1-year daily candlestick series, and breaking corporate news across NSE India and US exchanges. | Yahoo Finance Query APIs (v8 Chart, v1 Search, v6 Quote) |
 
@@ -237,6 +262,7 @@ flowchart TD
         QuantEngineJS["src/quant/engine.js<br/>• calculatePE()<br/>• calculatePEG()<br/>• calculateLynchFairValue()<br/>• generateScenarios()<br/>• generateSensitivityMatrix()<br/>• calculateQuantScore()"]
         SectorJS["src/components/sectors.js<br/>• SECTORS_DATA (12 Sectors)<br/>• initSectorDashboard()<br/>• fetchRealtimeSectorQuotes()<br/>• renderSectorTopStocksOrderBook()<br/>• renderSectorOrderBookChart()<br/>• renderSectorOrderBookTable()<br/>• renderSectorOrderBookDepth()"]
         OrderBookJS["src/components/orderbook.js<br/>• getOrGenerateOrderBook()<br/>• renderOrderBook()<br/>• renderOrderBookChart()<br/>• renderLevel2DOM()<br/>• updateOrderBookTheme()"]
+        SharkJS["src/components/sharks.js<br/>• SHARK_PROFILES (US & NSE Whales)<br/>• CURATED_STOCK_SHARKS<br/>• MACRO_SHARK_TRENDS<br/>• getOrGenerateSharkData()<br/>• renderBigSharksView()<br/>• renderShark1YearTrendChart()<br/>• renderMacroSharkRadar()"]
         ChartsJS["src/components/charts.js<br/>• renderStockChart()<br/>• renderEPSChart()<br/>• updateChartTheme()"]
         ScreenerJS["src/components/screener.js<br/>• initScreener()<br/>• renderScreenerTable()<br/>• filterScreener()"]
         NewsJS["src/components/news.js<br/>• renderNewsFeed()<br/>• scoreSentimentNLP()"]
@@ -255,6 +281,7 @@ flowchart TD
     MainJS --> QuantEngineJS
     MainJS --> SectorJS
     MainJS --> OrderBookJS
+    MainJS --> SharkJS
     MainJS --> ChartsJS
     MainJS --> ScreenerJS
     MainJS --> NewsJS
@@ -263,6 +290,7 @@ flowchart TD
     SectorJS --> YahooServiceJS
     SectorJS --> OrderBookJS
     SectorJS --> QuantEngineJS
+    SharkJS --> ChartsJS
     OrderBookJS --> BaselineDataJS
     ScreenerJS --> BaselineDataJS
     ScreenerJS --> YahooServiceJS
