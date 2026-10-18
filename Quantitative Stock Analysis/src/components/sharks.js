@@ -1,5 +1,5 @@
 /**
- * ApexQuant Terminal — Big Sharks & Institutional Fund Managers Intelligence
+ * Quantitative Stock Analysis — Big Sharks & Institutional Fund Managers Intelligence
  * Tracks super-investor portfolios, 13F filings, and institutional capital flows in REAL TIME:
  * - Adding or removing selected stock (Whales holding, buying, trimming, or exiting)
  * - Dynamic holding values and P&L calculated against current real-time market price

@@ -1,5 +1,5 @@
 /**
- * ApexQuant Terminal — All Sectors Dashboard
+ * Quantitative Stock Analysis — All Sectors Dashboard
  * Provides comprehensive sector-level performance tracking across Global, US,
  * and NSE Indian markets, sorted descending by Year-To-Date (YTD) performance.
  * Features interactive Top 3 Quant-Screened Leader Stocks on sector selection.
@@ -2735,8 +2735,12 @@ function renderSectorOrderBookChart(stockItems, activeTicker, colors, isDarkMode
         id: 'sectorYoyGrowthDataLabels',
         afterDatasetsDraw(chart) {
           const { ctx, chartArea } = chart;
+          if (!chartArea || !chartArea.width || !chartArea.height || chartArea.width <= 0 || chartArea.height <= 0) {
+            return;
+          }
+
           const yoyMeta = chart.getDatasetMeta(3);
-          if (!yoyMeta || !yoyMeta.data || !chartArea) return;
+          if (!yoyMeta || !yoyMeta.data || !Array.isArray(yoyMeta.data)) return;
 
           ctx.save();
           ctx.textAlign = 'center';
@@ -2744,10 +2748,19 @@ function renderSectorOrderBookChart(stockItems, activeTicker, colors, isDarkMode
           ctx.font = 'bold 10px "JetBrains Mono", monospace';
 
           yoyMeta.data.forEach((point, idx) => {
-            const growth = timeline[idx].growth;
+            if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+              return;
+            }
+
+            const item = timeline[idx];
+            if (!item) return;
+
+            const growth = item.growth;
             const text = `${growth > 0 ? '+' : ''}${growth}%`;
             const xPos = point.x;
             const yPos = Math.max(chartArea.top + 16, point.y - 8);
+
+            if (!Number.isFinite(xPos) || !Number.isFinite(yPos)) return;
 
             const textMetrics = ctx.measureText(text);
             const textWidth = textMetrics.width;
@@ -2758,16 +2771,25 @@ function renderSectorOrderBookChart(stockItems, activeTicker, colors, isDarkMode
             const bgW = textWidth + padX * 2;
             const bgH = 13 + padY * 2;
 
+            if (!Number.isFinite(bgX) || !Number.isFinite(bgY) || !Number.isFinite(bgW) || !Number.isFinite(bgH)) {
+              return;
+            }
+
             ctx.fillStyle = isDarkMode ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.95)';
             ctx.strokeStyle = '#f59e0b';
             ctx.lineWidth = 1;
 
-            if (ctx.roundRect) {
-              ctx.beginPath();
-              ctx.roundRect(bgX, bgY, bgW, bgH, 3);
-              ctx.fill();
-              ctx.stroke();
-            } else {
+            try {
+              if (typeof ctx.roundRect === 'function') {
+                ctx.beginPath();
+                ctx.roundRect(bgX, bgY, bgW, bgH, 3);
+                ctx.fill();
+                ctx.stroke();
+              } else {
+                ctx.fillRect(bgX, bgY, bgW, bgH);
+                ctx.strokeRect(bgX, bgY, bgW, bgH);
+              }
+            } catch (_) {
               ctx.fillRect(bgX, bgY, bgW, bgH);
               ctx.strokeRect(bgX, bgY, bgW, bgH);
             }

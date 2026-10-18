@@ -1,4 +1,4 @@
-# ApexQuant Terminal — Institutional Stock Market Analysis & Valuation Engine
+# Quantitative Stock Analysis — Institutional Stock Market Analysis & Valuation Engine
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Vite](https://img.shields.io/badge/Vite-6.x-646CFF.svg?logo=vite&logoColor=white)](https://vitejs.dev/)
@@ -6,7 +6,7 @@
 [![Exchange](https://img.shields.io/badge/Exchanges-NSE%20India%20%7C%20NASDAQ%20%7C%20NYSE-10B981.svg)](#supported-exchanges)
 [![Data Feed](https://img.shields.io/badge/Live%20Data-Yahoo%20Finance%20Stream-00F2FE.svg)](#market-data-architecture)
 
-ApexQuant Terminal is an institutional-grade, responsive quantitative equity analysis web platform designed for quants, portfolio managers, and individual investors. It provides real-time market data streaming from **NSE India (National Stock Exchange)** and **US Markets (NASDAQ / NYSE)**, Peter Lynch **Growth-At-A-Reasonable-Price (GARP)** valuation models, future earnings projections, 2D sensitivity stress matrices, technical momentum indicators, financial NLP sentiment analysis, and a real-time GARP radar screener.
+Quantitative Stock Analysis is an institutional-grade, responsive quantitative equity analysis web platform designed for quants, portfolio managers, and individual investors. It provides real-time market data streaming from **NSE India (National Stock Exchange)** and **US Markets (NASDAQ / NYSE)**, Peter Lynch **Growth-At-A-Reasonable-Price (GARP)** valuation models, future earnings projections, 2D sensitivity stress matrices, technical momentum indicators, financial NLP sentiment analysis, and a real-time GARP radar screener.
 
 ---
 
@@ -155,11 +155,11 @@ ApexQuant Terminal is an institutional-grade, responsive quantitative equity ana
 
 ### 1. High-Level Technical Architecture (HLA)
 
-The ApexQuant Terminal is architected as an institutional-grade, client-driven quantitative analytics platform. The application employs a decoupled multi-tier topology featuring a reactive client presentation layer, a modular quantitative modeling engine, an intelligent API proxy gateway with multi-tier network resilience, and real-time streaming integrations with global exchanges (NSE India, NASDAQ, NYSE).
+The Quantitative Stock Analysis platform is architected as an institutional-grade, client-driven quantitative analytics platform. The application employs a decoupled multi-tier topology featuring a reactive client presentation layer, a modular quantitative modeling engine, an intelligent API proxy gateway with multi-tier network resilience, and real-time streaming integrations with global exchanges (NSE India, NASDAQ, NYSE).
 
 ```mermaid
 flowchart TD
-    %% ApexQuant Terminal - High-Level Technical Architecture
+    %% Quantitative Stock Analysis - High-Level Technical Architecture
 
     subgraph ClientPresentation ["1. Client Presentation Tier (Responsive Web Shell)"]
         UI_Shell["Application Shell<br/>(index.html & style.css)"]

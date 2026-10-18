@@ -143,7 +143,7 @@ export function setupCustomStockModal(onAddCustomStock) {
         {
           id: 'c1',
           title: `Custom Quantitative Valuation Model Initiated for ${ticker}`,
-          source: 'ApexQuant Engine',
+          source: 'Quantitative Stock Analysis Engine',
           time: 'Just now',
           sentiment: pegRatio < 1.0 ? 'Bullish' : 'Neutral',
           sentimentScore: pegRatio < 1.0 ? 0.85 : 0.20,

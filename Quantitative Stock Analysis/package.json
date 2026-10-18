@@ -1,8 +1,9 @@
 {
-  "name": "antigravity",
+  "name": "quantitative-stock-analysis",
   "version": "1.0.0",
   "type": "module",
   "main": "index.js",
+  "description": "Quantitative Stock Analysis — Institutional Stock Market Analysis & Valuation Engine",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

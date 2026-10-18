@@ -8,7 +8,7 @@
 
 **AntiGravity** is an institutional-grade financial intelligence and quantitative analysis suite. The repository houses two primary specialized terminals:
 
-1. **[ApexQuant Terminal](./ApexQuant%20Terminal/)**: A high-performance web platform featuring Peter Lynch **Growth-At-A-Reasonable-Price (GARP)** valuation models, **On-Demand 10-Year Order Book Backlog History** (2020–2029) with YoY growth metrics & Level 2 Market Depth (Bids/Asks), a dedicated **Sector Rotation & Quant Leaders Dashboard** with **Full-View Mode** (auto-hiding stock card and nav tabs for maximum focus), 3-scenario stress testing, 2D sensitivity matrices, Chart.js momentum technicals, and financial NLP sentiment analysis.
+1. **[Quantitative Stock Analysis](./Quantitative%20Stock%20Analysis/)**: A high-performance web platform featuring Peter Lynch **Growth-At-A-Reasonable-Price (GARP)** valuation models, **On-Demand 10-Year Order Book Backlog History** (2020–2029) with YoY growth metrics & Level 2 Market Depth (Bids/Asks), a dedicated **Sector Rotation & Quant Leaders Dashboard** with **Full-View Mode** (auto-hiding stock card and nav tabs for maximum focus), 3-scenario stress testing, 2D sensitivity matrices, Chart.js momentum technicals, and financial NLP sentiment analysis.
 2. **[Intraday Stock Picker](./Intraday%20Stock%20Picker/)**: An intraday trading terminal and momentum scanner with real-time 1-minute candle streaming, automated pattern recognition (Engulfing, Hammer, Shooting Star, RVOL volume breakouts), multi-timeframe confluence rating, and dynamic stop-loss/target calculations.
 
 ---
@@ -24,7 +24,7 @@ flowchart TD
     %% High-Level Technical Architecture of AntiGravity
 
     subgraph ClientPresentation ["1. Client Presentation Tier (Responsive Institutional Web & Terminal UI)"]
-        TerminalShell["ApexQuant Terminal Shell<br/>(index.html & style.css)"]
+        TerminalShell["Quantitative Stock Analysis Shell<br/>(index.html & style.css)"]
         Omnibar["Universal Omnibar Search<br/>& Fuzzy Symbol Resolver"]
         TickerTape["Streaming Market Ticker Tape<br/>(NIFTY 50 | SENSEX | S&P 500 | NASDAQ)"]
         
@@ -380,11 +380,11 @@ interface Level2Depth {
 ```
 AntiGravity/
 ├── README.md                      # Root Master Technical Architecture & System Documentation
-├── ApexQuant Terminal/            # Institutional Quantitative Equity Platform
+├── Quantitative Stock Analysis/   # Institutional Quantitative Equity Platform
 │   ├── index.html                 # Terminal UI Shell and Semantic Viewports
 │   ├── package.json               # Dependencies and build scripts
 │   ├── vite.config.js             # Vite Configuration & Yahoo Finance API Reverse Proxy
-│   ├── README.md                  # ApexQuant Terminal Detailed Documentation
+│   ├── README.md                  # Quantitative Stock Analysis Detailed Documentation
 │   └── src/
 │       ├── main.js                # App Controller, State Store, Omnibar Search Handler
 │       ├── style.css              # Institutional Dark/Light CSS Theme & Design System
@@ -414,10 +414,10 @@ AntiGravity/
 
 ## 🚀 Quick Start Guide
 
-### 1. Launching ApexQuant Terminal (Web Platform)
+### 1. Launching Quantitative Stock Analysis (Web Platform)
 
 ```bash
-cd "ApexQuant Terminal"
+cd "Quantitative Stock Analysis"
 npm install
 npm run dev
 ```

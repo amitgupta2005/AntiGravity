@@ -62,7 +62,7 @@ import {
 } from './quant/engine.js';
 import { updateAllCharts } from './components/charts.js';
 import { renderNewsFeed } from './components/news.js';
-import { renderOrderBook, updateOrderBookTheme } from './components/orderbook.js';
+import { renderOrderBook, updateOrderBookTheme, resizeOrderBookChart } from './components/orderbook.js';
 import { renderSectorsDashboard } from './components/sectors.js';
 import { renderBigSharksView, updateSharkChartTheme, getOrGenerateSharkData } from './components/sharks.js';
 import { renderScreenerTable, setupScreenerControls } from './components/screener.js';
@@ -158,7 +158,7 @@ function setupThemeEngine() {
   const moonIcon = document.getElementById('themeIconMoon');
   const toggleText = document.getElementById('themeToggleText');
 
-  const savedTheme = localStorage.getItem('apexquant_theme');
+  const savedTheme = localStorage.getItem('quant_stock_analysis_theme') || localStorage.getItem('apexquant_theme');
   if (savedTheme === 'light') {
     state.isDarkMode = false;
   } else {
@@ -176,7 +176,7 @@ function setupThemeEngine() {
       moonIcon.style.display = 'inline-block';
       toggleText.textContent = 'Dark Mode';
     }
-    localStorage.setItem('apexquant_theme', isDark ? 'dark' : 'light');
+    localStorage.setItem('quant_stock_analysis_theme', isDark ? 'dark' : 'light');
     
     const currentStock = state.universe[state.currentTicker];
     if (currentStock) {
@@ -334,12 +334,14 @@ function setupTabNavigation() {
       if (targetId === 'tab-sectors') {
         openSectorDashboard();
       } else {
-        const stock = state.universe[state.currentTicker];
+        const stock = state.universe[state.currentTicker] || { ticker: state.currentTicker, price: 100 };
         if (stock) {
           if (targetId === 'tab-technicals' || targetId === 'tab-fundamentals') {
             updateAllCharts(stock, state.isDarkMode);
           } else if (targetId === 'tab-orderbook') {
-            renderOrderBook(stock, state.isDarkMode);
+            requestAnimationFrame(() => {
+              renderOrderBook(stock, state.isDarkMode);
+            });
           } else if (targetId === 'tab-big-sharks') {
             renderBigSharksView(stock, state.isDarkMode, (t) => {
               loadStockRealtime(t);
@@ -359,6 +361,14 @@ function setupTabNavigation() {
 
       refreshIcons();
     });
+  });
+
+  // Keep charts responsive upon window resize
+  window.addEventListener('resize', () => {
+    const activeTab = document.querySelector('.nav-tabs .tab-btn.active');
+    if (activeTab && activeTab.getAttribute('data-tab') === 'tab-orderbook') {
+      resizeOrderBookChart();
+    }
   });
 
   const heroSharkTag = document.getElementById('heroSharkActivityTag');
