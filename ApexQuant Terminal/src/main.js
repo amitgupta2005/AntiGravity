@@ -44,7 +44,10 @@ import {
   Filter,
   Sparkles,
   ChevronDown,
-  Anchor
+  Anchor,
+  Info,
+  Eye,
+  ArrowLeft
 } from 'lucide';
 
 import { STOCKS_DATA } from './data/stocks.js';
@@ -135,7 +138,10 @@ function refreshIcons() {
       Filter,
       Sparkles,
       ChevronDown,
-      Anchor
+      Anchor,
+      Info,
+      Eye,
+      ArrowLeft
     }
   });
 }
