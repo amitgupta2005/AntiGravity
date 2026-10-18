@@ -614,8 +614,20 @@ export async function fetchLiveStockData(ticker) {
 
   // 2. Fetch live news and sector information via Yahoo Finance Search API
   let liveNews = [];
-  let sector = existing?.sector || (isINR ? 'NSE Listed Equities' : 'Technology & Growth');
   let companyName = meta.longName || meta.shortName || existing?.name || sym;
+
+  // First check STOCK_ALIASES for curated metadata
+  const aliasKey = sym.replace(/\.(NS|BO)$/i, '').toUpperCase();
+  const aliasMatch = STOCK_ALIASES[sym] || STOCK_ALIASES[aliasKey] || STOCK_ALIASES[sym.toUpperCase()] || STOCK_ALIASES[rawTicker.toUpperCase()];
+  if (aliasMatch) {
+    if (aliasMatch.name && (!existing?.name || companyName === sym)) {
+      companyName = aliasMatch.name;
+    }
+  }
+
+  let sector = existing?.sector || aliasMatch?.sector || (isINR ? 'NSE Listed Equities' : 'Technology & Growth');
+  let industry = existing?.industry || aliasMatch?.industry || '';
+
   const now = new Date();
   const nowSec = Math.floor(now.getTime() / 1000);
   const dateFormatted = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -633,6 +645,9 @@ export async function fetchLiveStockData(ticker) {
       const topQuote = searchData.quotes?.find(q => q.symbol === sym) || searchData.quotes?.[0];
       if (topQuote) {
         if (topQuote.sector) sector = topQuote.sector;
+        if (topQuote.sectorDisp) sector = topQuote.sectorDisp;
+        if (topQuote.industry) industry = topQuote.industry;
+        if (topQuote.industryDisp) industry = topQuote.industryDisp;
         if (topQuote.longname && !existing) companyName = topQuote.longname;
       }
 
@@ -755,6 +770,7 @@ export async function fetchLiveStockData(ticker) {
     marketSession,
     feedLatency,
     sector,
+    industry,
     price: currentPrice,
     change,
     changePercent,
