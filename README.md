@@ -9,7 +9,7 @@
 **AntiGravity** is an institutional-grade financial intelligence and quantitative analysis suite. The repository houses two primary specialized terminals:
 
 1. **[ApexQuant Terminal](./ApexQuant%20Terminal/)**: A high-performance web platform featuring Peter Lynch **Growth-At-A-Reasonable-Price (GARP)** valuation models, **On-Demand 10-Year Order Book Backlog History** (2020–2029) with YoY growth metrics & Level 2 Market Depth (Bids/Asks), a dedicated **Sector Rotation & Quant Leaders Dashboard** with **Full-View Mode** (auto-hiding stock card and nav tabs for maximum focus), 3-scenario stress testing, 2D sensitivity matrices, Chart.js momentum technicals, and financial NLP sentiment analysis.
-2. **[ApexIntranet](./ApexIntranet/)**: An intraday trading terminal and momentum scanner with real-time 1-minute candle streaming, automated pattern recognition (Engulfing, Hammer, Shooting Star, RVOL volume breakouts), multi-timeframe confluence rating, and dynamic stop-loss/target calculations.
+2. **[Intraday Stock Picker](./Intraday%20Stock%20Picker/)**: An intraday trading terminal and momentum scanner with real-time 1-minute candle streaming, automated pattern recognition (Engulfing, Hammer, Shooting Star, RVOL volume breakouts), multi-timeframe confluence rating, and dynamic stop-loss/target calculations.
 
 ---
 
@@ -38,7 +38,7 @@ flowchart TD
             TabSectors["Sector Rotation Dashboard<br/>& Top 3 Quant Leaders"]
         end
 
-        IntradayTerminal["Apex Intraday Trading Terminal<br/>(Lightweight Charts & Python Backend)"]
+        IntradayTerminal["Intraday Stock Picker<br/>(Lightweight Charts & Python Backend)"]
     end
 
     subgraph CoreEngines ["2. Application Logic & Quantitative Engine Tier (ES6+ Modules)"]
@@ -50,7 +50,7 @@ flowchart TD
         ChartEngine["Visualizations & Rendering Engine<br/>(src/components/charts.js)<br/>• Chart.js Dual-Axis Renderers<br/>• YoY Growth DataLabels Plugin"]
         NewsEngine["Financial NLP Sentiment Classifier<br/>(src/components/news.js)"]
         ScreenerEngine["GARP Radar Screener Controller<br/>(src/components/screener.js)"]
-        IntradayEngine["Intraday Momentum Engine<br/>(ApexIntranet/analysis_engine.py)"]
+        IntradayEngine["Intraday Momentum Engine<br/>(Intraday Stock Picker/analysis_engine.py)"]
     end
 
     subgraph GatewayTier ["3. API Gateway & Network Resilience Tier"]
@@ -402,12 +402,12 @@ AntiGravity/
 │       └── services/
 │           └── yahooFinance.js    # Multi-Tier Resilient Market Data Ingestion
 │
-└── ApexIntranet/                  # Intraday Momentum Screener & Technical Setup Engine
-    ├── app.py                     # Flask API Server & Web Endpoint Orchestrator
+└── Intraday Stock Picker/         # Intraday Momentum Screener & Technical Setup Engine
+    ├── app.py                     # FastAPI API Server & Web Endpoint Orchestrator
     ├── analysis_engine.py         # Multi-Timeframe Trend & Pattern Recognition Engine
     ├── data_fetcher.py            # Real-time 1-Minute Live Data Pipeline via yfinance
     ├── requirements.txt           # Python Dependencies
-    └── README.md                  # ApexIntranet Terminal Documentation
+    └── README.md                  # Intraday Stock Picker Documentation
 ```
 
 ---
@@ -428,10 +428,10 @@ To produce an optimized production bundle:
 npm run build
 ```
 
-### 2. Launching ApexIntranet (Intraday Terminal)
+### 2. Launching Intraday Stock Picker (Intraday Terminal)
 
 ```bash
-cd "ApexIntranet"
+cd "Intraday Stock Picker"
 pip install -r requirements.txt
 python app.py
 ```

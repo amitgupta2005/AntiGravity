@@ -325,7 +325,7 @@ sequenceDiagram
 ## 🛠 File & Directory Organization
 
 ```
-ApexIntranet/
+Intraday Stock Picker/
 ├── app.py                   # FastAPI backend with REST endpoints & market session monitors
 ├── analysis_engine.py       # Intraday indicator math (VWAP, EMA, RSI, ATR, RVOL, SL & Targets)
 ├── data_fetcher.py          # Parallel Yahoo Finance 1-min data scraper & memory cache
