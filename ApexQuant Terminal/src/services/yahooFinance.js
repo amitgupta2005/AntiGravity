@@ -176,11 +176,12 @@ function formatTimeAgo(epochSeconds) {
 
 /**
  * Sanitize search query by stripping keyboard typo symbols ([ ] { } ( ) \ / etc.)
+ * Preserves &, ., -, ^, and alphanumeric characters which are valid in stock symbols
  */
 export function sanitizeSearchQuery(query) {
   if (!query) return '';
   return query
-    .replace(/[\[\]\{\}\(\)\<\>\\\/\|\^\$\*\+\?`~@#!%&=:;,"']/g, '')
+    .replace(/[\[\]\{\}\(\)\<\>\\\/\|\$\*\+\?`~@#!%=:;,"']/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -189,6 +190,38 @@ export function sanitizeSearchQuery(query) {
  * Curated Aliases for Prominent Indian (NSE) and US Equities
  */
 export const STOCK_ALIASES = {
+  // GE Vernova T&D India
+  'GVT&D': { sym: 'GVT&D.NS', name: 'GE Vernova T&D India Limited', sector: 'Power Transmission & Grid Equipment', exchange: 'NSE 🇮🇳', isIndian: true },
+  'GVT&D.NS': { sym: 'GVT&D.NS', name: 'GE Vernova T&D India Limited', sector: 'Power Transmission & Grid Equipment', exchange: 'NSE 🇮🇳', isIndian: true },
+  'GVTD': { sym: 'GVT&D.NS', name: 'GE Vernova T&D India Limited', sector: 'Power Transmission & Grid Equipment', exchange: 'NSE 🇮🇳', isIndian: true },
+  'GVTD.NS': { sym: 'GVT&D.NS', name: 'GE Vernova T&D India Limited', sector: 'Power Transmission & Grid Equipment', exchange: 'NSE 🇮🇳', isIndian: true },
+  'GE VERNOVA': { sym: 'GVT&D.NS', name: 'GE Vernova T&D India Limited', sector: 'Power Transmission & Grid Equipment', exchange: 'NSE 🇮🇳', isIndian: true },
+  'GE VERNOVA T&D': { sym: 'GVT&D.NS', name: 'GE Vernova T&D India Limited', sector: 'Power Transmission & Grid Equipment', exchange: 'NSE 🇮🇳', isIndian: true },
+  'GE T&D': { sym: 'GVT&D.NS', name: 'GE Vernova T&D India Limited', sector: 'Power Transmission & Grid Equipment', exchange: 'NSE 🇮🇳', isIndian: true },
+  'GET&D': { sym: 'GVT&D.NS', name: 'GE Vernova T&D India Limited', sector: 'Power Transmission & Grid Equipment', exchange: 'NSE 🇮🇳', isIndian: true },
+  'GET&D.NS': { sym: 'GVT&D.NS', name: 'GE Vernova T&D India Limited', sector: 'Power Transmission & Grid Equipment', exchange: 'NSE 🇮🇳', isIndian: true },
+  'GETD': { sym: 'GVT&D.NS', name: 'GE Vernova T&D India Limited', sector: 'Power Transmission & Grid Equipment', exchange: 'NSE 🇮🇳', isIndian: true },
+
+  // Mahindra & Mahindra
+  'M&M': { sym: 'M&M.NS', name: 'Mahindra & Mahindra Ltd.', sector: 'Automotive & Farm Equipment', exchange: 'NSE 🇮🇳', isIndian: true },
+  'M&M.NS': { sym: 'M&M.NS', name: 'Mahindra & Mahindra Ltd.', sector: 'Automotive & Farm Equipment', exchange: 'NSE 🇮🇳', isIndian: true },
+  'MM': { sym: 'M&M.NS', name: 'Mahindra & Mahindra Ltd.', sector: 'Automotive & Farm Equipment', exchange: 'NSE 🇮🇳', isIndian: true },
+  'MM.NS': { sym: 'M&M.NS', name: 'Mahindra & Mahindra Ltd.', sector: 'Automotive & Farm Equipment', exchange: 'NSE 🇮🇳', isIndian: true },
+  'MAHINDRA': { sym: 'M&M.NS', name: 'Mahindra & Mahindra Ltd.', sector: 'Automotive & Farm Equipment', exchange: 'NSE 🇮🇳', isIndian: true },
+  'MAHINDRA & MAHINDRA': { sym: 'M&M.NS', name: 'Mahindra & Mahindra Ltd.', sector: 'Automotive & Farm Equipment', exchange: 'NSE 🇮🇳', isIndian: true },
+  'M&MFIN': { sym: 'M&MFIN.NS', name: 'Mahindra Financial Services', sector: 'Financial Services & NBFC', exchange: 'NSE 🇮🇳', isIndian: true },
+  'M&MFIN.NS': { sym: 'M&MFIN.NS', name: 'Mahindra Financial Services', sector: 'Financial Services & NBFC', exchange: 'NSE 🇮🇳', isIndian: true },
+  'MMFIN': { sym: 'M&MFIN.NS', name: 'Mahindra Financial Services', sector: 'Financial Services & NBFC', exchange: 'NSE 🇮🇳', isIndian: true },
+
+  // L&T Group
+  'LT': { sym: 'LT.NS', name: 'Larsen & Toubro Ltd.', sector: 'Infrastructure & Engineering', exchange: 'NSE 🇮🇳', isIndian: true },
+  'L&T': { sym: 'LT.NS', name: 'Larsen & Toubro Ltd.', sector: 'Infrastructure & Engineering', exchange: 'NSE 🇮🇳', isIndian: true },
+  'LARSEN': { sym: 'LT.NS', name: 'Larsen & Toubro Ltd.', sector: 'Infrastructure & Engineering', exchange: 'NSE 🇮🇳', isIndian: true },
+  'LARSEN & TOUBRO': { sym: 'LT.NS', name: 'Larsen & Toubro Ltd.', sector: 'Infrastructure & Engineering', exchange: 'NSE 🇮🇳', isIndian: true },
+  'L&TFH': { sym: 'L&TFH.NS', name: 'L&T Finance Holdings Ltd.', sector: 'Financial Services & NBFC', exchange: 'NSE 🇮🇳', isIndian: true },
+  'L&TFH.NS': { sym: 'L&TFH.NS', name: 'L&T Finance Holdings Ltd.', sector: 'Financial Services & NBFC', exchange: 'NSE 🇮🇳', isIndian: true },
+  'LTFH': { sym: 'L&TFH.NS', name: 'L&T Finance Holdings Ltd.', sector: 'Financial Services & NBFC', exchange: 'NSE 🇮🇳', isIndian: true },
+
   // Tata Group
   'TATA POWER': { sym: 'TATAPOWER.NS', name: 'The Tata Power Company Ltd.', sector: 'Utilities & Clean Energy', exchange: 'NSE 🇮🇳', isIndian: true },
   'TATAPOWER': { sym: 'TATAPOWER.NS', name: 'The Tata Power Company Ltd.', sector: 'Utilities & Clean Energy', exchange: 'NSE 🇮🇳', isIndian: true },
@@ -386,9 +419,9 @@ export async function searchYahooStocks(query) {
       quotes = data.quotes || [];
     }
 
-    // Filter to equities, ETFs, and ADRs
+    // Filter to equities, ETFs, ADRs, and indices
     const results = quotes
-      .filter(q => q.quoteType === 'EQUITY' || q.quoteType === 'ETF')
+      .filter(q => q.quoteType === 'EQUITY' || q.quoteType === 'ETF' || q.quoteType === 'INDEX')
       .map(q => {
         const isNSE = q.symbol?.endsWith('.NS') || q.exchange === 'NSI' || q.exchDisp === 'NSE';
         const isBSE = q.symbol?.endsWith('.BO') || q.exchange === 'BSE' || q.exchDisp === 'BSE';
@@ -424,9 +457,10 @@ export async function searchYahooStocks(query) {
         });
       }
     } else {
-      // Check partial match in aliases
+      // Check partial match in aliases (up to 3 matches)
+      let addedAliases = 0;
       for (const [key, alias] of Object.entries(STOCK_ALIASES)) {
-        if (key.includes(cleanUpper) || cleanUpper.includes(key)) {
+        if (key.includes(cleanUpper) || (cleanUpper.length >= 3 && cleanUpper.includes(key))) {
           if (!results.some(r => r.symbol === alias.sym)) {
             results.unshift({
               symbol: alias.sym,
@@ -436,7 +470,8 @@ export async function searchYahooStocks(query) {
               type: 'EQUITY',
               isIndian: alias.isIndian
             });
-            break;
+            addedAliases++;
+            if (addedAliases >= 3) break;
           }
         }
       }
@@ -480,7 +515,24 @@ export async function fetchLiveStockData(ticker) {
       }
     }
 
-    if (chartRes.ok) {
+    // If still not ok, try resolving via search query
+    if (!chartRes.ok) {
+      try {
+        const searchMatches = await searchYahooStocks(ticker);
+        if (searchMatches && searchMatches.length > 0) {
+          const topSym = searchMatches[0].symbol;
+          if (topSym && topSym !== fetchSym) {
+            const retryRes = await fetch(`/api/yahoo/chart/${encodeURIComponent(topSym)}?range=1y&interval=1d`);
+            if (retryRes.ok) {
+              chartRes = retryRes;
+              sym = topSym;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (chartRes && chartRes.ok) {
       chartData = await chartRes.json();
       result = chartData?.chart?.result?.[0];
     }

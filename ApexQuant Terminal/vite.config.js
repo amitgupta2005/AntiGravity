@@ -25,7 +25,7 @@ export default defineConfig({
               }
               let clean = decodeURIComponent(rawSym).trim().toUpperCase();
               const isIndex = clean.startsWith('^');
-              clean = clean.replace(/[\[\]\{\}\(\)\<\>\\\/\|\$\*\+\?`~@#!%&=:;,"']/g, '').trim();
+              clean = clean.replace(/[\[\]\{\}\(\)\<\>\\\/\|\$\*\+\?`~@#!%=:;,"']/g, '').trim();
               if (isIndex && !clean.startsWith('^')) {
                 clean = '^' + clean;
               }
@@ -42,7 +42,14 @@ export default defineConfig({
 
               const targetUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}`;
               
-              const response = await fetch(targetUrl, { headers: YAHOO_HEADERS });
+              let response = await fetch(targetUrl, { headers: YAHOO_HEADERS });
+              if (!response.ok) {
+                const fallbackUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}`;
+                try {
+                  const fb = await fetch(fallbackUrl, { headers: YAHOO_HEADERS });
+                  if (fb.ok) response = fb;
+                } catch (_) {}
+              }
               const data = await response.json();
               
               res.statusCode = response.status;
@@ -63,8 +70,8 @@ export default defineConfig({
             try {
               const parsedUrl = new URL(req.url, 'http://localhost');
               const rawQ = parsedUrl.searchParams.get('q') || '';
-              // Sanitize query by removing keyboard typo characters: [, ], {, }, (, ), <, >, \, /, |, ^, $, *, +, ?, `, ~, ", ', @, #, etc.
-              const q = rawQ.replace(/[\[\]\{\}\(\)\<\>\\\/\|\^\$\*\+\?`~@#!%&=:;,"']/g, '').replace(/\s+/g, ' ').trim();
+              // Sanitize query by removing keyboard typo characters: [, ], {, }, (, ), <, >, \, /, |, ^, $, *, +, ?, `, ~, ", ', @, #, etc. (keep & for symbols like M&M, GVT&D)
+              const q = rawQ.replace(/[\[\]\{\}\(\)\<\>\\\/\|\^\$\*\+\?`~@#!%=:;,"']/g, '').replace(/\s+/g, ' ').trim();
               const quotesCount = parsedUrl.searchParams.get('quotesCount') || '12';
               const newsCount = parsedUrl.searchParams.get('newsCount') || '6';
 
@@ -76,7 +83,14 @@ export default defineConfig({
               }
 
               const targetUrl = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=${quotesCount}&newsCount=${newsCount}`;
-              const response = await fetch(targetUrl, { headers: YAHOO_HEADERS });
+              let response = await fetch(targetUrl, { headers: YAHOO_HEADERS });
+              if (!response.ok) {
+                const fallbackUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=${quotesCount}&newsCount=${newsCount}`;
+                try {
+                  const fb = await fetch(fallbackUrl, { headers: YAHOO_HEADERS });
+                  if (fb.ok) response = fb;
+                } catch (_) {}
+              }
               const data = await response.json();
 
               res.statusCode = response.status;

@@ -47,7 +47,8 @@ import {
   Anchor,
   Info,
   Eye,
-  ArrowLeft
+  ArrowLeft,
+  Landmark
 } from 'lucide';
 
 import { STOCKS_DATA } from './data/stocks.js';
@@ -141,7 +142,8 @@ function refreshIcons() {
       Anchor,
       Info,
       Eye,
-      ArrowLeft
+      ArrowLeft,
+      Landmark
     }
   });
 }
@@ -792,6 +794,7 @@ export async function loadStockRealtime(ticker, notify = true) {
     }
 
     refreshIcons();
+    return true;
   } catch (err) {
     console.error(`Error loading live stock data for ${rawTicker}:`, err);
     if (liveTimestamp) {
@@ -814,7 +817,9 @@ export async function loadStockRealtime(ticker, notify = true) {
       renderScreenerTable(state.universe, (t) => {
         loadStockRealtime(t);
       }, state.currentTicker);
+      return true;
     }
+    return false;
   } finally {
     state.isLoadingRealtime = false;
     if (notify && refreshIcon) refreshIcon.classList.remove('spinning');
@@ -833,6 +838,18 @@ function setupOmnibarSearch() {
   if (!searchInput || !dropdown) return;
 
   let debounceTimer = null;
+  let selectedIndex = -1;
+
+  function updateHighlight(items) {
+    items.forEach((item, idx) => {
+      if (idx === selectedIndex) {
+        item.classList.add('highlighted');
+        item.scrollIntoView({ block: 'nearest' });
+      } else {
+        item.classList.remove('highlighted');
+      }
+    });
+  }
 
   async function executeSearch(query) {
     const clean = sanitizeSearchQuery(query);
@@ -849,22 +866,69 @@ function setupOmnibarSearch() {
 
     try {
       const resolvedSym = await resolveTickerSymbol(clean);
-      dropdown.classList.remove('active');
-      dropdown.innerHTML = '';
       if (resolvedSym) {
         if (window.exitSectorDashboard && document.body.classList.contains('view-sector-dashboard')) {
           window.exitSectorDashboard('tab-return-model');
         }
         searchInput.value = resolvedSym;
-        await loadStockRealtime(resolvedSym);
+        const loaded = await loadStockRealtime(resolvedSym);
+        if (loaded) {
+          dropdown.classList.remove('active');
+          dropdown.innerHTML = '';
+          return;
+        }
       }
+      throw new Error(`Unable to load market data for "${clean}"`);
     } catch (err) {
       console.error('Execute search error:', err);
-      dropdown.innerHTML = `
-        <div style="padding: 14px; color: var(--rose-loss); font-size: 0.82rem; text-align: center;">
-          Could not find or analyze "${clean}". Please verify ticker or company name.
-        </div>
-      `;
+      // Fetch suggestions to show alternative matches
+      const suggestions = await searchYahooStocks(clean);
+      if (suggestions && suggestions.length > 0) {
+        dropdown.innerHTML = `
+          <div style="padding: 10px 14px; background: rgba(239, 68, 68, 0.1); border-bottom: 1px solid rgba(239, 68, 68, 0.2); color: var(--rose-loss); font-size: 0.8rem; font-weight: 600;">
+            Could not directly load "${clean}". Did you mean one of these?
+          </div>
+          ${suggestions.map(item => `
+            <div class="search-result-item" data-symbol="${item.symbol}">
+              <div class="result-info">
+                <span class="result-sym">${item.symbol}</span>
+                <span class="result-name">${item.name}</span>
+              </div>
+              <div class="result-meta">
+                <span class="result-tag" style="${item.isIndian ? 'background: rgba(16,185,129,0.2); color: var(--emerald-bull); border-color: rgba(16,185,129,0.4);' : ''}">${item.exchange}</span>
+                <span class="result-tag" style="color: var(--cyan-primary);">${item.sector}</span>
+              </div>
+            </div>
+          `).join('')}
+        `;
+        dropdown.querySelectorAll('.search-result-item').forEach(item => {
+          item.addEventListener('pointerdown', (evt) => {
+            evt.preventDefault();
+            const sym = item.getAttribute('data-symbol');
+            if (sym) {
+              if (window.exitSectorDashboard && document.body.classList.contains('view-sector-dashboard')) {
+                window.exitSectorDashboard('tab-return-model');
+              }
+              searchInput.value = sym;
+              dropdown.classList.remove('active');
+              dropdown.innerHTML = '';
+              loadStockRealtime(sym);
+            }
+          });
+        });
+      } else {
+        dropdown.innerHTML = `
+          <div style="padding: 16px; text-align: center;">
+            <div style="color: var(--rose-loss); font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">
+              Could not find "${clean}" on NSE India or US Exchanges
+            </div>
+            <div style="color: var(--text-dim); font-size: 0.78rem;">
+              Please verify the ticker symbol or company name (e.g. Tata Power, Reliance, NVDA, AAPL).
+            </div>
+          </div>
+        `;
+      }
+      dropdown.classList.add('active');
       refreshIcons();
     }
   }
@@ -872,6 +936,8 @@ function setupOmnibarSearch() {
   searchInput.addEventListener('input', (e) => {
     const rawVal = e.target.value;
     const clean = sanitizeSearchQuery(rawVal);
+    selectedIndex = -1;
+
     if (clearBtn) {
       clearBtn.style.display = rawVal.trim().length > 0 ? 'block' : 'none';
     }
@@ -894,6 +960,7 @@ function setupOmnibarSearch() {
       refreshIcons();
 
       const results = await searchYahooStocks(clean);
+      selectedIndex = -1;
 
       if (results.length === 0) {
         dropdown.innerHTML = `
@@ -937,26 +1004,52 @@ function setupOmnibarSearch() {
   });
 
   searchInput.addEventListener('keydown', async (e) => {
+    const items = dropdown.querySelectorAll('.search-result-item');
+    if (dropdown.classList.contains('active') && items.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex + 1) % items.length;
+        updateHighlight(items);
+        return;
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+        updateHighlight(items);
+        return;
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        clearTimeout(debounceTimer);
+        const targetItem = (selectedIndex >= 0 && selectedIndex < items.length) 
+          ? items[selectedIndex] 
+          : items[0];
+        if (targetItem) {
+          const sym = targetItem.getAttribute('data-symbol');
+          if (sym) {
+            if (window.exitSectorDashboard && document.body.classList.contains('view-sector-dashboard')) {
+              window.exitSectorDashboard('tab-return-model');
+            }
+            searchInput.value = sym;
+            dropdown.classList.remove('active');
+            dropdown.innerHTML = '';
+            loadStockRealtime(sym);
+            return;
+          }
+        }
+      }
+    }
+
     if (e.key === 'Enter') {
       e.preventDefault();
       clearTimeout(debounceTimer);
-      const firstItem = dropdown.querySelector('.search-result-item');
-      if (dropdown.classList.contains('active') && firstItem) {
-        const sym = firstItem.getAttribute('data-symbol');
-        if (sym) {
-          if (window.exitSectorDashboard && document.body.classList.contains('view-sector-dashboard')) {
-            window.exitSectorDashboard('tab-return-model');
-          }
-          searchInput.value = sym;
-          dropdown.classList.remove('active');
-          dropdown.innerHTML = '';
-          loadStockRealtime(sym);
-          return;
-        }
-      }
       await executeSearch(searchInput.value);
     } else if (e.key === 'Escape') {
       dropdown.classList.remove('active');
+    }
+  });
+
+  searchInput.addEventListener('focus', () => {
+    if (searchInput.value.trim().length > 0 && dropdown.children.length > 0) {
+      dropdown.classList.add('active');
     }
   });
 
