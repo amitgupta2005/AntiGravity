@@ -23,10 +23,10 @@ from data_fetcher import (
 )
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("apex_intraday")
+logger = logging.getLogger("intraday_stock_picker")
 
 app = FastAPI(
-    title="Apex Intraday Trading Terminal",
+    title="Intraday Stock Picker",
     description="Real-time 1-minute intraday technical screener, Stop Loss & Target calculation engine, and institutional chart analysis terminal."
 )
 
@@ -55,7 +55,7 @@ def get_index():
     index_file = os.path.join(STATIC_DIR, "index.html")
     if os.path.exists(index_file):
         return FileResponse(index_file)
-    return {"message": "Apex Intraday Backend Running. Static index.html not yet created."}
+    return {"message": "Intraday Stock Picker Backend Running. Static index.html not yet created."}
 
 
 @app.get("/api/watchlists")

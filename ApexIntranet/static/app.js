@@ -1,5 +1,5 @@
 /**
- * Apex Intraday Trading Terminal - Client Application
+ * Intraday Stock Picker - Client Application
  * - Ultra-readable high-resolution chart scaling (barSpacing & visible logical range)
  * - Dark Mode & Light Mode dynamic theme engine
  * - Fully responsive layout with mobile/tablet view switcher & desktop panel collapse

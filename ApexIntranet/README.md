@@ -1,6 +1,6 @@
-# Apex Intraday Trading Terminal 📈⚡
+# Intraday Stock Picker 📈⚡
 
-An institutional-grade **Intraday Technical Screener & Interactive Chart Analysis Terminal** powered by real-time 1-minute data from Yahoo Finance.
+An institutional-grade **Intraday Technical Screener & Stock Picker Terminal** powered by real-time 1-minute data from Yahoo Finance.
 
 Built specifically for active intraday traders to automatically identify high-probability momentum setups, calculate dynamic volatility-adjusted Stop Loss & Target prices, and provide comprehensive chart analysis rationales.
 

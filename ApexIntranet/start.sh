@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Apex Intraday Trading Terminal - Startup Script
+# Intraday Stock Picker - Startup Script
 # ==============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 echo "============================================================"
-echo "  🚀 Starting Apex Intraday Trading Terminal"
-echo "  Institutional 1-Min Screener & Chart Analysis Terminal"
+echo "  🚀 Starting Intraday Stock Picker"
+echo "  Technical Screener & Chart Analysis Terminal"
 echo "============================================================"
 
 if [ ! -d ".venv" ]; then
