@@ -6,7 +6,7 @@
 
 import { calculateGreeks, calculatePOP } from './blackScholes.js';
 import { calculatePayoffProfile } from './payoffCalculator.js';
-import { getStandardExpirations } from '../data/marketDataFeed.js';
+import { getMarketExpirations } from '../data/marketDataFeed.js';
 
 export const STRATEGY_CATEGORIES = {
   ALL: 'ALL',
@@ -282,6 +282,58 @@ export function buildExitPlan({
 /**
  * Scan an underlying asset quote and generate all valid option strategies with exit plans
  */
+
+/**
+ * Build structured Transaction Execution Spec
+ * Explicitly recommends which market, series, and expiration date to trade
+ */
+export function buildTransactSpec(quote, exp, stratName, dte) {
+  const isIndia = quote.market === "IN";
+  const isStock = quote.type === "STOCK";
+  const ticker = quote.displayTicker;
+  const day = exp.dayOfWeek || (isIndia ? "Thursday" : "Friday");
+  const dateStr = exp.dateStr;
+  const cycleType = exp.type;
+
+  let instrumentTag = "";
+  if (isIndia) {
+    instrumentTag = isStock ? "NSE Stock F&O Series (Monthly Contract Only)" : "NSE Index Options Series";
+  } else {
+    instrumentTag = isStock ? "US Equity Option Contract" : "US Index Standard Series";
+  }
+
+  let contractCode = "";
+  const cleanDate = dateStr.replace(/ /g, "").toUpperCase();
+  if (stratName.includes("Call Spread") || stratName.includes("Long Call")) {
+    contractCode = `${isIndia ? "NSE" : "US"}:${ticker} ${cleanDate} CALL`;
+  } else if (stratName.includes("Put Spread") || stratName.includes("Long Put")) {
+    contractCode = `${isIndia ? "NSE" : "US"}:${ticker} ${cleanDate} PUT`;
+  } else {
+    contractCode = `${isIndia ? "NSE" : "US"}:${ticker} ${cleanDate} MULTI-LEG`;
+  }
+
+  let rationale = "";
+  if (isIndia && isStock) {
+    rationale = `Transact specifically in the ${dateStr} Monthly Contract on NSE. SEBI regulations permit only monthly options for Indian equities.`;
+  } else if (stratName.includes("Theta") || stratName.includes("Condor")) {
+    rationale = `Transact specifically in the ${dateStr} (${cycleType}) cycle. High liquidity zone offering optimal exponential theta decay capture. Close early at 50% profit target.`;
+  } else if (stratName.includes("Spread")) {
+    rationale = `Transact in the ${dateStr} (${cycleType}) series to provide adequate runway for directional target achievement with capped debit.`;
+  } else {
+    rationale = `Transact specifically in the ${dateStr} (${cycleType}) series for optimal gamma responsiveness and liquidity.`;
+  }
+
+  return {
+    expiryDate: dateStr,
+    dte,
+    dayOfWeek: day,
+    cycleType,
+    instrumentTag,
+    contractSeries: contractCode,
+    recommendationNote: rationale
+  };
+}
+
 export function scanStrategiesForAsset(quote) {
   if (!quote) return [];
 
@@ -295,10 +347,20 @@ export function scanStrategiesForAsset(quote) {
   const lotSize = quote.lotSize || 100;
   const curr = quote.currencySymbol || '$';
 
-  const expirations = getStandardExpirations();
-  const nearExp = expirations[0];  // ~7-14 DTE
-  const monthlyExp = expirations[2]; // ~28-35 DTE
-  const thetaExp = expirations[3]; // ~45 DTE
+  const expirations = getMarketExpirations(quote);
+  const isIndia = quote.market === "IN";
+  const isStock = quote.type === "STOCK";
+
+  // 1. Weekly / Near-term cycle (for quick momentum breakouts)
+  const weeklyExp = expirations[0];
+
+  // 2. Current Monthly cycle (Core high-liquidity series)
+  const currentMonthlyExp = (isIndia && !isStock) ? (expirations[1] || expirations[0]) : expirations[0];
+
+  // 3. Next Monthly cycle (30-45 DTE institutional series)
+  const nextMonthlyExp = (isIndia && isStock)
+    ? (expirations[1] || currentMonthlyExp)
+    : (isIndia ? (expirations[2] || currentMonthlyExp) : (expirations[2] || expirations[1]));
 
   const strategies = [];
 
@@ -307,7 +369,8 @@ export function scanStrategiesForAsset(quote) {
   // Optimal when IV Rank is low to moderate (< 45%) and bullish trend
   // -------------------------------------------------------------
   {
-    const dte = nearExp.dte;
+    const exp = (weeklyExp.dte >= 2) ? weeklyExp : currentMonthlyExp;
+    const dte = exp.dte;
     const T = dte / 365;
     const strike = atmStrike;
     const greeks = calculateGreeks('call', S, strike, T, r, ivDecimal);
@@ -352,7 +415,9 @@ export function scanStrategiesForAsset(quote) {
       badgeClass: 'badge-bullish',
       conviction: ivRank < 40 ? 'High Momentum' : 'Standard',
       dte,
-      expiryLabel: nearExp.label,
+      expiryDate: exp.dateStr,
+      expiryLabel: `${exp.dateStr} (${exp.type})`,
+      transactSpec: buildTransactSpec(quote, exp, 'Long Call', dte),
       spotPrice: S,
       targetPrice: exitPlan.targetBooking.spotPrice,
       stopLossPrice: exitPlan.stopLoss.spotPrice,
@@ -377,7 +442,8 @@ export function scanStrategiesForAsset(quote) {
   // Buy ATM Call + Sell OTM Call (Caps risk, cuts cost by 40-50%)
   // -------------------------------------------------------------
   {
-    const dte = monthlyExp.dte;
+    const exp = currentMonthlyExp;
+    const dte = exp.dte;
     const T = dte / 365;
     const lowerStrike = atmStrike;
     const upperStrike = atmStrike + step * 2;
@@ -431,7 +497,9 @@ export function scanStrategiesForAsset(quote) {
       badgeClass: 'badge-bullish',
       conviction: 'Defined Risk',
       dte,
-      expiryLabel: monthlyExp.label,
+      expiryDate: exp.dateStr,
+      expiryLabel: `${exp.dateStr} (${exp.type})`,
+      transactSpec: buildTransactSpec(quote, exp, 'Bull Call Spread', dte),
       spotPrice: S,
       targetPrice: exitPlan.targetBooking.spotPrice,
       stopLossPrice: exitPlan.stopLoss.spotPrice,
@@ -456,7 +524,8 @@ export function scanStrategiesForAsset(quote) {
   // Sell OTM Put + Buy Lower OTM Put (High probability income)
   // -------------------------------------------------------------
   {
-    const dte = thetaExp.dte;
+    const exp = currentMonthlyExp.dte >= 7 ? currentMonthlyExp : nextMonthlyExp;
+    const dte = exp.dte;
     const T = dte / 365;
     const shortStrike = atmStrike - step * 2;
     const longStrike = atmStrike - step * 4;
@@ -510,7 +579,9 @@ export function scanStrategiesForAsset(quote) {
       badgeClass: 'badge-credit',
       conviction: pop > 70 ? 'High Win Rate (POP > 70%)' : 'Income Play',
       dte,
-      expiryLabel: thetaExp.label,
+      expiryDate: exp.dateStr,
+      expiryLabel: `${exp.dateStr} (${exp.type})`,
+      transactSpec: buildTransactSpec(quote, exp, 'Iron Condor', dte),
       spotPrice: S,
       targetPrice: exitPlan.targetBooking.spotPrice,
       stopLossPrice: exitPlan.stopLoss.spotPrice,
@@ -535,7 +606,8 @@ export function scanStrategiesForAsset(quote) {
   // Direct downside directional leverage
   // -------------------------------------------------------------
   {
-    const dte = nearExp.dte;
+    const exp = (weeklyExp.dte >= 2) ? weeklyExp : currentMonthlyExp;
+    const dte = exp.dte;
     const T = dte / 365;
     const strike = atmStrike;
     const greeks = calculateGreeks('put', S, strike, T, r, ivDecimal);
@@ -581,7 +653,9 @@ export function scanStrategiesForAsset(quote) {
       badgeClass: 'badge-bearish',
       conviction: pcr > 1.2 ? 'Bearish Momentum' : 'Downside Hedge',
       dte,
-      expiryLabel: nearExp.label,
+      expiryDate: exp.dateStr,
+      expiryLabel: `${exp.dateStr} (${exp.type})`,
+      transactSpec: buildTransactSpec(quote, exp, 'Long Put', dte),
       spotPrice: S,
       targetPrice: exitPlan.targetBooking.spotPrice,
       stopLossPrice: exitPlan.stopLoss.spotPrice,
@@ -606,7 +680,8 @@ export function scanStrategiesForAsset(quote) {
   // Buy Higher Put + Sell Lower Put
   // -------------------------------------------------------------
   {
-    const dte = monthlyExp.dte;
+    const exp = currentMonthlyExp;
+    const dte = exp.dte;
     const T = dte / 365;
     const higherStrike = atmStrike;
     const lowerStrike = atmStrike - step * 2;
@@ -660,7 +735,9 @@ export function scanStrategiesForAsset(quote) {
       badgeClass: 'badge-bearish',
       conviction: 'Defined Risk',
       dte,
-      expiryLabel: monthlyExp.label,
+      expiryDate: exp.dateStr,
+      expiryLabel: `${exp.dateStr} (${exp.type})`,
+      transactSpec: buildTransactSpec(quote, exp, 'Bull Put Spread', dte),
       spotPrice: S,
       targetPrice: exitPlan.targetBooking.spotPrice,
       stopLossPrice: exitPlan.stopLoss.spotPrice,
@@ -686,7 +763,8 @@ export function scanStrategiesForAsset(quote) {
   // Optimal when IV Rank is elevated (> 50%) and stock is consolidating
   // -------------------------------------------------------------
   {
-    const dte = thetaExp.dte;
+    const exp = currentMonthlyExp.dte >= 7 ? currentMonthlyExp : nextMonthlyExp;
+    const dte = exp.dte;
     const T = dte / 365;
     const putShort = atmStrike - step * 2;
     const putLong  = atmStrike - step * 4;
@@ -753,7 +831,9 @@ export function scanStrategiesForAsset(quote) {
       badgeClass: 'badge-neutral',
       conviction: ivRank > 50 ? 'Prime Volatility Crush' : 'Income Range',
       dte,
-      expiryLabel: thetaExp.label,
+      expiryDate: exp.dateStr,
+      expiryLabel: `${exp.dateStr} (${exp.type})`,
+      transactSpec: buildTransactSpec(quote, exp, 'Iron Condor', dte),
       spotPrice: S,
       targetPrice: S,
       stopLossPrice: putShort,
@@ -778,7 +858,8 @@ export function scanStrategiesForAsset(quote) {
   // Buy ATM Call + Buy ATM Put (Explosive Breakout Play)
   // -------------------------------------------------------------
   {
-    const dte = nearExp.dte;
+    const exp = (weeklyExp.dte >= 2) ? weeklyExp : currentMonthlyExp;
+    const dte = exp.dte;
     const T = dte / 365;
     const callGreeks = calculateGreeks('call', S, atmStrike, T, r, ivDecimal);
     const putGreeks = calculateGreeks('put', S, atmStrike, T, r, ivDecimal);
@@ -824,7 +905,9 @@ export function scanStrategiesForAsset(quote) {
       badgeClass: 'badge-volatility',
       conviction: ivRank < 30 ? 'Cheap Volatility' : 'Speculative',
       dte,
-      expiryLabel: nearExp.label,
+      expiryDate: exp.dateStr,
+      expiryLabel: `${exp.dateStr} (${exp.type})`,
+      transactSpec: buildTransactSpec(quote, exp, 'Long Straddle', dte),
       spotPrice: S,
       targetPrice: exitPlan.targetBooking.spotPrice,
       stopLossPrice: S,
@@ -850,7 +933,8 @@ export function scanStrategiesForAsset(quote) {
   // Maximum Positive Net Theta decay strategy at ATM strike
   // -------------------------------------------------------------
   {
-    const dte = thetaExp.dte; // Peak exponential time decay window (14-21 DTE)
+    const exp = currentMonthlyExp;
+    const dte = exp.dte;
     const T = dte / 365;
     const wingWidth = step * 3;
     const putWing = atmStrike - wingWidth;
@@ -915,7 +999,9 @@ export function scanStrategiesForAsset(quote) {
       badgeClass: 'badge-theta',
       conviction: 'Pure Time Decay',
       dte,
-      expiryLabel: thetaExp.label,
+      expiryDate: exp.dateStr,
+      expiryLabel: `${exp.dateStr} (${exp.type})`,
+      transactSpec: buildTransactSpec(quote, exp, 'Theta Decay Harvester', dte),
       spotPrice: S,
       targetPrice: atmStrike,
       stopLossPrice: exitPlan.stopLoss.spotPrice,

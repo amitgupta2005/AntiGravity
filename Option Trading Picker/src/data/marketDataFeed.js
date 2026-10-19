@@ -13,46 +13,151 @@ const liveQuotesCache = new Map();
 /**
  * Generate standard option expiration dates (Weekly, Monthly, 45 DTE, Quarterly)
  */
-export function getStandardExpirations() {
+/**
+ * Compute institutional, market-accurate option expiration dates
+ * Handles:
+ * 1. Indian Indices (NSE: NIFTY 50 -> Thu, BANKNIFTY -> Wed, FINNIFTY -> Tue, BSE: SENSEX -> Fri)
+ * 2. Indian Equities (NSE F&O Stocks -> strictly Last Thursday of each month, no weeklies)
+ * 3. US Equities & Benchmark Indices (Fridays weekly, 3rd Friday monthly)
+ */
+export function getMarketExpirations(asset = null) {
   const now = new Date();
-  const expirations = [];
+  const isIndia = asset ? (asset.market === 'IN' || (asset.ticker && (asset.ticker.includes('.NS') || asset.ticker.includes('.BO') || asset.ticker.includes('NSE')))) : false;
+  const isStock = asset ? asset.type === 'STOCK' : false;
+  const ticker = asset ? (asset.ticker || asset.displayTicker || '') : '';
 
-  // Helper to format date YYYY-MM-DD and friendly label
-  const formatDate = (d) => {
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+  function formatDate(d, typeLabel, note = '') {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthStr = monthNames[d.getMonth()];
+    const msDiff = d.getTime() - now.getTime();
+    const dte = Math.max(1, Math.round(msDiff / (1000 * 60 * 60 * 24)));
+    const dayOfWeek = dayNames[d.getDay()];
+
     return {
       iso: `${year}-${month}-${day}`,
-      label: `${day} ${monthNames[d.getMonth()]} ${year}`,
-      dte: Math.max(1, Math.round((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+      dateStr: `${day} ${monthStr} ${year}`,
+      label: `${day} ${monthStr} ${year}`,
+      dte,
+      type: typeLabel,
+      dayOfWeek,
+      note
     };
-  };
+  }
 
-  // 1. Current Weekly (Next Friday)
-  const daysUntilFriday = (5 - now.getDay() + 7) % 7 || 7;
-  const thisFriday = new Date(now.getTime() + daysUntilFriday * 24 * 60 * 60 * 1000);
-  const curExp = formatDate(thisFriday);
-  expirations.push({ ...curExp, type: 'Weekly', isNear: true });
+  function getNextDayOfWeek(fromD, targetDay) {
+    const d = new Date(fromD.getFullYear(), fromD.getMonth(), fromD.getDate());
+    const cur = d.getDay();
+    let diff = (targetDay - cur + 7) % 7;
+    if (diff === 0) diff = 7; // next week if today
+    d.setDate(d.getDate() + diff);
+    return d;
+  }
 
-  // 2. Next Weekly (Following Friday)
-  const nextFriday = new Date(thisFriday.getTime() + 7 * 24 * 60 * 60 * 1000);
-  expirations.push({ ...formatDate(nextFriday), type: 'Weekly' });
+  function getLastDayOfWeekOfMonth(year, month, targetDay) {
+    const lastDay = new Date(year, month + 1, 0); // last day of month
+    const cur = lastDay.getDay();
+    const diff = (cur >= targetDay) ? (cur - targetDay) : (cur + 7 - targetDay);
+    return new Date(year, month, lastDay.getDate() - diff);
+  }
 
-  // 3. Monthly Expiration (Third Friday of next month or ~30 days out)
-  const monthly = new Date(now.getTime() + 28 * 24 * 60 * 60 * 1000);
-  expirations.push({ ...formatDate(monthly), type: 'Monthly', isOptimalTheta: true });
+  function getThirdFriday(year, month) {
+    const firstDay = new Date(year, month, 1);
+    const cur = firstDay.getDay();
+    const firstFriDate = (5 - cur + 7) % 7 + 1;
+    return new Date(year, month, firstFriDate + 14);
+  }
 
-  // 4. Institutional 45 DTE (Ideal for Theta Spreads / Iron Condors)
-  const dte45 = new Date(now.getTime() + 45 * 24 * 60 * 60 * 1000);
-  expirations.push({ ...formatDate(dte45), type: '45-DTE' });
+  const results = [];
+  const curYear = now.getFullYear();
+  const curMonth = now.getMonth();
 
-  // 5. Quarterly / 90 DTE
-  const dte90 = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
-  expirations.push({ ...formatDate(dte90), type: 'Quarterly' });
+  if (isIndia) {
+    if (isStock) {
+      // 1. Indian Single Stocks: SEBI permits ONLY Monthly contracts expiring on Last Thursday of the Month
+      const thisMonthExpiry = getLastDayOfWeekOfMonth(curYear, curMonth, 4);
+      if (thisMonthExpiry > now) {
+        results.push(formatDate(thisMonthExpiry, `${monthNames[curMonth]} Monthly`, 'Current NSE Monthly Contract (No weeklies for Indian stocks)'));
+      }
+      const nextMonthExpiry = getLastDayOfWeekOfMonth(curYear, curMonth + 1, 4);
+      results.push(formatDate(nextMonthExpiry, `${monthNames[(curMonth + 1) % 12]} Monthly`, 'Next NSE Monthly Contract'));
 
-  return expirations;
+      const farMonthExpiry = getLastDayOfWeekOfMonth(curYear, curMonth + 2, 4);
+      results.push(formatDate(farMonthExpiry, `${monthNames[(curMonth + 2) % 12]} Monthly`, 'Far NSE Monthly Contract'));
+
+      const qtrExpiry = getLastDayOfWeekOfMonth(curYear, curMonth + 3, 4);
+      results.push(formatDate(qtrExpiry, `${monthNames[(curMonth + 3) % 12]} Quarterly`, 'Quarterly Series'));
+    } else {
+      // 2. Indian Index Options (NIFTY 50 -> Thu, BANKNIFTY -> Wed, FINNIFTY -> Tue, SENSEX -> Fri)
+      let expiryDay = 4; // Default Thursday for NIFTY
+      let indexExchange = 'NSE';
+      if (ticker === '^NSEBANK' || ticker.includes('BANKNIFTY')) {
+        expiryDay = 3; // Wednesday
+      } else if (ticker.includes('FIN_SERVICE') || ticker.includes('FINNIFTY')) {
+        expiryDay = 2; // Tuesday
+      } else if (ticker === '^BSESN' || ticker.includes('SENSEX')) {
+        expiryDay = 5; // Friday
+        indexExchange = 'BSE';
+      }
+
+      // Next Weekly
+      const weekly1 = getNextDayOfWeek(now, expiryDay);
+      results.push(formatDate(weekly1, 'Current Weekly', `${indexExchange} Primary Weekly Series`));
+
+      // Following Weekly
+      const weekly2 = new Date(weekly1);
+      weekly2.setDate(weekly2.getDate() + 7);
+
+      const thisMonthMonthly = getLastDayOfWeekOfMonth(curYear, curMonth, expiryDay);
+      const isWeekly2Monthly = Math.abs(weekly2.getTime() - thisMonthMonthly.getTime()) < 24 * 60 * 60 * 1000;
+
+      if (isWeekly2Monthly) {
+        results.push(formatDate(thisMonthMonthly, `${monthNames[curMonth]} Monthly Expiry`, 'NSE Monthly Series & Contract Expiry'));
+      } else {
+        results.push(formatDate(weekly2, 'Next Weekly', 'Weekly Series'));
+        if (thisMonthMonthly > now && Math.abs(weekly1.getTime() - thisMonthMonthly.getTime()) >= 24 * 60 * 60 * 1000) {
+          results.push(formatDate(thisMonthMonthly, `${monthNames[curMonth]} Monthly Expiry`, 'NSE Monthly Series & Contract Expiry'));
+        }
+      }
+
+      // Next Month Monthly
+      const nextMonthMonthly = getLastDayOfWeekOfMonth(curYear, curMonth + 1, expiryDay);
+      results.push(formatDate(nextMonthMonthly, `${monthNames[(curMonth + 1) % 12]} Monthly`, 'Next Month Core Series'));
+
+      // Far Month Monthly
+      const farMonthMonthly = getLastDayOfWeekOfMonth(curYear, curMonth + 2, expiryDay);
+      results.push(formatDate(farMonthMonthly, `${monthNames[(curMonth + 2) % 12]} Monthly`, 'Far Month Core Series'));
+    }
+  } else {
+    // 3. USA Markets (Fridays weekly, 3rd Friday monthly)
+    const weekly1 = getNextDayOfWeek(now, 5);
+    results.push(formatDate(weekly1, 'Current Weekly', 'CBOE/NYSE Weekly Series'));
+
+    const weekly2 = new Date(weekly1);
+    weekly2.setDate(weekly2.getDate() + 7);
+    results.push(formatDate(weekly2, 'Next Weekly', 'Weekly Series'));
+
+    // Next Month 3rd Friday
+    const nextMonthThirdFri = getThirdFriday(curYear, curMonth + 1);
+    results.push(formatDate(nextMonthThirdFri, `${monthNames[(curMonth + 1) % 12]} Monthly`, 'Standard Monthly (3rd Friday)'));
+
+    // Far Month 3rd Friday
+    const farMonthThirdFri = getThirdFriday(curYear, curMonth + 2);
+    results.push(formatDate(farMonthThirdFri, `${monthNames[(curMonth + 2) % 12]} Monthly`, 'Quarterly / Far Monthly'));
+  }
+
+  return results;
+}
+
+/**
+ * Backward compatibility wrapper
+ */
+export function getStandardExpirations(asset = null) {
+  return getMarketExpirations(asset);
 }
 
 /**

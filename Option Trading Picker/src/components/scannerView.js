@@ -145,10 +145,43 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
           </div>
           <div class="strat-dte-wrap">
             <span class="badge badge-dte font-mono">
-              <i data-lucide="clock" class="inline-icon"></i> ${strat.dte} DTE (${strat.expiryLabel})
+              <i data-lucide="clock" class="inline-icon"></i> ${strat.dte} DTE
             </span>
           </div>
         </div>
+
+        <!-- Institutional Expiry & Transaction Recommendation -->
+        ${strat.transactSpec ? `
+          <div class="strat-transact-spec">
+            <div class="transact-spec-header">
+              <div class="transact-spec-title">
+                <i data-lucide="calendar-check" class="inline-icon text-cyan"></i>
+                <span class="font-bold">Recommended Expiry to Transact</span>
+              </div>
+              <div class="transact-spec-badge-group">
+                <span class="badge badge-transact-cycle font-mono">${strat.transactSpec.cycleType}</span>
+                <span class="badge badge-subtle font-mono">${strat.transactSpec.instrumentTag}</span>
+              </div>
+            </div>
+            
+            <div class="transact-spec-body">
+              <div class="transact-expiry-row">
+                <div class="transact-date-pill">
+                  <span class="transact-cal-icon">📅</span>
+                  <span class="transact-date font-mono font-bold">${strat.transactSpec.expiryDate}</span>
+                  <span class="transact-day-badge font-mono">(${strat.transactSpec.dayOfWeek} • ${strat.transactSpec.dte} DTE)</span>
+                </div>
+                <div class="transact-series-code font-mono">
+                  <span class="text-dim">Series:</span> <span class="series-highlight font-bold">${strat.transactSpec.contractSeries}</span>
+                </div>
+              </div>
+              <div class="transact-rationale text-dim">
+                <i data-lucide="info" class="inline-icon text-cyan"></i>
+                <span>${strat.transactSpec.recommendationNote}</span>
+              </div>
+            </div>
+          </div>
+        ` : ''}
 
         <!-- Legs Structure -->
         <div class="strat-legs-box">

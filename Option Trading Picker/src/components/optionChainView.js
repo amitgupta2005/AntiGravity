@@ -4,7 +4,7 @@
  * OI heatmap, and dynamic column view modes.
  */
 
-import { generateOptionChain, getStandardExpirations } from '../data/marketDataFeed.js';
+import { generateOptionChain, getMarketExpirations } from '../data/marketDataFeed.js';
 import { calculateExpectedMove, formatGamma, formatTheta } from '../quant/blackScholes.js';
 
 let currentChainData = null;
@@ -17,7 +17,7 @@ export function renderOptionChain(containerId, quote, selectedDte = null, onAddL
   const container = document.getElementById(containerId);
   if (!container || !quote) return;
 
-  const expirations = getStandardExpirations();
+  const expirations = getMarketExpirations(quote);
   const activeDte = selectedDte != null ? selectedDte : expirations[0].dte;
   const chain = generateOptionChain(quote, activeDte);
   currentChainData = chain;
