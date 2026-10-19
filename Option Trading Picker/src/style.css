@@ -460,6 +460,13 @@ body.light-theme .app-title {
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
+.badge-theta {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.12);
+}
+
 .badge-subtle {
   background: var(--bg-surface-elevated);
   color: var(--text-dim);

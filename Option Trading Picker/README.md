@@ -23,6 +23,7 @@ The application utilizes the **Black-Scholes-Merton** mathematical pricing model
 
 ### 2. Multi-Regime Strategy Scanner
 Automatically classifies market regimes (directional momentum, high/low IV, support/resistance, range-bound consolidation) and suggests optimal multi-leg option structures:
+* **⚡ Theta Decay & Time Value Harvest**: Theta Decay Harvester (ATM Iron Butterfly Pin — pure positive Net Theta $\Theta > 0$ collection engine), Calendar Time Spreads.
 * **Bullish Momentum**: Long Call (Breakout), Bull Call Spread (Debit), Bull Put Spread (Credit), Cash-Secured Put.
 * **Bearish Momentum**: Long Put (Breakdown), Bear Put Spread (Debit), Bear Call Spread (Credit).
 * **Delta-Neutral & Income**: Iron Condor (Consolidation harvest), Iron Butterfly (Pinning strike), Covered Call (Buy-Write).

@@ -10,6 +10,7 @@ import { getStandardExpirations } from '../data/marketDataFeed.js';
 
 export const STRATEGY_CATEGORIES = {
   ALL: 'ALL',
+  THETA_DECAY: 'THETA_DECAY',
   BULLISH_CALLS: 'BULLISH_CALLS',
   BEARISH_PUTS: 'BEARISH_PUTS',
   CREDIT_SPREADS: 'CREDIT_SPREADS',
@@ -208,6 +209,33 @@ export function buildExitPlan({
         rule: 'Stop loss: exit if either short strike is breached or loss reaches 1.5x credit',
         lossPerLot: stopLossPerLot,
         lossPct: '-1.5x Credit'
+      };
+      managedRiskReward = `1 : ${(targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(2)}`;
+      capitalPreservedPct = 70;
+      riskProfile = RISK_PROFILES.CONSERVATIVE;
+      break;
+    }
+
+    case 'THETA_DECAY': {
+      const targetProfitPerLot = Number((netCost * 0.50).toFixed(2));
+      const stopLossPerLot = Number((netCost * 1.25).toFixed(2));
+      const stopDistance = step * 1.5;
+      const stopSpotUpper = Number(((atmStrike || S) + stopDistance).toFixed(2));
+      const stopSpotLower = Number(((atmStrike || S) - stopDistance).toFixed(2));
+
+      targetBooking = {
+        spotPrice: atmStrike || S,
+        spotPct: 'Pinning ATM',
+        rule: `Capture Theta: Book 50% max credit (${curr}${targetProfitPerLot.toLocaleString()}) within 7-10 days`,
+        profitPerLot: targetProfitPerLot,
+        profitPct: '+50% Credit'
+      };
+      stopLoss = {
+        spotPrice: stopSpotLower,
+        spotPct: `±${((stopDistance / S) * 100).toFixed(1)}%`,
+        rule: `Stop loss: close if spot breaks outside ${curr}${stopSpotLower} — ${curr}${stopSpotUpper} or loss reaches 1.25x credit`,
+        lossPerLot: stopLossPerLot,
+        lossPct: '-1.25x Credit'
       };
       managedRiskReward = `1 : ${(targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(2)}`;
       capitalPreservedPct = 70;
@@ -813,6 +841,97 @@ export function scanStrategiesForAsset(quote) {
       netDelta: payoff.netDelta,
       netTheta: payoff.netTheta,
       catalyst: `Underpriced option volatility. Provisioned with +45% Target Booking (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}) and a strict 5-day / 35% time stop to prevent theta decay.`
+    });
+  }
+
+  // -------------------------------------------------------------
+  // 8. STRATEGY: Theta Decay Harvester (Iron Butterfly Pin)
+  // Sell ATM Call + Sell ATM Put + Buy OTM Protective Wings (4 legs)
+  // Maximum Positive Net Theta decay strategy at ATM strike
+  // -------------------------------------------------------------
+  {
+    const dte = thetaExp.dte; // Peak exponential time decay window (14-21 DTE)
+    const T = dte / 365;
+    const wingWidth = step * 3;
+    const putWing = atmStrike - wingWidth;
+    const callWing = atmStrike + wingWidth;
+
+    const atmCallGreeks = calculateGreeks('call', S, atmStrike, T, r, ivDecimal);
+    const atmPutGreeks = calculateGreeks('put', S, atmStrike, T, r, ivDecimal);
+    const callWingGreeks = calculateGreeks('call', S, callWing, T, r, ivDecimal);
+    const putWingGreeks = calculateGreeks('put', S, putWing, T, r, ivDecimal);
+
+    const creditCollected = (atmCallGreeks.price + atmPutGreeks.price) - (callWingGreeks.price + putWingGreeks.price);
+    const totalCredit = Math.max(0.10, Number(creditCollected.toFixed(2)));
+
+    const maxLossPerShare = Number((wingWidth - totalCredit).toFixed(2));
+    const lowerBE = Number((atmStrike - totalCredit).toFixed(2));
+    const upperBE = Number((atmStrike + totalCredit).toFixed(2));
+
+    const popLower = calculatePOP(S, lowerBE, T, ivDecimal, true);
+    const popUpper = calculatePOP(S, upperBE, T, ivDecimal, false);
+    const pop = Number((Math.min(95, Math.max(52, (popLower + popUpper) / 2))).toFixed(1));
+
+    const legs = [
+      { type: 'put', action: 'buy', strike: putWing, premium: putWingGreeks.price, contracts: 1, label: `Buy ${curr}${putWing} Put (Wing Protection)` },
+      { type: 'put', action: 'sell', strike: atmStrike, premium: atmPutGreeks.price, contracts: 1, label: `Sell ${curr}${atmStrike} Put (Theta Decay)` },
+      { type: 'call', action: 'sell', strike: atmStrike, premium: atmCallGreeks.price, contracts: 1, label: `Sell ${curr}${atmStrike} Call (Theta Decay)` },
+      { type: 'call', action: 'buy', strike: callWing, premium: callWingGreeks.price, contracts: 1, label: `Buy ${curr}${callWing} Call (Wing Protection)` }
+    ];
+
+    const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
+    const netCost = Number((totalCredit * lotSize).toFixed(2));
+    const maxProfit = netCost;
+    const maxLoss = Number((maxLossPerShare * lotSize).toFixed(2));
+
+    const exitPlan = buildExitPlan({
+      type: 'THETA_DECAY',
+      S,
+      lotSize,
+      netCost,
+      maxProfit,
+      maxLoss,
+      isCredit: true,
+      curr,
+      atmStrike,
+      step
+    });
+
+    const netDailyThetaCurr = Math.abs(payoff.netTheta).toFixed(1);
+
+    strategies.push({
+      id: `${quote.ticker}-THETA-DECAY-${atmStrike}`,
+      ticker: quote.ticker,
+      displayTicker: quote.displayTicker,
+      name: quote.name,
+      market: quote.market,
+      type: quote.type,
+      currency: quote.currency,
+      currencySymbol: curr,
+      strategyName: 'Theta Decay Harvester (Iron Butterfly Pin)',
+      category: STRATEGY_CATEGORIES.THETA_DECAY,
+      sentiment: 'Neutral',
+      directionBadge: 'Theta Decay',
+      badgeClass: 'badge-theta',
+      conviction: 'Pure Time Decay',
+      dte,
+      expiryLabel: thetaExp.label,
+      spotPrice: S,
+      targetPrice: atmStrike,
+      stopLossPrice: exitPlan.stopLoss.spotPrice,
+      exitPlan,
+      legs,
+      netCost,
+      isCredit: true,
+      maxProfit,
+      maxLoss,
+      breakevens: [lowerBE, upperBE],
+      riskReward: `1 : ${(totalCredit / maxLossPerShare).toFixed(2)}`,
+      pop,
+      ivRank,
+      netDelta: payoff.netDelta,
+      netTheta: payoff.netTheta,
+      catalyst: `Engineered for pure positive time decay. Generates +${curr}${netDailyThetaCurr}/day Theta harvest around ${curr}${atmStrike}. Exit rule books 50% credit (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}) within 7-10 days.`
     });
   }
 
