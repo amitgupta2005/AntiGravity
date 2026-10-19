@@ -51,34 +51,43 @@ export function buildExitPlan({
   let managedRiskReward = '1 : 2.0';
   let capitalPreservedPct = 60;
   let riskProfile = RISK_PROFILES.BALANCED;
+  let laymanSummary = {};
 
   switch (type) {
     case 'LONG_CALL': {
       const targetSpot = Number((S * 1.04).toFixed(2));
       const targetProfitPerLot = Number((netCost * 0.55).toFixed(2));
-      const targetOptPrice = Number((premium * 1.55).toFixed(2));
 
       const stopSpot = Number((S * 0.98).toFixed(2));
       const stopLossPerLot = Number((netCost * 0.40).toFixed(2));
-      const stopOptPrice = Number((premium * 0.60).toFixed(2));
 
       targetBooking = {
         spotPrice: targetSpot,
         spotPct: '+4.0%',
-        rule: `Book profit at +55% Premium ROI (${curr}${targetOptPrice}) near resistance`,
+        triggerText: `Stock reaches ${curr}${targetSpot}`,
+        rule: `Book profit at +55% Premium gain (${curr}${targetProfitPerLot.toLocaleString()}) near resistance`,
+        laymanAction: `Close Call when stock touches ${curr}${targetSpot} OR your profit hits +${curr}${targetProfitPerLot.toLocaleString()}. Bank your cash.`,
         profitPerLot: targetProfitPerLot,
         profitPct: '+55%'
       };
       stopLoss = {
         spotPrice: stopSpot,
         spotPct: '-2.0%',
-        rule: `Stop loss: cut if call drops -40% (${curr}${stopOptPrice}) or underlying breaks ${curr}${stopSpot}`,
+        triggerText: `Stock falls below ${curr}${stopSpot}`,
+        rule: `Stop loss: cut if loss reaches -40% (${curr}${stopLossPerLot.toLocaleString()}) or stock drops below ${curr}${stopSpot}`,
+        laymanAction: `Exit immediately if stock falls below ${curr}${stopSpot} OR loss touches -${curr}${stopLossPerLot.toLocaleString()}. Don't hope for a bounce.`,
         lossPerLot: stopLossPerLot,
         lossPct: '-40%'
       };
-      managedRiskReward = `1 : ${(targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(2)}`;
+      const ratio = (targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(1);
+      managedRiskReward = `1 : ${ratio}`;
       capitalPreservedPct = 60;
       riskProfile = RISK_PROFILES.BALANCED;
+      laymanSummary = {
+        plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()} (${ratio}x your risk).`,
+        timeExitRule: 'Exit 2–3 days before expiry to prevent time decay (theta) eating your call.',
+        actionTip: 'First trigger wins: exit as soon as either Target or Stop Loss is touched.'
+      };
       break;
     }
 
@@ -92,20 +101,30 @@ export function buildExitPlan({
       targetBooking = {
         spotPrice: targetSpot,
         spotPct: `+${(((targetSpot - S) / S) * 100).toFixed(1)}%`,
+        triggerText: `Stock reaches ${curr}${targetSpot}`,
         rule: `Book early at 70% of max spread profit (${curr}${targetProfitPerLot.toLocaleString()})`,
+        laymanAction: `Close both spread legs when stock reaches ${curr}${targetSpot} OR profit reaches +${curr}${targetProfitPerLot.toLocaleString()}. Don't wait for the last 30%.`,
         profitPerLot: targetProfitPerLot,
         profitPct: '+70% Spread'
       };
       stopLoss = {
         spotPrice: stopSpot,
         spotPct: '-1.5%',
+        triggerText: `Stock drops below ${curr}${stopSpot}`,
         rule: `Stop loss: exit if debit spread loses 45% or spot breaks below ${curr}${stopSpot}`,
+        laymanAction: `Close trade if stock drops below ${curr}${stopSpot} OR loss reaches -${curr}${stopLossPerLot.toLocaleString()}. Saves 55% of your capital.`,
         lossPerLot: stopLossPerLot,
         lossPct: '-45%'
       };
-      managedRiskReward = `1 : ${(targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(2)}`;
+      const ratio = (targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(1);
+      managedRiskReward = `1 : ${ratio}`;
       capitalPreservedPct = 55;
       riskProfile = RISK_PROFILES.CONSERVATIVE;
+      laymanSummary = {
+        plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()} (${ratio}x your risk).`,
+        timeExitRule: 'Book 70% profit early; avoids late reversal risk near expiration.',
+        actionTip: 'Always close both Call legs together as a package.'
+      };
       break;
     }
 
@@ -119,49 +138,67 @@ export function buildExitPlan({
       targetBooking = {
         spotPrice: targetSpot,
         spotPct: '+1.5%',
-        rule: 'Book early at 50% max credit to eliminate tail risk (Tastytrade Standard)',
+        triggerText: `Stock stays above ${curr}${shortStrike}`,
+        rule: 'Book early at 50% max credit to eliminate tail risk',
+        laymanAction: `Buy back spread when you make +${curr}${targetProfitPerLot.toLocaleString()} (50% of credit collected). Free up margin.`,
         profitPerLot: targetProfitPerLot,
         profitPct: '+50% Credit'
       };
       stopLoss = {
         spotPrice: stopSpot,
         spotPct: `-${(((S - stopSpot) / S) * 100).toFixed(1)}%`,
-        rule: `Stop loss: exit if spread cost expands to 1.5x credit collected (protects wings)`,
+        triggerText: `Stock falls to ${curr}${stopSpot}`,
+        rule: 'Stop loss: exit if loss reaches 1.5x credit collected',
+        laymanAction: `Exit trade if stock tests ${curr}${stopSpot} OR loss reaches -${curr}${stopLossPerLot.toLocaleString()}. Prevents full max loss.`,
         lossPerLot: stopLossPerLot,
         lossPct: '-1.5x Credit'
       };
-      managedRiskReward = `1 : ${(targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(2)}`;
+      const ratio = (targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(1);
+      managedRiskReward = `1 : ${ratio}`;
       capitalPreservedPct = 65;
       riskProfile = RISK_PROFILES.CONSERVATIVE;
+      laymanSummary = {
+        plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()}.`,
+        timeExitRule: 'Credit trade: time decay works for you. Exit at 50% profit target early.',
+        actionTip: 'Never hold until the final hour; close early when 50% profit is captured.'
+      };
       break;
     }
 
     case 'LONG_PUT': {
       const targetSpot = Number((S * 0.96).toFixed(2));
       const targetProfitPerLot = Number((netCost * 0.55).toFixed(2));
-      const targetOptPrice = Number((premium * 1.55).toFixed(2));
 
       const stopSpot = Number((S * 1.02).toFixed(2));
       const stopLossPerLot = Number((netCost * 0.40).toFixed(2));
-      const stopOptPrice = Number((premium * 0.60).toFixed(2));
 
       targetBooking = {
         spotPrice: targetSpot,
         spotPct: '-4.0%',
-        rule: `Book profit at +55% Premium gain (${curr}${targetOptPrice}) on breakdown`,
+        triggerText: `Stock drops to ${curr}${targetSpot}`,
+        rule: `Book profit at +55% Premium gain (${curr}${targetProfitPerLot.toLocaleString()}) on breakdown`,
+        laymanAction: `Sell Put when stock drops to ${curr}${targetSpot} OR your profit hits +${curr}${targetProfitPerLot.toLocaleString()}. Lock in bear gains.`,
         profitPerLot: targetProfitPerLot,
         profitPct: '+55%'
       };
       stopLoss = {
         spotPrice: stopSpot,
         spotPct: '+2.0%',
-        rule: `Stop loss: cut if put drops -40% (${curr}${stopOptPrice}) or spot breaks above ${curr}${stopSpot}`,
+        triggerText: `Stock rallies above ${curr}${stopSpot}`,
+        rule: `Stop loss: cut if loss reaches -40% (${curr}${stopLossPerLot.toLocaleString()}) or stock rises above ${curr}${stopSpot}`,
+        laymanAction: `Exit immediately if stock rebounds to ${curr}${stopSpot} OR loss reaches -${curr}${stopLossPerLot.toLocaleString()}. Protect your cash.`,
         lossPerLot: stopLossPerLot,
         lossPct: '-40%'
       };
-      managedRiskReward = `1 : ${(targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(2)}`;
+      const ratio = (targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(1);
+      managedRiskReward = `1 : ${ratio}`;
       capitalPreservedPct = 60;
       riskProfile = RISK_PROFILES.BALANCED;
+      laymanSummary = {
+        plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()} (${ratio}x your risk).`,
+        timeExitRule: 'Exit 2–3 days prior to expiration to protect gains from theta decay.',
+        actionTip: 'Do not stay in a Put if the stock refuses to break down.'
+      };
       break;
     }
 
@@ -175,20 +212,30 @@ export function buildExitPlan({
       targetBooking = {
         spotPrice: targetSpot,
         spotPct: `-${(((S - targetSpot) / S) * 100).toFixed(1)}%`,
+        triggerText: `Stock drops to ${curr}${targetSpot}`,
         rule: `Book early at 70% of max spread profit (${curr}${targetProfitPerLot.toLocaleString()})`,
+        laymanAction: `Close both Put legs when stock drops to ${curr}${targetSpot} OR profit reaches +${curr}${targetProfitPerLot.toLocaleString()}. Bank 70% gain.`,
         profitPerLot: targetProfitPerLot,
         profitPct: '+70% Spread'
       };
       stopLoss = {
         spotPrice: stopSpot,
         spotPct: '+1.5%',
+        triggerText: `Stock rises above ${curr}${stopSpot}`,
         rule: `Stop loss: exit if spread loses 45% or spot breaks above ${curr}${stopSpot}`,
+        laymanAction: `Exit if stock rallies above ${curr}${stopSpot} OR loss reaches -${curr}${stopLossPerLot.toLocaleString()}. Preserves 55% of capital.`,
         lossPerLot: stopLossPerLot,
         lossPct: '-45%'
       };
-      managedRiskReward = `1 : ${(targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(2)}`;
+      const ratio = (targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(1);
+      managedRiskReward = `1 : ${ratio}`;
       capitalPreservedPct = 55;
       riskProfile = RISK_PROFILES.CONSERVATIVE;
+      laymanSummary = {
+        plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()} (${ratio}x your risk).`,
+        timeExitRule: 'Book 70% profit early; don\'t risk a late-week sudden market rebound.',
+        actionTip: 'Close both Put legs simultaneously to avoid unhedged naked exposure.'
+      };
       break;
     }
 
@@ -198,21 +245,31 @@ export function buildExitPlan({
 
       targetBooking = {
         spotPrice: S,
-        spotPct: '0.0%',
-        rule: 'Take profit at 50% max credit collected (Institutional Rule)',
+        spotPct: 'Range Pin',
+        triggerText: 'Stock stays in range',
+        rule: 'Take profit at 50% max credit collected',
+        laymanAction: `Close all 4 legs as soon as profit reaches +${curr}${targetProfitPerLot.toLocaleString()} (50% of credit). Take profit and exit.`,
         profitPerLot: targetProfitPerLot,
         profitPct: '+50% Credit'
       };
       stopLoss = {
         spotPrice: shortStrike || Number((S * 0.97).toFixed(2)),
         spotPct: 'Wing Test',
+        triggerText: `Stock breaches ${curr}${shortStrike || Number((S * 0.97).toFixed(2))}`,
         rule: 'Stop loss: exit if either short strike is breached or loss reaches 1.5x credit',
+        laymanAction: `Close all 4 legs if either inner strike is touched OR loss hits -${curr}${stopLossPerLot.toLocaleString()}. Cuts loss cleanly.`,
         lossPerLot: stopLossPerLot,
         lossPct: '-1.5x Credit'
       };
-      managedRiskReward = `1 : ${(targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(2)}`;
+      const ratio = (targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(1);
+      managedRiskReward = `1 : ${ratio}`;
       capitalPreservedPct = 70;
       riskProfile = RISK_PROFILES.CONSERVATIVE;
+      laymanSummary = {
+        plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()}.`,
+        timeExitRule: 'Sideways trade: Once 50% credit is gained through time decay, take it and exit.',
+        actionTip: 'Do not hold till expiry Friday. Close all 4 legs together.'
+      };
       break;
     }
 
@@ -225,21 +282,31 @@ export function buildExitPlan({
 
       targetBooking = {
         spotPrice: atmStrike || S,
-        spotPct: 'Pinning ATM',
+        spotPct: 'ATM Pin',
+        triggerText: `Stock pins near ${curr}${atmStrike || S}`,
         rule: `Capture Theta: Book 50% max credit (${curr}${targetProfitPerLot.toLocaleString()}) within 7-10 days`,
+        laymanAction: `Exit trade when time decay gives you +${curr}${targetProfitPerLot.toLocaleString()} (50% credit collected). Usually takes 7-10 days.`,
         profitPerLot: targetProfitPerLot,
         profitPct: '+50% Credit'
       };
       stopLoss = {
         spotPrice: stopSpotLower,
         spotPct: `±${((stopDistance / S) * 100).toFixed(1)}%`,
-        rule: `Stop loss: close if spot breaks outside ${curr}${stopSpotLower} — ${curr}${stopSpotUpper} or loss reaches 1.25x credit`,
+        triggerText: `Stock leaves ${curr}${stopSpotLower} — ${curr}${stopSpotUpper}`,
+        rule: `Stop loss: close if spot breaks outside range or loss reaches 1.25x credit`,
+        laymanAction: `Exit all legs if stock moves outside ${curr}${stopSpotLower} — ${curr}${stopSpotUpper} OR loss reaches -${curr}${stopLossPerLot.toLocaleString()}.`,
         lossPerLot: stopLossPerLot,
         lossPct: '-1.25x Credit'
       };
-      managedRiskReward = `1 : ${(targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(2)}`;
+      const ratio = (targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(1);
+      managedRiskReward = `1 : ${ratio}`;
       capitalPreservedPct = 70;
       riskProfile = RISK_PROFILES.CONSERVATIVE;
+      laymanSummary = {
+        plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()}.`,
+        timeExitRule: 'Theta Harvest: Capture decay quickly, exit before final week expiration gamma spikes.',
+        actionTip: 'Time decay deposits money every day. Cash out when 50% is banked.'
+      };
       break;
     }
 
@@ -252,20 +319,30 @@ export function buildExitPlan({
       targetBooking = {
         spotPrice: targetSpot,
         spotPct: '±4.5%',
-        rule: 'Book profit when implied volatility surges or position reaches +45%',
+        triggerText: 'Large breakout in either direction',
+        rule: 'Book profit when volatility surges or position reaches +45%',
+        laymanAction: `Sell both Call and Put as soon as profit hits +${curr}${targetProfitPerLot.toLocaleString()} (+45%). Take the breakout gain.`,
         profitPerLot: targetProfitPerLot,
         profitPct: '+45%'
       };
       stopLoss = {
         spotPrice: S,
         spotPct: 'Time Stop',
+        triggerText: 'Stock remains flat for 5 days',
         rule: 'Time stop: exit if consolidation persists past 5 days or -35% loss',
+        laymanAction: `Close both legs if market stays flat for 5 days OR loss reaches -${curr}${stopLossPerLot.toLocaleString()}. Avoids theta bleed.`,
         lossPerLot: stopLossPerLot,
         lossPct: '-35%'
       };
-      managedRiskReward = `1 : ${(targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(2)}`;
+      const ratio = (targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(1);
+      managedRiskReward = `1 : ${ratio}`;
       capitalPreservedPct = 65;
       riskProfile = RISK_PROFILES.BALANCED;
+      laymanSummary = {
+        plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()} (${ratio}x your risk).`,
+        timeExitRule: 'Time stop: If no breakout occurs in 5 trading days, close the position.',
+        actionTip: 'Needs rapid movement. If quiet, get out to preserve capital.'
+      };
       break;
     }
   }
@@ -275,7 +352,8 @@ export function buildExitPlan({
     stopLoss,
     managedRiskReward,
     capitalPreservedPct,
-    riskProfile
+    riskProfile,
+    laymanSummary
   };
 }
 

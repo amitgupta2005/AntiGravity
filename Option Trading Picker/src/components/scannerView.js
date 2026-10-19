@@ -221,59 +221,86 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
           </div>
         </div>
 
-        <!-- PROVISIONED RISK MANAGEMENT & EXIT PLAN (Stop Loss & Target Booking) -->
+        <!-- SIMPLIFIED LAYMAN-FRIENDLY RISK MANAGEMENT & EXIT PLAN -->
         ${strat.exitPlan ? `
           <div class="strat-exit-box">
             <div class="exit-box-header">
-              <span class="exit-header-title">
+              <div class="exit-header-left">
                 <i data-lucide="shield-check" class="inline-icon text-cyan"></i>
-                Risk Management & Exit Plan
-              </span>
-              <span class="badge ${strat.exitPlan.riskProfile === 'CONSERVATIVE' ? 'badge-credit' : 'badge-subtle'} font-mono" style="font-size: 0.68rem;">
-                ${strat.exitPlan.riskProfile === 'CONSERVATIVE' ? 'Low Risk (Disciplined)' : 'Balanced Discipline'}
-              </span>
-            </div>
-
-            <div class="exit-grid">
-              <!-- Target Price Booking -->
-              <div class="exit-card target-card">
-                <div class="exit-card-top">
-                  <span class="exit-badge-tag text-emerald">
-                    <i data-lucide="target" class="inline-icon"></i> Target Booking
-                  </span>
-                  <span class="exit-spot font-mono font-bold text-emerald">
-                    ${curr}${strat.exitPlan.targetBooking.spotPrice} (${strat.exitPlan.targetBooking.spotPct})
-                  </span>
-                </div>
-                <div class="exit-rule-desc text-dim">${strat.exitPlan.targetBooking.rule}</div>
-                <div class="exit-amount-row font-mono">
-                  <span class="text-emerald font-bold">+${curr}${strat.exitPlan.targetBooking.profitPerLot.toLocaleString()} / lot</span>
-                  <span class="text-dim">(${strat.exitPlan.targetBooking.profitPct})</span>
-                </div>
+                <span class="exit-header-title">Simple Exit Plan (When to Close)</span>
               </div>
-
-              <!-- Stop Loss Protection -->
-              <div class="exit-card stop-card">
-                <div class="exit-card-top">
-                  <span class="exit-badge-tag text-rose">
-                    <i data-lucide="shield-alert" class="inline-icon"></i> Stop Loss
-                  </span>
-                  <span class="exit-spot font-mono font-bold text-rose">
-                    ${curr}${strat.exitPlan.stopLoss.spotPrice} (${strat.exitPlan.stopLoss.spotPct})
-                  </span>
-                </div>
-                <div class="exit-rule-desc text-dim">${strat.exitPlan.stopLoss.rule}</div>
-                <div class="exit-amount-row font-mono">
-                  <span class="text-rose font-bold">-${curr}${strat.exitPlan.stopLoss.lossPerLot.toLocaleString()} / lot</span>
-                  <span class="text-dim">(${strat.exitPlan.stopLoss.lossPct})</span>
-                </div>
+              <div class="exit-header-badges">
+                <span class="badge badge-layman font-mono">Layman Guide</span>
+                <span class="badge ${strat.exitPlan.riskProfile === 'CONSERVATIVE' ? 'badge-credit' : 'badge-subtle'} font-mono" style="font-size: 0.68rem;">
+                  ${strat.exitPlan.riskProfile === 'CONSERVATIVE' ? 'Low Risk' : 'Balanced'}
+                </span>
               </div>
             </div>
 
-            <!-- Managed Risk/Reward & Capital Preservation Footer -->
-            <div class="exit-footer-bar font-mono">
-              <span>⚖️ Realized R:R with Stop Loss: <strong class="text-cyan">${strat.exitPlan.managedRiskReward}</strong></span>
-              <span>🛡️ Capital Preserved: <strong class="text-emerald">${strat.exitPlan.capitalPreservedPct}%</strong></span>
+            <div class="exit-grid-simplified">
+              <!-- Target Price Booking (When to Take Profit) -->
+              <div class="exit-card-simple target-simple">
+                <div class="exit-simple-header">
+                  <span class="simple-tag text-emerald font-bold">
+                    <i data-lucide="target" class="inline-icon"></i> 1. WHEN TO TAKE PROFIT
+                  </span>
+                  <span class="simple-spot-pill font-mono font-bold text-emerald">
+                    Stock Hits: ${curr}${strat.exitPlan.targetBooking.spotPrice} <span class="spot-pct">(${strat.exitPlan.targetBooking.spotPct})</span>
+                  </span>
+                </div>
+
+                <div class="simple-cash-callout">
+                  <span class="cash-label text-dim">Cash Profit to Bank:</span>
+                  <span class="cash-val font-mono font-bold text-emerald">
+                    +${curr}${strat.exitPlan.targetBooking.profitPerLot.toLocaleString()} <span class="cash-unit">/ lot</span>
+                  </span>
+                  <span class="badge badge-profit-tag font-mono">${strat.exitPlan.targetBooking.profitPct}</span>
+                </div>
+
+                <div class="simple-action-box bg-emerald-soft">
+                  <span class="action-lead font-bold text-emerald">👉 What to do:</span>
+                  <span class="action-body text-emerald-light">${strat.exitPlan.targetBooking.laymanAction || strat.exitPlan.targetBooking.rule}</span>
+                </div>
+              </div>
+
+              <!-- Stop Loss Protection (When to Cut Loss) -->
+              <div class="exit-card-simple stop-simple">
+                <div class="exit-simple-header">
+                  <span class="simple-tag text-rose font-bold">
+                    <i data-lucide="shield-alert" class="inline-icon"></i> 2. WHEN TO CUT LOSS
+                  </span>
+                  <span class="simple-spot-pill font-mono font-bold text-rose">
+                    Stock Hits: ${curr}${strat.exitPlan.stopLoss.spotPrice} <span class="spot-pct">(${strat.exitPlan.stopLoss.spotPct})</span>
+                  </span>
+                </div>
+
+                <div class="simple-cash-callout">
+                  <span class="cash-label text-dim">Max Loss to Allow:</span>
+                  <span class="cash-val font-mono font-bold text-rose">
+                    -${curr}${strat.exitPlan.stopLoss.lossPerLot.toLocaleString()} <span class="cash-unit">/ lot</span>
+                  </span>
+                  <span class="badge badge-loss-tag font-mono">${strat.exitPlan.stopLoss.lossPct}</span>
+                </div>
+
+                <div class="simple-action-box bg-rose-soft">
+                  <span class="action-lead font-bold text-rose">👉 What to do:</span>
+                  <span class="action-body text-rose-light">${strat.exitPlan.stopLoss.laymanAction || strat.exitPlan.stopLoss.rule}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Layman Pocket Summary Strip -->
+            <div class="exit-layman-footer">
+              <div class="footer-rule-headline">
+                <span class="rule-icon">💡</span>
+                <span class="rule-title font-bold text-primary">Layman Rule:</span>
+                <span class="rule-summary text-dim">${strat.exitPlan.laymanSummary?.plainRule || `Risk ${curr}${strat.exitPlan.stopLoss.lossPerLot.toLocaleString()} to make ${curr}${strat.exitPlan.targetBooking.profitPerLot.toLocaleString()}`}</span>
+              </div>
+              <div class="footer-chips-row font-mono">
+                <span class="footer-pill">⚖️ Risk : Reward <strong class="text-cyan">${strat.exitPlan.managedRiskReward}</strong></span>
+                <span class="footer-pill">🛡️ Preserves <strong class="text-emerald">${strat.exitPlan.capitalPreservedPct}% Capital</strong></span>
+                <span class="footer-pill pill-timer text-amber">⏱️ ${strat.exitPlan.laymanSummary?.timeExitRule || 'Close before expiry week'}</span>
+              </div>
             </div>
           </div>
         ` : ''}

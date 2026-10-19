@@ -920,6 +920,240 @@ body.light-theme .app-title {
   letter-spacing: 0.03em;
 }
 
+.exit-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.exit-header-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.badge-layman {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  font-size: 0.68rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Simplified 2-Column Layman Grid */
+.exit-grid-simplified {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.65rem;
+}
+
+@media (max-width: 640px) {
+  .exit-grid-simplified {
+    grid-template-columns: 1fr;
+  }
+}
+
+.exit-card-simple {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  padding: 0.7rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border: 1px solid var(--border-subtle);
+  transition: all 0.2s ease;
+}
+
+.target-simple {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.05) 0%, var(--bg-secondary) 100%);
+}
+
+.target-simple:hover {
+  border-color: var(--emerald-bull);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.14);
+}
+
+.stop-simple {
+  border-color: rgba(244, 63, 94, 0.3);
+  background: linear-gradient(180deg, rgba(244, 63, 94, 0.05) 0%, var(--bg-secondary) 100%);
+}
+
+.stop-simple:hover {
+  border-color: var(--rose-bear);
+  box-shadow: 0 4px 12px rgba(244, 63, 94, 0.14);
+}
+
+.exit-simple-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.simple-tag {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.simple-spot-pill {
+  font-size: 0.74rem;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.2rem 0.45rem;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+}
+
+.spot-pct {
+  opacity: 0.85;
+  font-size: 0.68rem;
+}
+
+.simple-cash-callout {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  background: var(--bg-primary);
+  padding: 0.45rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+}
+
+.cash-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.cash-val {
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.cash-unit {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.badge-profit-tag {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  font-size: 0.68rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  margin-left: auto;
+}
+
+.badge-loss-tag {
+  background: rgba(244, 63, 94, 0.18);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  font-size: 0.68rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  margin-left: auto;
+}
+
+.simple-action-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  font-size: 0.73rem;
+  line-height: 1.4;
+  padding: 0.45rem 0.6rem;
+  border-radius: 4px;
+  border: 1px dashed;
+}
+
+.bg-emerald-soft {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.text-emerald-light {
+  color: #a7f3d0;
+}
+
+.bg-rose-soft {
+  background: rgba(244, 63, 94, 0.08);
+  border-color: rgba(244, 63, 94, 0.3);
+}
+
+.text-rose-light {
+  color: #fecdd3;
+}
+
+body.light-theme .text-emerald-light {
+  color: #065f46;
+}
+
+body.light-theme .text-rose-light {
+  color: #9f1239;
+}
+
+body.light-theme .simple-spot-pill {
+  background: #ffffff;
+}
+
+.action-lead {
+  flex-shrink: 0;
+}
+
+.action-body {
+  flex-grow: 1;
+}
+
+/* Layman Pocket Summary Footer */
+.exit-layman-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-subtle);
+}
+
+.footer-rule-headline {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.76rem;
+  flex-wrap: wrap;
+}
+
+.rule-icon {
+  font-size: 0.95rem;
+}
+
+.footer-chips-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  font-size: 0.72rem;
+  border-top: 1px dashed var(--border-subtle);
+  padding-top: 0.35rem;
+}
+
+.footer-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Legacy exit card classes support */
 .exit-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -934,43 +1168,12 @@ body.light-theme .app-title {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  transition: all 0.15s ease;
-}
-
-.target-card {
-  border-color: rgba(16, 185, 129, 0.25);
-  background: rgba(16, 185, 129, 0.04);
-}
-
-.target-card:hover {
-  border-color: var(--emerald-bull);
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
-}
-
-.stop-card {
-  border-color: rgba(244, 63, 94, 0.25);
-  background: rgba(244, 63, 94, 0.04);
-}
-
-.stop-card:hover {
-  border-color: var(--rose-bear);
-  box-shadow: 0 0 10px rgba(244, 63, 94, 0.15);
 }
 
 .exit-card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.35rem;
-}
-
-.exit-badge-tag {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
 }
 
 .exit-spot {
@@ -987,7 +1190,6 @@ body.light-theme .app-title {
   align-items: baseline;
   justify-content: space-between;
   font-size: 0.8rem;
-  margin-top: 2px;
 }
 
 .exit-footer-bar {

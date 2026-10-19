@@ -279,25 +279,28 @@ function renderAnalyzerTab() {
       </div>
       ${strat.exitPlan ? `
         <div class="kpi-card highlight-target" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.06);">
-          <span class="m-label text-emerald font-bold">🎯 Target Profit Booking</span>
+          <span class="m-label text-emerald font-bold">🎯 Win Exit: Target Booking</span>
           <span class="m-val font-mono font-bold text-emerald" style="font-size: 1.15rem;">
             ${curr}${strat.exitPlan.targetBooking.spotPrice} (${strat.exitPlan.targetBooking.spotPct})
           </span>
-          <span class="text-dim font-mono" style="font-size: 0.72rem;">+${curr}${strat.exitPlan.targetBooking.profitPerLot.toLocaleString()} / lot (${strat.exitPlan.targetBooking.profitPct})</span>
+          <span class="text-emerald font-mono font-bold" style="font-size: 0.78rem;">+${curr}${strat.exitPlan.targetBooking.profitPerLot.toLocaleString()} / lot (${strat.exitPlan.targetBooking.profitPct})</span>
+          <span class="text-dim" style="font-size: 0.68rem; margin-top: 3px; line-height: 1.3;">👉 ${strat.exitPlan.targetBooking.laymanAction || strat.exitPlan.targetBooking.rule}</span>
         </div>
         <div class="kpi-card highlight-stop" style="border-color: rgba(244, 63, 94, 0.4); background: rgba(244, 63, 94, 0.06);">
-          <span class="m-label text-rose font-bold">🛑 Stop Loss Trigger</span>
+          <span class="m-label text-rose font-bold">🛑 Defense Exit: Stop Loss</span>
           <span class="m-val font-mono font-bold text-rose" style="font-size: 1.15rem;">
             ${curr}${strat.exitPlan.stopLoss.spotPrice} (${strat.exitPlan.stopLoss.spotPct})
           </span>
-          <span class="text-dim font-mono" style="font-size: 0.72rem;">-${curr}${strat.exitPlan.stopLoss.lossPerLot.toLocaleString()} / lot (${strat.exitPlan.stopLoss.lossPct})</span>
+          <span class="text-rose font-mono font-bold" style="font-size: 0.78rem;">-${curr}${strat.exitPlan.stopLoss.lossPerLot.toLocaleString()} / lot (${strat.exitPlan.stopLoss.lossPct})</span>
+          <span class="text-dim" style="font-size: 0.68rem; margin-top: 3px; line-height: 1.3;">👉 ${strat.exitPlan.stopLoss.laymanAction || strat.exitPlan.stopLoss.rule}</span>
         </div>
         <div class="kpi-card" style="border-color: rgba(0, 242, 254, 0.3); background: rgba(0, 242, 254, 0.05);">
-          <span class="m-label text-cyan font-bold">⚖️ Realized Managed R:R</span>
+          <span class="m-label text-cyan font-bold">⚖️ Layman Rule</span>
           <span class="m-val font-mono font-bold text-cyan" style="font-size: 1.15rem;">
-            ${strat.exitPlan.managedRiskReward}
+            ${strat.exitPlan.managedRiskReward} R:R
           </span>
-          <span class="text-dim font-mono" style="font-size: 0.72rem;">🛡️ Preserves ${strat.exitPlan.capitalPreservedPct}% of Capital</span>
+          <span class="text-dim font-mono" style="font-size: 0.72rem;">🛡️ Preserves ${strat.exitPlan.capitalPreservedPct}% Capital</span>
+          <span class="text-dim" style="font-size: 0.68rem; margin-top: 3px; line-height: 1.3;">${strat.exitPlan.laymanSummary?.plainRule || ''}</span>
         </div>
       ` : ''}
     `;
