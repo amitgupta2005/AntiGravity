@@ -204,8 +204,8 @@ export function renderOptionChain(containerId, quote, selectedDte = null, onAddL
     </div>
   `;
 
-  if (window.lucide && typeof window.lucide.createIcons === 'function') {
-    window.lucide.createIcons();
+  if (typeof window.refreshIcons === 'function') {
+    window.refreshIcons();
   }
 
   // Bind Expiry chips

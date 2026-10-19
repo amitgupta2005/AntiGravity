@@ -26,8 +26,8 @@ export function showToast(message, type = 'info', duration = 3000) {
 
   container.appendChild(toast);
 
-  if (window.lucide && typeof window.lucide.createIcons === 'function') {
-    window.lucide.createIcons();
+  if (typeof window.refreshIcons === 'function') {
+    window.refreshIcons();
   }
 
   // Animate in

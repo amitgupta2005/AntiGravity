@@ -77,8 +77,8 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
         </button>
       </div>
     `;
-    if (window.lucide && typeof window.lucide.createIcons === 'function') {
-      window.lucide.createIcons();
+    if (typeof window.refreshIcons === 'function') {
+      window.refreshIcons();
     }
     const resetBtn = document.getElementById('btnResetFilters');
     if (resetBtn) {
@@ -203,8 +203,8 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
     `;
   }).join('');
 
-  if (window.lucide && typeof window.lucide.createIcons === 'function') {
-    window.lucide.createIcons();
+  if (typeof window.refreshIcons === 'function') {
+    window.refreshIcons();
   }
 
   // Bind Event Listeners to Card Buttons

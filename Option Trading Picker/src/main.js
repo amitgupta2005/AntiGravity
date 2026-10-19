@@ -3,9 +3,9 @@
  * Handles global state, tabs routing, strategy scanning, option chains, and payoff charting.
  */
 
-import * as lucide from 'lucide';
+import { createIcons, icons } from 'lucide';
 import { OPTION_UNIVERSE, findStockInUniverse } from './data/stockUniverse.js';
-import { fetchAllUniverseQuotes, fetchLiveQuote } from './data/marketDataFeed.js';
+import { fetchAllUniverseQuotes, fetchLiveQuote, getBaseQuote } from './data/marketDataFeed.js';
 import { scanAllUniverseStrategies } from './quant/strategyEngine.js';
 import { filterStrategies, renderScannerCards } from './components/scannerView.js';
 import { renderPayoffChart, resizePayoffChart } from './components/payoffChart.js';
@@ -16,8 +16,16 @@ import { calculatePayoffProfile } from './quant/payoffCalculator.js';
 import { calculateGreeks } from './quant/blackScholes.js';
 import { showToast } from './components/toast.js';
 
-// Make lucide available globally for dynamic elements
-window.lucide = lucide;
+// Safe Lucide icon refresh helper
+export function refreshIcons() {
+  try {
+    createIcons({ icons });
+  } catch (err) {
+    console.warn('Lucide icon refresh warning:', err);
+  }
+}
+window.refreshIcons = refreshIcons;
+window.lucide = { createIcons: refreshIcons, icons };
 
 // Global App State
 const state = {
@@ -43,13 +51,13 @@ const state = {
  * Initialize Application
  */
 async function initApp() {
-  lucide.createIcons();
+  // 1. Setup event listeners immediately so tabs and buttons are responsive
   setupEventListeners();
 
-  // 1. Initial Load of Quotes & Strategies
-  await refreshMarketData();
+  // 2. Synchronous baseline initial render (0ms latency, no blocking)
+  state.quotes = OPTION_UNIVERSE.map(a => getBaseQuote(a));
+  state.strategies = scanAllUniverseStrategies(state.quotes);
 
-  // 2. Select default strategy for analyzer
   if (state.strategies.length > 0) {
     state.activeStrategy = state.strategies[0];
   }
@@ -62,9 +70,13 @@ async function initApp() {
 
   // 5. Initial Render of Scanner & Active Tab
   renderActiveView();
+  refreshIcons();
 
-  // 6. Start continuous live market pulse (every 6 seconds)
-  setInterval(tickMarketSimulation, 6000);
+  // 6. Asynchronously fetch live real-time quotes without blocking
+  refreshMarketData().catch(console.error);
+
+  // 7. Start continuous live market pulse (every 5 seconds)
+  setInterval(tickMarketSimulation, 5000);
 }
 
 /**
@@ -622,7 +634,7 @@ function setupEventListeners() {
       document.body.classList.toggle('dark-theme', state.isDarkMode);
       if (themeIcon) {
         themeIcon.setAttribute('data-lucide', state.isDarkMode ? 'sun' : 'moon');
-        lucide.createIcons();
+        refreshIcons();
       }
       if (state.activeTab === 'tab-analyzer') {
         renderAnalyzerTab();

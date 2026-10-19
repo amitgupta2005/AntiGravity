@@ -56,7 +56,32 @@ export function getStandardExpirations() {
 }
 
 /**
- * Fetch live or simulated quote for an asset
+ * Return synchronous baseline quote for immediate zero-latency initial UI render
+ */
+export function getBaseQuote(asset) {
+  if (!asset) return null;
+  const drift = (Math.random() - 0.48) * 0.008;
+  const price = asset.basePrice * (1 + drift);
+  const change = price - asset.basePrice;
+  const changePercent = (change / asset.basePrice) * 100;
+  return {
+    ...asset,
+    price: Number(price.toFixed(2)),
+    change: Number(change.toFixed(2)),
+    changePercent: Number(changePercent.toFixed(2)),
+    volume: 1500000,
+    dayHigh: Number((price * 1.01).toFixed(2)),
+    dayLow: Number((price * 0.99).toFixed(2)),
+    iv: asset.historicalIV,
+    ivRank: asset.ivRank,
+    pcr: asset.pcr,
+    maxPain: asset.maxPain,
+    lastUpdated: new Date().toLocaleTimeString()
+  };
+}
+
+/**
+ * Fetch live quote for an asset via local proxy with fallback
  */
 export async function fetchLiveQuote(asset) {
   if (!asset) return null;
@@ -74,11 +99,16 @@ export async function fetchLiveQuote(asset) {
   let volume = 1500000;
   let dayHigh = price * 1.012;
   let dayLow = price * 0.988;
+  let fetched = false;
 
+  // Try local Vite proxy first with 2.5s AbortController timeout
   try {
-    // Attempt live quote from Yahoo Finance API endpoint
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(asset.ticker)}?interval=1d&range=5d`;
-    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
+    const proxyUrl = `/api/yahoo/chart?symbol=${encodeURIComponent(asset.ticker)}&range=5d&interval=1d`;
+    const res = await fetch(proxyUrl, { signal: controller.signal, headers: { 'Accept': 'application/json' } });
+    clearTimeout(timeoutId);
+
     if (res.ok) {
       const data = await res.json();
       const meta = data?.chart?.result?.[0]?.meta;
@@ -86,14 +116,43 @@ export async function fetchLiveQuote(asset) {
         price = meta.regularMarketPrice;
         const prevClose = meta.previousClose || meta.chartPreviousClose || price;
         change = price - prevClose;
-        changePercent = (change / prevClose) * 100;
+        changePercent = ((price - prevClose) / prevClose) * 100;
         volume = meta.regularMarketVolume || volume;
         dayHigh = meta.regularMarketDayHigh || price * 1.01;
         dayLow = meta.regularMarketDayLow || price * 0.99;
+        fetched = true;
       }
     }
-  } catch (_) {
-    // Fallback: apply realistic intraday variance
+  } catch (_) {}
+
+  // If proxy did not return, try direct query with fast timeout
+  if (!fetched) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(asset.ticker)}?interval=1d&range=5d`;
+      const res = await fetch(url, { signal: controller.signal, headers: { 'Accept': 'application/json' } });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        const meta = data?.chart?.result?.[0]?.meta;
+        if (meta && meta.regularMarketPrice) {
+          price = meta.regularMarketPrice;
+          const prevClose = meta.previousClose || meta.chartPreviousClose || price;
+          change = price - prevClose;
+          changePercent = ((price - prevClose) / prevClose) * 100;
+          volume = meta.regularMarketVolume || volume;
+          dayHigh = meta.regularMarketDayHigh || price * 1.01;
+          dayLow = meta.regularMarketDayLow || price * 0.99;
+          fetched = true;
+        }
+      }
+    } catch (_) {}
+  }
+
+  // Realistic fallback if network unavailable
+  if (!fetched) {
     const drift = (Math.random() - 0.48) * 0.008;
     price = asset.basePrice * (1 + drift);
     change = price - asset.basePrice;
@@ -102,7 +161,7 @@ export async function fetchLiveQuote(asset) {
 
   const quote = {
     ...asset,
-    price: Number(price.toFixed(asset.currency === 'INR' ? 2 : 2)),
+    price: Number(price.toFixed(2)),
     change: Number(change.toFixed(2)),
     changePercent: Number(changePercent.toFixed(2)),
     volume,
