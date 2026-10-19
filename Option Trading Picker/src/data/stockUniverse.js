@@ -23,7 +23,9 @@ export const OPTION_UNIVERSE = [
     pcr: 1.15,
     maxPain: 5850,
     sector: 'Broad Market Index',
-    riskFreeRate: 0.045
+    riskFreeRate: 0.045,
+    beta: 1,
+    alpha: 0
   },
   {
     ticker: 'QQQ',
@@ -41,7 +43,9 @@ export const OPTION_UNIVERSE = [
     pcr: 1.28,
     maxPain: 492.5,
     sector: 'Tech & Growth Index',
-    riskFreeRate: 0.045
+    riskFreeRate: 0.045,
+    beta: 1.18,
+    alpha: 1.8
   },
   {
     ticker: 'DIA',
@@ -59,7 +63,9 @@ export const OPTION_UNIVERSE = [
     pcr: 0.94,
     maxPain: 430,
     sector: 'Industrial & Blue Chip Index',
-    riskFreeRate: 0.045
+    riskFreeRate: 0.045,
+    beta: 0.88,
+    alpha: -0.4
   },
   {
     ticker: 'IWM',
@@ -77,7 +83,9 @@ export const OPTION_UNIVERSE = [
     pcr: 1.35,
     maxPain: 225,
     sector: 'Small-Cap Index',
-    riskFreeRate: 0.045
+    riskFreeRate: 0.045,
+    beta: 1.25,
+    alpha: 1.5
   },
   {
     ticker: '^VIX',
@@ -95,7 +103,9 @@ export const OPTION_UNIVERSE = [
     pcr: 0.72,
     maxPain: 16,
     sector: 'Market Volatility Gauge',
-    riskFreeRate: 0.045
+    riskFreeRate: 0.045,
+    beta: -4.5,
+    alpha: 0
   },
 
   // ==========================================
@@ -117,7 +127,9 @@ export const OPTION_UNIVERSE = [
     pcr: 0.88,
     maxPain: 135,
     sector: 'Semiconductors & AI Hardware',
-    riskFreeRate: 0.045
+    riskFreeRate: 0.045,
+    beta: 1.75,
+    alpha: 14.2
   },
   {
     ticker: 'AAPL',
@@ -135,7 +147,9 @@ export const OPTION_UNIVERSE = [
     pcr: 0.95,
     maxPain: 232.5,
     sector: 'Consumer Electronics & Services',
-    riskFreeRate: 0.045
+    riskFreeRate: 0.045,
+    beta: 1.08,
+    alpha: 3.5
   },
   {
     ticker: 'TSLA',
@@ -153,7 +167,9 @@ export const OPTION_UNIVERSE = [
     pcr: 1.42,
     maxPain: 220,
     sector: 'Automotive & Clean Energy',
-    riskFreeRate: 0.045
+    riskFreeRate: 0.045,
+    beta: 2.15,
+    alpha: 6.2
   },
   {
     ticker: 'MSFT',
@@ -171,7 +187,9 @@ export const OPTION_UNIVERSE = [
     pcr: 1.04,
     maxPain: 415,
     sector: 'Enterprise Cloud & AI Software',
-    riskFreeRate: 0.045
+    riskFreeRate: 0.045,
+    beta: 1.12,
+    alpha: 4
   },
   {
     ticker: 'AMZN',
@@ -189,7 +207,9 @@ export const OPTION_UNIVERSE = [
     pcr: 0.89,
     maxPain: 185,
     sector: 'E-Commerce & AWS Cloud',
-    riskFreeRate: 0.045
+    riskFreeRate: 0.045,
+    beta: 1.28,
+    alpha: 6.8
   },
   {
     ticker: 'META',
@@ -207,7 +227,9 @@ export const OPTION_UNIVERSE = [
     pcr: 0.92,
     maxPain: 570,
     sector: 'Digital Advertising & AI Platforms',
-    riskFreeRate: 0.045
+    riskFreeRate: 0.045,
+    beta: 1.35,
+    alpha: 11.5
   },
   {
     ticker: 'GOOGL',
@@ -225,7 +247,9 @@ export const OPTION_UNIVERSE = [
     pcr: 1.10,
     maxPain: 165,
     sector: 'Internet Search & Cloud Infrastructure',
-    riskFreeRate: 0.045
+    riskFreeRate: 0.045,
+    beta: 1.1,
+    alpha: 3.2
   },
   {
     ticker: 'AMD',
@@ -243,7 +267,9 @@ export const OPTION_UNIVERSE = [
     pcr: 1.18,
     maxPain: 155,
     sector: 'Semiconductors & Accelerators',
-    riskFreeRate: 0.045
+    riskFreeRate: 0.045,
+    beta: 1.68,
+    alpha: 8.4
   },
   {
     ticker: 'COIN',
@@ -261,7 +287,9 @@ export const OPTION_UNIVERSE = [
     pcr: 1.25,
     maxPain: 210,
     sector: 'Crypto Economy & Digital Assets',
-    riskFreeRate: 0.045
+    riskFreeRate: 0.045,
+    beta: 2.65,
+    alpha: 16.5
   },
   {
     ticker: 'PLTR',
@@ -279,7 +307,9 @@ export const OPTION_UNIVERSE = [
     pcr: 0.81,
     maxPain: 42,
     sector: 'Enterprise AI & Defense Analytics',
-    riskFreeRate: 0.045
+    riskFreeRate: 0.045,
+    beta: 1.95,
+    alpha: 13
   },
 
   // ==========================================
@@ -301,7 +331,9 @@ export const OPTION_UNIVERSE = [
     pcr: 1.18,
     maxPain: 24850,
     sector: 'National Stock Exchange Benchmark',
-    riskFreeRate: 0.065
+    riskFreeRate: 0.065,
+    beta: 1,
+    alpha: 0
   },
   {
     ticker: '^NSEBANK',
@@ -319,7 +351,9 @@ export const OPTION_UNIVERSE = [
     pcr: 0.98,
     maxPain: 51200,
     sector: 'Indian Banking Sector Index',
-    riskFreeRate: 0.065
+    riskFreeRate: 0.065,
+    beta: 1.15,
+    alpha: 2.2
   },
   {
     ticker: 'NIFTY_FIN_SERVICE.NS',
@@ -337,7 +371,9 @@ export const OPTION_UNIVERSE = [
     pcr: 1.05,
     maxPain: 23600,
     sector: 'Financials, NBFC & Insurance',
-    riskFreeRate: 0.065
+    riskFreeRate: 0.065,
+    beta: 1.12,
+    alpha: 1.9
   },
   {
     ticker: '^BSESN',
@@ -355,7 +391,9 @@ export const OPTION_UNIVERSE = [
     pcr: 1.12,
     maxPain: 81200,
     sector: 'Bombay Stock Exchange Benchmark',
-    riskFreeRate: 0.065
+    riskFreeRate: 0.065,
+    beta: 0.98,
+    alpha: 0
   },
 
   // ==========================================
@@ -377,7 +415,9 @@ export const OPTION_UNIVERSE = [
     pcr: 0.94,
     maxPain: 2740,
     sector: 'Energy, Retail & 5G Telecom',
-    riskFreeRate: 0.065
+    riskFreeRate: 0.065,
+    beta: 1.05,
+    alpha: 2.6
   },
   {
     ticker: 'HDFCBANK.NS',
@@ -395,7 +435,9 @@ export const OPTION_UNIVERSE = [
     pcr: 1.22,
     maxPain: 1680,
     sector: 'Private Banking & Retail Lending',
-    riskFreeRate: 0.065
+    riskFreeRate: 0.065,
+    beta: 1.1,
+    alpha: 1.8
   },
   {
     ticker: 'TATAMOTORS.NS',
@@ -413,7 +455,9 @@ export const OPTION_UNIVERSE = [
     pcr: 0.85,
     maxPain: 910,
     sector: 'Automotive, EVs & JLR Luxury',
-    riskFreeRate: 0.065
+    riskFreeRate: 0.065,
+    beta: 1.48,
+    alpha: 9.5
   },
   {
     ticker: 'ICICIBANK.NS',
@@ -431,7 +475,9 @@ export const OPTION_UNIVERSE = [
     pcr: 1.14,
     maxPain: 1250,
     sector: 'Private Commercial Banking',
-    riskFreeRate: 0.065
+    riskFreeRate: 0.065,
+    beta: 1.18,
+    alpha: 5.8
   },
   {
     ticker: 'INFY.NS',
@@ -449,7 +495,9 @@ export const OPTION_UNIVERSE = [
     pcr: 1.02,
     maxPain: 1920,
     sector: 'IT Consulting & Enterprise Cloud',
-    riskFreeRate: 0.065
+    riskFreeRate: 0.065,
+    beta: 0.95,
+    alpha: 1.4
   },
   {
     ticker: 'TCS.NS',
@@ -467,7 +515,9 @@ export const OPTION_UNIVERSE = [
     pcr: 0.91,
     maxPain: 4120,
     sector: 'IT Services & Digital Transformation',
-    riskFreeRate: 0.065
+    riskFreeRate: 0.065,
+    beta: 0.88,
+    alpha: 2.2
   },
   {
     ticker: 'SBIN.NS',
@@ -485,7 +535,9 @@ export const OPTION_UNIVERSE = [
     pcr: 1.31,
     maxPain: 820,
     sector: 'Public Sector Banking',
-    riskFreeRate: 0.065
+    riskFreeRate: 0.065,
+    beta: 1.22,
+    alpha: 4.8
   },
   {
     ticker: 'BHARTIARTL.NS',
@@ -503,7 +555,9 @@ export const OPTION_UNIVERSE = [
     pcr: 1.15,
     maxPain: 1700,
     sector: '5G Telecommunications & Data Centers',
-    riskFreeRate: 0.065
+    riskFreeRate: 0.065,
+    beta: 0.82,
+    alpha: 8.2
   },
   {
     ticker: 'LT.NS',
@@ -521,7 +575,9 @@ export const OPTION_UNIVERSE = [
     pcr: 1.08,
     maxPain: 3550,
     sector: 'Civil Engineering, High-Speed Rail & EPC',
-    riskFreeRate: 0.065
+    riskFreeRate: 0.065,
+    beta: 1.15,
+    alpha: 6.8
   },
   {
     ticker: 'ITC.NS',
@@ -539,7 +595,9 @@ export const OPTION_UNIVERSE = [
     pcr: 0.88,
     maxPain: 490,
     sector: 'FMCG, Cigarettes, Hotels & Agri-Business',
-    riskFreeRate: 0.065
+    riskFreeRate: 0.065,
+    beta: 0.65,
+    alpha: 2
   },
   {
     ticker: 'BAJFINANCE.NS',
@@ -557,7 +615,9 @@ export const OPTION_UNIVERSE = [
     pcr: 1.20,
     maxPain: 7100,
     sector: 'Consumer Lending & FinTech NBFC',
-    riskFreeRate: 0.065
+    riskFreeRate: 0.065,
+    beta: 1.35,
+    alpha: 7.6
   },
   {
     ticker: 'TATAPOWER.NS',
@@ -575,7 +635,9 @@ export const OPTION_UNIVERSE = [
     pcr: 0.95,
     maxPain: 430,
     sector: 'Renewable Solar/Wind & Power Transmission',
-    riskFreeRate: 0.065
+    riskFreeRate: 0.065,
+    beta: 1.42,
+    alpha: 9
   }
 ];
 

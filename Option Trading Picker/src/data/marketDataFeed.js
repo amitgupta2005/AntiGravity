@@ -5,7 +5,7 @@
  */
 
 import { OPTION_UNIVERSE } from './stockUniverse.js';
-import { calculateGreeks, calculateIV } from '../quant/blackScholes.js';
+import { calculateGreeks, calculateIV, calculateOptionBeta, calculateOptionAlpha } from '../quant/blackScholes.js';
 
 // Cache for live quotes
 const liveQuotesCache = new Map();
@@ -195,6 +195,9 @@ export function generateOptionChain(quote, selectedDte = 14) {
   const S = quote.price;
   const r = quote.riskFreeRate || (quote.currency === 'INR' ? 0.065 : 0.045);
   const sigma = (quote.iv || 25) / 100;
+  const historicalIV = (quote.historicalIV || quote.iv || 25) / 100;
+  const assetBeta = quote.beta != null ? quote.beta : 1.0;
+  const assetAlpha = quote.alpha != null ? quote.alpha : 0.0;
   const T = Math.max(0.003, selectedDte / 365);
   const step = quote.strikeStep || 5;
 
@@ -219,12 +222,16 @@ export function generateOptionChain(quote, selectedDte = 14) {
     const callSpread = Math.max(0.05, callGreeks.price * 0.025);
     const callBid = Math.max(0.05, Number((callGreeks.price - callSpread / 2).toFixed(2)));
     const callAsk = Number((callGreeks.price + callSpread / 2).toFixed(2));
+    const callBeta = calculateOptionBeta(callGreeks.delta, S, callGreeks.price, assetBeta);
+    const callAlpha = calculateOptionAlpha('call', callGreeks.delta, S, callGreeks.price, strikeIV, historicalIV, assetAlpha, T);
 
     // Calculate Put Greeks & Price
     const putGreeks = calculateGreeks('put', S, K, T, r, strikeIV);
     const putSpread = Math.max(0.05, putGreeks.price * 0.025);
     const putBid = Math.max(0.05, Number((putGreeks.price - putSpread / 2).toFixed(2)));
     const putAsk = Number((putGreeks.price + putSpread / 2).toFixed(2));
+    const putBeta = calculateOptionBeta(putGreeks.delta, S, putGreeks.price, assetBeta);
+    const putAlpha = calculateOptionAlpha('put', putGreeks.delta, S, putGreeks.price, strikeIV, historicalIV, assetAlpha, T);
 
     // Simulated realistic Open Interest & Volume distributions
     const distFromATM = Math.abs(K - atmStrike) / step;
@@ -248,6 +255,8 @@ export function generateOptionChain(quote, selectedDte = 14) {
         gamma: callGreeks.gamma,
         theta: callGreeks.theta,
         vega: callGreeks.vega,
+        beta: callBeta,
+        alpha: callAlpha,
         iv: Number((strikeIV * 100).toFixed(1)),
         oi: callOI,
         volume: callVol,
@@ -262,6 +271,8 @@ export function generateOptionChain(quote, selectedDte = 14) {
         gamma: putGreeks.gamma,
         theta: putGreeks.theta,
         vega: putGreeks.vega,
+        beta: putBeta,
+        alpha: putAlpha,
         iv: Number((strikeIV * 100).toFixed(1)),
         oi: putOI,
         volume: putVol,
@@ -276,6 +287,12 @@ export function generateOptionChain(quote, selectedDte = 14) {
   const totalPutOI = strikes.reduce((sum, s) => sum + s.put.oi, 0);
   const chainPCR = totalCallOI > 0 ? Number((totalPutOI / totalCallOI).toFixed(2)) : quote.pcr;
 
+  // Extract ATM Greeks & Chain Risk metrics
+  const atmRow = strikes.find(s => s.isATM) || strikes[Math.floor(strikes.length / 2)];
+  const atmGamma = atmRow ? atmRow.call.gamma : 0;
+  const atmTheta = atmRow ? atmRow.call.theta : 0;
+  const avgAlpha = atmRow ? Number(((atmRow.call.alpha + atmRow.put.alpha) / 2).toFixed(1)) : 0;
+
   return {
     quote,
     dte: selectedDte,
@@ -284,6 +301,11 @@ export function generateOptionChain(quote, selectedDte = 14) {
     strikes,
     totalCallOI,
     totalPutOI,
-    chainPCR
+    chainPCR,
+    atmGamma,
+    atmTheta,
+    assetBeta,
+    assetAlpha,
+    avgAlpha
   };
 }

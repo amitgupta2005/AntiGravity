@@ -975,13 +975,77 @@ body.light-theme .app-title {
   font-size: 0.7rem;
 }
 
+.chain-controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 1rem;
+}
+
 .chain-expiry-bar {
   display: flex;
   align-items: center;
   gap: 0.85rem;
-  margin-bottom: 1rem;
   overflow-x: auto;
-  padding-bottom: 4px;
+  padding-bottom: 2px;
+}
+
+.chain-view-mode-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.view-mode-label {
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.view-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  gap: 2px;
+}
+
+.view-mode-btn {
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-sm) - 2px);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.view-mode-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.view-mode-btn.active {
+  background: var(--cyan-primary);
+  color: #050b14;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 242, 254, 0.25);
 }
 
 .expiry-chips {
@@ -1019,6 +1083,52 @@ body.light-theme .app-title {
 .chip-dte {
   font-size: 0.72rem;
   color: var(--text-dim);
+}
+
+/* Greek Highlight Pills in Header */
+.highlight-gamma {
+  border-color: rgba(251, 191, 36, 0.3);
+  background: rgba(251, 191, 36, 0.05);
+}
+
+.highlight-theta {
+  border-color: rgba(244, 63, 94, 0.3);
+  background: rgba(244, 63, 94, 0.05);
+}
+
+.highlight-beta {
+  border-color: rgba(0, 242, 254, 0.3);
+  background: rgba(0, 242, 254, 0.05);
+}
+
+.highlight-alpha {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.text-gold {
+  color: #fbbf24;
+}
+
+/* Greek Columns in Chain Table */
+.col-alpha {
+  letter-spacing: -0.02em;
+}
+
+.col-beta {
+  letter-spacing: -0.02em;
+}
+
+.col-gamma {
+  letter-spacing: -0.02em;
+}
+
+.col-theta {
+  letter-spacing: -0.02em;
+}
+
+.greek-alpha, .greek-beta, .greek-gamma, .greek-theta {
+  font-weight: 600;
 }
 
 /* Chain Table */

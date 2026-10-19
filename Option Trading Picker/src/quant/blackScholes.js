@@ -217,3 +217,66 @@ export function calculateExpectedMove(S, sigma, T) {
     lower: Number(Math.max(0, S - move).toFixed(2))
   };
 }
+
+/**
+ * Calculate Option Beta (Systematic market exposure multiplier)
+ * β_opt = Ω * β_asset = (Delta * S / OptionPrice) * β_asset
+ * @param {number} delta - Option Delta
+ * @param {number} S - Underlying Spot Price
+ * @param {number} optionPrice - Option Market Price (LTP or Mid)
+ * @param {number} assetBeta - Underlying Asset Beta relative to benchmark (default: 1.0)
+ * @returns {number} Option Beta (multiplier, e.g. 15.4 for Call or -14.2 for Put)
+ */
+export function calculateOptionBeta(delta, S, optionPrice, assetBeta = 1.0) {
+  if (!optionPrice || optionPrice <= 0.001 || !S || S <= 0) return 0;
+  const gearing = (S / Math.max(0.05, optionPrice)) * delta;
+  // Clamp gearing to reasonable financial bounds [-45, +45] to avoid extreme deep OTM distortion
+  const clampedGearing = Math.min(45, Math.max(-45, gearing));
+  const beta = clampedGearing * (Number(assetBeta) || 1.0);
+  return Number(beta.toFixed(2));
+}
+
+/**
+ * Calculate Option Alpha (Theoretical Edge & Risk-Adjusted Excess Yield %)
+ * Derived from Volatility Pricing Edge (Fair HV vs Market IV) + Leveraged Asset Alpha
+ * @param {string} type - 'call' or 'put'
+ * @param {number} delta - Option Delta
+ * @param {number} S - Underlying Spot Price
+ * @param {number} optionPrice - Option Market Price
+ * @param {number} strikeIV - Strike Implied Volatility (decimal, e.g. 0.28)
+ * @param {number} historicalIV - Asset Historical Volatility (decimal, e.g. 0.25)
+ * @param {number} assetAlpha - Asset Jensen's Alpha % (e.g. 5.5)
+ * @param {number} T - Time to expiration in years
+ * @returns {number} Option Alpha in percent (e.g. +3.8% or -2.4%)
+ */
+export function calculateOptionAlpha(type, delta, S, optionPrice, strikeIV, historicalIV, assetAlpha = 0, T = 0.05) {
+  if (!optionPrice || optionPrice <= 0.001 || !strikeIV || strikeIV <= 0) return 0;
+  const hv = historicalIV > 0 ? historicalIV : strikeIV;
+  // Volatility edge: positive for buyers when IV is cheap (IV < HV), negative when IV is rich
+  const volSpreadPct = ((hv - strikeIV) / strikeIV) * 100;
+  // Leveraged directional alpha from underlying asset drift
+  const gearing = Math.min(30, Math.max(-30, (S / Math.max(0.1, optionPrice)) * delta));
+  const driftAlpha = gearing * ((Number(assetAlpha) || 0) / 100) * Math.max(0.01, T) * 100;
+  const alpha = (volSpreadPct * 0.4) + driftAlpha;
+  return Number(Math.min(99.0, Math.max(-99.0, alpha)).toFixed(1));
+}
+
+/**
+ * Format Gamma with high precision (avoid scientific notation)
+ */
+export function formatGamma(gamma) {
+  const g = Number(gamma) || 0;
+  if (g < 0.0001) return g.toFixed(6);
+  if (g < 0.001) return g.toFixed(5);
+  return g.toFixed(4);
+}
+
+/**
+ * Format Theta with currency sign and daily rate
+ */
+export function formatTheta(theta, curr = '$') {
+  const th = Number(theta) || 0;
+  const sign = th < 0 ? '-' : '';
+  return `${sign}${curr}${Math.abs(th).toFixed(2)}`;
+}
+

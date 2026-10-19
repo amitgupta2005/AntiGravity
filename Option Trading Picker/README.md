@@ -42,10 +42,19 @@ Designed specifically for disciplined risk managers and less risk-averse traders
 * **Target & Stop Loss Threshold Lines**: Displays emerald dashed line for Target Profit Exit and rose dashed line for Stop Loss Trigger.
 * **Risk & Probability Metrics**: Immediate calculation of Breakeven points, Max Profit, Max Loss, Managed Risk/Reward ratio, and Probability of Profit (POP %).
 
-### 5. Institutional 3-Way Option Chain
+### 5. Institutional 3-Way Option Chain with Alpha, Beta, Gamma, Theta
 * Classic institutional trading desk format: **Calls | Strike Price Ladder | Puts**.
-* Comprehensive metrics per strike: **Delta ($\Delta$)**, **IV %**, **Open Interest (OI) Heatmap bars**, **Volume**, **Bid**, **Ask**, and **LTP**.
-* Visual highlights for **ATM (At-The-Money)** and **Max Pain Pin** strikes.
+* **Full Greeks & Risk Suite Per Strike**:
+  * **Alpha ($\alpha$)**: Theoretical mispricing edge & expected excess yield (%) comparing Implied Volatility against Historical Volatility and underlying momentum alpha.
+  * **Beta ($\beta$)**: Option systematic market sensitivity multiplier ($\beta_{\text{opt}} = \Omega \times \beta_{\text{asset}}$), showing leveraged upside exposure for Calls ($>0$) and inverse portfolio hedge exposure for Puts ($<0$).
+  * **Gamma ($\Gamma$)**: High-precision second-order Greek measuring the acceleration of Delta per $1 unit move in underlying spot.
+  * **Theta ($\Theta$)**: Daily time decay expressed in currency erosion per share per day.
+  * **Delta ($\Delta$)** and **Implied Volatility (IV %)**.
+* **Segmented View Mode Switcher**:
+  * `📊 All Columns`: Complete 23-column institutional trading desk view with high-density data.
+  * `🔬 Greeks Suite (α, β, γ, θ, Δ)`: Focused quantitative view highlighting analytical Greeks alongside LTP.
+  * `📈 Depth & Liquidity`: Execution-focused view with OI Heatmap, Volume, Bid, Ask, and Delta.
+* **Top KPI Greek Highlights**: Real-time cards displaying **ATM Gamma ($\Gamma$)**, **ATM Theta ($\Theta$)**, **Asset Beta ($\beta$)**, and **Option Alpha ($\alpha$)** edge alongside Spot, IV, PCR, and Max Pain.
 * **One-Click Leg Insertion**: Direct click on any Bid or Ask price instantly imports that leg into the Strategy Builder.
 
 ### 6. Custom Multi-Leg Strategy Builder & Simulator
@@ -211,6 +220,10 @@ Where:
   $$\Theta_{\text{Put}} = \frac{1}{365} \left( -\frac{S N'(d_1) \sigma}{2\sqrt{T}} + r K e^{-rT} N(-d_2) \right)$$
 * **Vega ($\nu$)**: Sensitivity per $1\%$ change in volatility:
   $$\nu = \frac{S \sqrt{T} N'(d_1)}{100}$$
+* **Option Beta ($\beta_{\text{opt}}$)**: Systematic market sensitivity and gearing multiplier:
+  $$\beta_{\text{opt}} = \Omega \times \beta_{\text{asset}} = \left(\frac{S \cdot \Delta}{V}\right) \times \beta_{\text{asset}}$$
+* **Option Alpha ($\alpha_{\text{opt}}$)**: Theoretical mispricing edge & expected excess yield (%):
+  $$\alpha_{\text{opt}} = 0.4 \left(\frac{\text{HV} - \text{IV}}{\text{IV}} \times 100\right) + \Omega \cdot \frac{\alpha_{\text{asset}}}{100} \cdot T \cdot 100$$
 
 ### 3. Probability of Profit (POP %)
 Computed using the log-normal distribution of underlying price reaching breakeven at expiration:
