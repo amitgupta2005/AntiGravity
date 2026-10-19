@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Option Trading Picker — Quantitative Call & Put Strategy Scanner (USA & India)</title>
+  <meta name="description" content="Institutional Option Trading Strategy Scanner for US and Indian Equities and Benchmark Indices. Real-time Greeks, Option Chain, Payoff Curves, and Probability of Profit." />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300f2fe' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='m16 12-4-4-4 4'/><path d='M12 16V8'/></svg>" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body class="dark-theme">
+  <div class="app-container">
+    <!-- Top Global App Header -->
+    <header class="app-header">
+      <!-- Brand -->
+      <div class="header-brand">
+        <div class="brand-icon-wrap">
+          <i data-lucide="layers" style="width: 22px; height: 22px;"></i>
+        </div>
+        <div class="brand-titles">
+          <h1 class="app-title">Option Trading Picker</h1>
+          <span class="app-subtitle">Institutional Derivatives Scanner • USA & India</span>
+        </div>
+      </div>
+
+      <!-- Omnibar Search -->
+      <div class="header-search-wrap">
+        <div class="search-input-box">
+          <i data-lucide="search" class="search-icon"></i>
+          <input
+            type="text"
+            id="globalSearchInput"
+            class="search-input font-mono"
+            placeholder="Search any Stock or Index (e.g. NVDA, NIFTY 50, SPX, TATAMOTORS, TSLA, RELIANCE)..."
+            autocomplete="off"
+          />
+          <button id="btnClearSearch" class="btn-ghost btn-xs" style="display: none; padding: 2px 6px;">
+            <i data-lucide="x" style="width: 12px; height: 12px;"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Right Header Actions -->
+      <div class="header-right">
+        <div class="feed-pulse-badge">
+          <span class="status-indicator"></span>
+          <span class="font-mono text-dim" style="font-size: 0.72rem;" id="marketClock">FEED ACTIVE</span>
+        </div>
+        <button id="btnRefreshData" class="btn-icon" title="Refresh Live Market Data">
+          <i data-lucide="refresh-cw"></i>
+        </button>
+        <button id="btnThemeToggle" class="btn-icon" title="Toggle Dark/Light Theme">
+          <i data-lucide="sun" id="themeIcon"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs & Market Filter Ribbon -->
+    <nav class="nav-tabs-bar">
+      <!-- Main Functional Tabs -->
+      <div class="nav-tabs">
+        <button class="nav-tab-btn active" data-tab="tab-scanner">
+          <i data-lucide="crosshair"></i> Strategy Scanner
+        </button>
+        <button class="nav-tab-btn" data-tab="tab-analyzer">
+          <i data-lucide="line-chart"></i> Strategy Analyzer & Payoff
+        </button>
+        <button class="nav-tab-btn" data-tab="tab-chain">
+          <i data-lucide="table"></i> Live Option Chain
+        </button>
+        <button class="nav-tab-btn" data-tab="tab-builder">
+          <i data-lucide="sliders"></i> Strategy Builder
+        </button>
+        <button class="nav-tab-btn" data-tab="tab-overview">
+          <i data-lucide="activity"></i> Market Overview & Max Pain
+        </button>
+      </div>
+
+      <!-- Quick Market Chips -->
+      <div class="quick-market-chips">
+        <button class="market-chip active" data-market-filter="ALL">All Markets</button>
+        <button class="market-chip" data-market-filter="US_STOCKS">🇺🇸 US Stocks</button>
+        <button class="market-chip" data-market-filter="US_INDICES">🇺🇸 US Indices</button>
+        <button class="market-chip" data-market-filter="IN_STOCKS">🇮🇳 India Stocks</button>
+        <button class="market-chip" data-market-filter="IN_INDICES">🇮🇳 India Indices</button>
+      </div>
+    </nav>
+
+    <!-- Main Content Panes -->
+    <main class="main-content">
+      <!-- ========================================================
+           TAB 1: STRATEGY SCANNER
+           ======================================================== -->
+      <section id="tab-scanner" class="tab-pane active">
+        <!-- Filter Controls Toolbar -->
+        <div class="scanner-filter-bar">
+          <div class="filter-row-top">
+            <!-- Market Scope -->
+            <div class="filter-group">
+              <span class="filter-label">Market:</span>
+              <div class="filter-pill-group" id="filterMarketGroup">
+                <button class="filter-pill active" data-val="ALL">All</button>
+                <button class="filter-pill" data-val="US">🇺🇸 USA</button>
+                <button class="filter-pill" data-val="IN">🇮🇳 India</button>
+              </div>
+            </div>
+
+            <!-- Asset Type -->
+            <div class="filter-group">
+              <span class="filter-label">Asset:</span>
+              <div class="filter-pill-group" id="filterAssetTypeGroup">
+                <button class="filter-pill active" data-val="ALL">All</button>
+                <button class="filter-pill" data-val="STOCK">Stocks</button>
+                <button class="filter-pill" data-val="INDEX">Indices</button>
+              </div>
+            </div>
+
+            <!-- Sentiment Bias -->
+            <div class="filter-group">
+              <span class="filter-label">Sentiment:</span>
+              <div class="filter-pill-group" id="filterSentimentGroup">
+                <button class="filter-pill active" data-val="ALL">All</button>
+                <button class="filter-pill" data-val="Bullish">Bullish</button>
+                <button class="filter-pill" data-val="Bearish">Bearish</button>
+                <button class="filter-pill" data-val="Neutral">Neutral</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Secondary Filter Dropdowns -->
+          <div class="filter-dropdowns-row">
+            <div>
+              <select id="filterCategory" class="filter-select">
+                <option value="ALL">All Strategy Types</option>
+                <option value="BULLISH_CALLS">Long Calls (Momentum Breakout)</option>
+                <option value="BEARISH_PUTS">Long Puts (Breakdown Leverage)</option>
+                <option value="CREDIT_SPREADS">Credit Spreads (High Win-Rate)</option>
+                <option value="DEBIT_SPREADS">Debit Spreads (Defined Risk)</option>
+                <option value="IRON_CONDORS">Iron Condors (Delta-Neutral Range)</option>
+                <option value="STRADDLES">Straddles (Volatility Breakout)</option>
+              </select>
+            </div>
+
+            <div>
+              <select id="filterIVRank" class="filter-select">
+                <option value="ALL">All IV Ranks</option>
+                <option value="HIGH">High IV Rank (&gt; 50% for Sellers)</option>
+                <option value="LOW">Low IV Rank (&lt; 35% for Buyers)</option>
+              </select>
+            </div>
+
+            <div>
+              <select id="filterMinPOP" class="filter-select">
+                <option value="">Any Win Rate (POP)</option>
+                <option value="60">&gt; 60% POP</option>
+                <option value="70">&gt; 70% POP (High Probability)</option>
+              </select>
+            </div>
+
+            <div style="margin-left: auto;">
+              <select id="filterSortBy" class="filter-select font-mono font-bold">
+                <option value="POP_DESC">Sort: Probability of Profit (Highest)</option>
+                <option value="IVR_DESC">Sort: IV Rank (Highest First)</option>
+                <option value="IVR_ASC">Sort: IV Rank (Lowest / Cheapest First)</option>
+                <option value="DTE_ASC">Sort: DTE (Near-term First)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Strategy Cards Container -->
+        <div id="scannerCardsContainer" class="strategy-cards-grid">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </section>
+
+      <!-- ========================================================
+           TAB 2: STRATEGY ANALYZER & PAYOFF
+           ======================================================== -->
+      <section id="tab-analyzer" class="tab-pane">
+        <div class="analyzer-panel">
+          <!-- Active Strategy Header -->
+          <div class="analyzer-header-bar">
+            <div id="analyzerStrategyHeader">
+              <!-- Dynamically populated -->
+            </div>
+            <div class="analyzer-controls">
+              <button class="btn btn-secondary btn-sm" id="btnOpenChainFromAnalyzer">
+                <i data-lucide="list"></i> View Option Chain
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btnEditInBuilder">
+                <i data-lucide="sliders"></i> Edit in Builder
+              </button>
+            </div>
+          </div>
+
+          <!-- Payoff Curve Chart -->
+          <div class="chart-card">
+            <canvas id="payoffChartCanvas"></canvas>
+          </div>
+
+          <!-- Key Financial Metrics Grid -->
+          <div class="analyzer-kpis-grid" id="analyzerKpiGrid">
+            <!-- Dynamically populated -->
+          </div>
+
+          <!-- Legs Ledger Table -->
+          <div class="builder-legs-container">
+            <h3 class="panel-sub-title" style="margin-bottom: 0.75rem;">Strategy Legs Structure</h3>
+            <table class="builder-table font-mono" id="analyzerLegsTable">
+              <thead>
+                <tr>
+                  <th>Action</th>
+                  <th>Type</th>
+                  <th>Strike</th>
+                  <th>Premium</th>
+                  <th>Contracts</th>
+                  <th>Position Cost / Value</th>
+                  <th>Delta</th>
+                  <th>Theta</th>
+                </tr>
+              </thead>
+              <tbody id="analyzerLegsTableBody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================
+           TAB 3: LIVE OPTION CHAIN
+           ======================================================== -->
+      <section id="tab-chain" class="tab-pane">
+        <div style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <label class="control-label text-dim" style="margin-bottom: 0;">Select Underlying Asset:</label>
+            <select id="chainAssetSelector" class="filter-select font-mono font-bold" style="min-width: 260px;">
+              <!-- Dynamically populated with USA & India Stocks/Indices -->
+            </select>
+          </div>
+          <span class="text-dim font-mono" style="font-size: 0.75rem;">
+            Tip: Click on any <strong>Bid</strong> or <strong>Ask</strong> price to instantly add that leg to Strategy Builder!
+          </span>
+        </div>
+
+        <div id="optionChainContainer">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- ========================================================
+           TAB 4: STRATEGY BUILDER
+           ======================================================== -->
+      <section id="tab-builder" class="tab-pane">
+        <div id="strategyBuilderContainer">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- ========================================================
+           TAB 5: MARKET OVERVIEW & MAX PAIN
+           ======================================================== -->
+      <section id="tab-overview" class="tab-pane">
+        <div id="marketOverviewContainer">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Lucide Icons -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
