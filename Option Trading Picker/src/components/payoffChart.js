@@ -16,7 +16,7 @@ let payoffChartInstance = null;
  * @param {string} currencySymbol - '$' or '₹'
  * @param {boolean} isDarkMode - Dark or light theme
  */
-export function renderPayoffChart(canvasId, payoffData, spotPrice, currencySymbol = '$', isDarkMode = true) {
+export function renderPayoffChart(canvasId, payoffData, spotPrice, currencySymbol = '$', isDarkMode = true, exitPlan = null) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
 
@@ -49,49 +49,79 @@ export function renderPayoffChart(canvasId, payoffData, spotPrice, currencySymbo
   pnlGradient.addColorStop(0.51, 'rgba(244, 63, 94, 0.05)');
   pnlGradient.addColorStop(1, 'rgba(244, 63, 94, 0.25)');  // Rose Red (Loss)
 
+  const datasets = [
+    {
+      label: 'P&L at Expiration',
+      data: expiryData,
+      borderColor: '#10b981', // Emerald
+      borderWidth: 3,
+      pointRadius: 0,
+      pointHoverRadius: 6,
+      pointHoverBackgroundColor: '#10b981',
+      pointHoverBorderColor: '#ffffff',
+      pointHoverBorderWidth: 2,
+      fill: true,
+      backgroundColor: pnlGradient,
+      tension: 0.1,
+      order: 1
+    },
+    {
+      label: 'P&L Today (T+0)',
+      data: currentData,
+      borderColor: '#00f2fe', // Neon Cyan
+      borderWidth: 2,
+      borderDash: [5, 4],
+      pointRadius: 0,
+      pointHoverRadius: 5,
+      fill: false,
+      tension: 0.25,
+      order: 2
+    },
+    {
+      label: 'Zero Line',
+      data: labels.map(() => 0),
+      borderColor: zeroLineColor,
+      borderWidth: 1.5,
+      borderDash: [3, 3],
+      pointRadius: 0,
+      fill: false,
+      order: 3
+    }
+  ];
+
+  // Optional: Stop Loss & Target Profit Booking Thresholds
+  if (exitPlan && exitPlan.targetBooking && exitPlan.stopLoss) {
+    const targetProfitVal = exitPlan.targetBooking.profitPerLot;
+    const stopLossVal = -exitPlan.stopLoss.lossPerLot;
+
+    datasets.push({
+      label: `🎯 Target Profit Exit (+${currencySymbol}${targetProfitVal.toLocaleString()})`,
+      data: labels.map(() => targetProfitVal),
+      borderColor: '#10b981',
+      borderWidth: 2,
+      borderDash: [6, 4],
+      pointRadius: 0,
+      fill: false,
+      order: 4
+    });
+
+    datasets.push({
+      label: `🛑 Stop Loss Trigger (-${currencySymbol}${exitPlan.stopLoss.lossPerLot.toLocaleString()})`,
+      data: labels.map(() => stopLossVal),
+      borderColor: '#f43f5e',
+      borderWidth: 2,
+      borderDash: [6, 4],
+      pointRadius: 0,
+      fill: false,
+      order: 5
+    });
+  }
+
   payoffChartInstance = new Chart(ctx, {
     type: 'line',
     data: {
       labels,
-      datasets: [
-        {
-          label: 'P&L at Expiration',
-          data: expiryData,
-          borderColor: '#10b981', // Emerald
-          borderWidth: 3,
-          pointRadius: 0,
-          pointHoverRadius: 6,
-          pointHoverBackgroundColor: '#10b981',
-          pointHoverBorderColor: '#ffffff',
-          pointHoverBorderWidth: 2,
-          fill: true,
-          backgroundColor: pnlGradient,
-          tension: 0.1,
-          order: 1
-        },
-        {
-          label: 'P&L Today (T+0)',
-          data: currentData,
-          borderColor: '#00f2fe', // Neon Cyan
-          borderWidth: 2,
-          borderDash: [5, 4],
-          pointRadius: 0,
-          pointHoverRadius: 5,
-          fill: false,
-          tension: 0.25,
-          order: 2
-        },
-        {
-          label: 'Zero Line',
-          data: labels.map(() => 0),
-          borderColor: zeroLineColor,
-          borderWidth: 1.5,
-          borderDash: [3, 3],
-          pointRadius: 0,
-          fill: false,
-          order: 3
-        }
-      ]
+      datasets
     },
     options: {
       responsive: true,

@@ -1,9 +1,9 @@
 /**
  * Option Strategy Scanner View Component
- * Multi-filter strategy scanner with real-time analytics and one-click deep dives
+ * Multi-filter strategy scanner with real-time analytics, Stop Loss & Target Booking exit rules
  */
 
-import { STRATEGY_CATEGORIES } from '../quant/strategyEngine.js';
+import { STRATEGY_CATEGORIES, RISK_PROFILES } from '../quant/strategyEngine.js';
 
 /**
  * Filter strategies based on active filter state
@@ -43,7 +43,14 @@ export function filterStrategies(strategies, filters) {
       return false;
     }
 
-    // 7. Search Text Filter (Ticker or Name)
+    // 7. Risk Profile Filter (Conservative, Balanced)
+    if (filters.riskProfile && filters.riskProfile !== 'ALL') {
+      if (strat.exitPlan?.riskProfile !== filters.riskProfile) {
+        return false;
+      }
+    }
+
+    // 8. Search Text Filter (Ticker or Name)
     if (filters.searchQuery) {
       const q = filters.searchQuery.trim().toLowerCase();
       const matchTicker = strat.ticker.toLowerCase().includes(q);
@@ -71,7 +78,7 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
       <div class="empty-state-card">
         <i data-lucide="filter-x" class="empty-icon"></i>
         <h3>No Option Strategies Matched</h3>
-        <p>Try broadening your filters (Market, Strategy Category, or Sentiment) or clear the search query.</p>
+        <p>Try broadening your filters (Market, Strategy Category, Risk Profile, or Sentiment) or clear the search query.</p>
         <button class="btn btn-secondary" id="btnResetFilters">
           <i data-lucide="rotate-ccw"></i> Reset Filters
         </button>
@@ -156,7 +163,7 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
             <span class="m-val font-mono font-bold ${popClass}">${strat.pop}% POP</span>
           </div>
           <div class="metric-cell">
-            <span class="m-label text-dim">Risk / Reward</span>
+            <span class="m-label text-dim">Expiration R:R</span>
             <span class="m-val font-mono font-bold text-cyan">${strat.riskReward}</span>
           </div>
           <div class="metric-cell">
@@ -166,7 +173,7 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
             </span>
           </div>
           <div class="metric-cell">
-            <span class="m-label text-dim">Max Loss (Risk)</span>
+            <span class="m-label text-dim">Max Loss (At Expiry)</span>
             <span class="m-val font-mono font-bold text-rose">
               ${curr}${strat.maxLoss.toLocaleString()}
             </span>
@@ -180,6 +187,63 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
             <span class="m-val font-mono">${strat.ivRank}% IVR • <span class="${strat.netTheta >= 0 ? 'text-emerald' : 'text-rose'}">${strat.netTheta >= 0 ? '+' : ''}${curr}${strat.netTheta}/d</span></span>
           </div>
         </div>
+
+        <!-- PROVISIONED RISK MANAGEMENT & EXIT PLAN (Stop Loss & Target Booking) -->
+        ${strat.exitPlan ? `
+          <div class="strat-exit-box">
+            <div class="exit-box-header">
+              <span class="exit-header-title">
+                <i data-lucide="shield-check" class="inline-icon text-cyan"></i>
+                Risk Management & Exit Plan
+              </span>
+              <span class="badge ${strat.exitPlan.riskProfile === 'CONSERVATIVE' ? 'badge-credit' : 'badge-subtle'} font-mono" style="font-size: 0.68rem;">
+                ${strat.exitPlan.riskProfile === 'CONSERVATIVE' ? 'Low Risk (Disciplined)' : 'Balanced Discipline'}
+              </span>
+            </div>
+
+            <div class="exit-grid">
+              <!-- Target Price Booking -->
+              <div class="exit-card target-card">
+                <div class="exit-card-top">
+                  <span class="exit-badge-tag text-emerald">
+                    <i data-lucide="target" class="inline-icon"></i> Target Booking
+                  </span>
+                  <span class="exit-spot font-mono font-bold text-emerald">
+                    ${curr}${strat.exitPlan.targetBooking.spotPrice} (${strat.exitPlan.targetBooking.spotPct})
+                  </span>
+                </div>
+                <div class="exit-rule-desc text-dim">${strat.exitPlan.targetBooking.rule}</div>
+                <div class="exit-amount-row font-mono">
+                  <span class="text-emerald font-bold">+${curr}${strat.exitPlan.targetBooking.profitPerLot.toLocaleString()} / lot</span>
+                  <span class="text-dim">(${strat.exitPlan.targetBooking.profitPct})</span>
+                </div>
+              </div>
+
+              <!-- Stop Loss Protection -->
+              <div class="exit-card stop-card">
+                <div class="exit-card-top">
+                  <span class="exit-badge-tag text-rose">
+                    <i data-lucide="shield-alert" class="inline-icon"></i> Stop Loss
+                  </span>
+                  <span class="exit-spot font-mono font-bold text-rose">
+                    ${curr}${strat.exitPlan.stopLoss.spotPrice} (${strat.exitPlan.stopLoss.spotPct})
+                  </span>
+                </div>
+                <div class="exit-rule-desc text-dim">${strat.exitPlan.stopLoss.rule}</div>
+                <div class="exit-amount-row font-mono">
+                  <span class="text-rose font-bold">-${curr}${strat.exitPlan.stopLoss.lossPerLot.toLocaleString()} / lot</span>
+                  <span class="text-dim">(${strat.exitPlan.stopLoss.lossPct})</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Managed Risk/Reward & Capital Preservation Footer -->
+            <div class="exit-footer-bar font-mono">
+              <span>⚖️ Realized R:R with Stop Loss: <strong class="text-cyan">${strat.exitPlan.managedRiskReward}</strong></span>
+              <span>🛡️ Capital Preserved: <strong class="text-emerald">${strat.exitPlan.capitalPreservedPct}%</strong></span>
+            </div>
+          </div>
+        ` : ''}
 
         <!-- Institutional Catalyst Rationale -->
         <div class="strat-catalyst">

@@ -1,6 +1,7 @@
 /**
  * Option Trading Strategy Scanner & Classification Engine
  * Quantitative multi-strategy detector for US & Indian Stocks and Indices
+ * with dynamic Stop Loss, Target Profit Booking, and Capital Preservation Exit Rules.
  */
 
 import { calculateGreeks, calculatePOP } from './blackScholes.js';
@@ -17,8 +18,241 @@ export const STRATEGY_CATEGORIES = {
   STRADDLES: 'STRADDLES'
 };
 
+export const RISK_PROFILES = {
+  ALL: 'ALL',
+  CONSERVATIVE: 'CONSERVATIVE', // Disciplined 35-40% stop loss & 50% profit booking
+  BALANCED: 'BALANCED',         // Standard 50% stop loss & 60% profit booking
+  AGGRESSIVE: 'AGGRESSIVE'      // Expiration hold
+};
+
 /**
- * Scan an underlying asset quote and generate all valid option strategies
+ * Build structured Exit Plan with Stop Loss and Target Booking
+ */
+export function buildExitPlan({
+  type,
+  S,
+  lotSize,
+  netCost,
+  maxProfit,
+  maxLoss,
+  isCredit,
+  curr,
+  upperStrike,
+  lowerStrike,
+  shortStrike,
+  longStrike,
+  atmStrike,
+  premium,
+  step
+}) {
+  let targetBooking = {};
+  let stopLoss = {};
+  let managedRiskReward = '1 : 2.0';
+  let capitalPreservedPct = 60;
+  let riskProfile = RISK_PROFILES.BALANCED;
+
+  switch (type) {
+    case 'LONG_CALL': {
+      const targetSpot = Number((S * 1.04).toFixed(2));
+      const targetProfitPerLot = Number((netCost * 0.55).toFixed(2));
+      const targetOptPrice = Number((premium * 1.55).toFixed(2));
+
+      const stopSpot = Number((S * 0.98).toFixed(2));
+      const stopLossPerLot = Number((netCost * 0.40).toFixed(2));
+      const stopOptPrice = Number((premium * 0.60).toFixed(2));
+
+      targetBooking = {
+        spotPrice: targetSpot,
+        spotPct: '+4.0%',
+        rule: `Book profit at +55% Premium ROI (${curr}${targetOptPrice}) near resistance`,
+        profitPerLot: targetProfitPerLot,
+        profitPct: '+55%'
+      };
+      stopLoss = {
+        spotPrice: stopSpot,
+        spotPct: '-2.0%',
+        rule: `Stop loss: cut if call drops -40% (${curr}${stopOptPrice}) or underlying breaks ${curr}${stopSpot}`,
+        lossPerLot: stopLossPerLot,
+        lossPct: '-40%'
+      };
+      managedRiskReward = `1 : ${(targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(2)}`;
+      capitalPreservedPct = 60;
+      riskProfile = RISK_PROFILES.BALANCED;
+      break;
+    }
+
+    case 'BULL_CALL_SPREAD': {
+      const targetSpot = Number(upperStrike.toFixed(2));
+      const targetProfitPerLot = Number((maxProfit * 0.70).toFixed(2));
+
+      const stopSpot = Number((lowerStrike * 0.985).toFixed(2));
+      const stopLossPerLot = Number((netCost * 0.45).toFixed(2));
+
+      targetBooking = {
+        spotPrice: targetSpot,
+        spotPct: `+${(((targetSpot - S) / S) * 100).toFixed(1)}%`,
+        rule: `Book early at 70% of max spread profit (${curr}${targetProfitPerLot.toLocaleString()})`,
+        profitPerLot: targetProfitPerLot,
+        profitPct: '+70% Spread'
+      };
+      stopLoss = {
+        spotPrice: stopSpot,
+        spotPct: '-1.5%',
+        rule: `Stop loss: exit if debit spread loses 45% or spot breaks below ${curr}${stopSpot}`,
+        lossPerLot: stopLossPerLot,
+        lossPct: '-45%'
+      };
+      managedRiskReward = `1 : ${(targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(2)}`;
+      capitalPreservedPct = 55;
+      riskProfile = RISK_PROFILES.CONSERVATIVE;
+      break;
+    }
+
+    case 'BULL_PUT_SPREAD': {
+      const targetSpot = Number((S * 1.015).toFixed(2));
+      const targetProfitPerLot = Number((netCost * 0.50).toFixed(2)); // netCost is credit
+
+      const stopSpot = Number((shortStrike * 0.995).toFixed(2));
+      const stopLossPerLot = Number((netCost * 1.50).toFixed(2));
+
+      targetBooking = {
+        spotPrice: targetSpot,
+        spotPct: '+1.5%',
+        rule: 'Book early at 50% max credit to eliminate tail risk (Tastytrade Standard)',
+        profitPerLot: targetProfitPerLot,
+        profitPct: '+50% Credit'
+      };
+      stopLoss = {
+        spotPrice: stopSpot,
+        spotPct: `-${(((S - stopSpot) / S) * 100).toFixed(1)}%`,
+        rule: `Stop loss: exit if spread cost expands to 1.5x credit collected (protects wings)`,
+        lossPerLot: stopLossPerLot,
+        lossPct: '-1.5x Credit'
+      };
+      managedRiskReward = `1 : ${(targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(2)}`;
+      capitalPreservedPct = 65;
+      riskProfile = RISK_PROFILES.CONSERVATIVE;
+      break;
+    }
+
+    case 'LONG_PUT': {
+      const targetSpot = Number((S * 0.96).toFixed(2));
+      const targetProfitPerLot = Number((netCost * 0.55).toFixed(2));
+      const targetOptPrice = Number((premium * 1.55).toFixed(2));
+
+      const stopSpot = Number((S * 1.02).toFixed(2));
+      const stopLossPerLot = Number((netCost * 0.40).toFixed(2));
+      const stopOptPrice = Number((premium * 0.60).toFixed(2));
+
+      targetBooking = {
+        spotPrice: targetSpot,
+        spotPct: '-4.0%',
+        rule: `Book profit at +55% Premium gain (${curr}${targetOptPrice}) on breakdown`,
+        profitPerLot: targetProfitPerLot,
+        profitPct: '+55%'
+      };
+      stopLoss = {
+        spotPrice: stopSpot,
+        spotPct: '+2.0%',
+        rule: `Stop loss: cut if put drops -40% (${curr}${stopOptPrice}) or spot breaks above ${curr}${stopSpot}`,
+        lossPerLot: stopLossPerLot,
+        lossPct: '-40%'
+      };
+      managedRiskReward = `1 : ${(targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(2)}`;
+      capitalPreservedPct = 60;
+      riskProfile = RISK_PROFILES.BALANCED;
+      break;
+    }
+
+    case 'BEAR_PUT_SPREAD': {
+      const targetSpot = Number(lowerStrike.toFixed(2));
+      const targetProfitPerLot = Number((maxProfit * 0.70).toFixed(2));
+
+      const stopSpot = Number((upperStrike * 1.015).toFixed(2));
+      const stopLossPerLot = Number((netCost * 0.45).toFixed(2));
+
+      targetBooking = {
+        spotPrice: targetSpot,
+        spotPct: `-${(((S - targetSpot) / S) * 100).toFixed(1)}%`,
+        rule: `Book early at 70% of max spread profit (${curr}${targetProfitPerLot.toLocaleString()})`,
+        profitPerLot: targetProfitPerLot,
+        profitPct: '+70% Spread'
+      };
+      stopLoss = {
+        spotPrice: stopSpot,
+        spotPct: '+1.5%',
+        rule: `Stop loss: exit if spread loses 45% or spot breaks above ${curr}${stopSpot}`,
+        lossPerLot: stopLossPerLot,
+        lossPct: '-45%'
+      };
+      managedRiskReward = `1 : ${(targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(2)}`;
+      capitalPreservedPct = 55;
+      riskProfile = RISK_PROFILES.CONSERVATIVE;
+      break;
+    }
+
+    case 'IRON_CONDOR': {
+      const targetProfitPerLot = Number((netCost * 0.50).toFixed(2));
+      const stopLossPerLot = Number((netCost * 1.50).toFixed(2));
+
+      targetBooking = {
+        spotPrice: S,
+        spotPct: '0.0%',
+        rule: 'Take profit at 50% max credit collected (Institutional Rule)',
+        profitPerLot: targetProfitPerLot,
+        profitPct: '+50% Credit'
+      };
+      stopLoss = {
+        spotPrice: shortStrike || Number((S * 0.97).toFixed(2)),
+        spotPct: 'Wing Test',
+        rule: 'Stop loss: exit if either short strike is breached or loss reaches 1.5x credit',
+        lossPerLot: stopLossPerLot,
+        lossPct: '-1.5x Credit'
+      };
+      managedRiskReward = `1 : ${(targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(2)}`;
+      capitalPreservedPct = 70;
+      riskProfile = RISK_PROFILES.CONSERVATIVE;
+      break;
+    }
+
+    case 'LONG_STRADDLE':
+    default: {
+      const targetSpot = Number((S * 1.045).toFixed(2));
+      const targetProfitPerLot = Number((netCost * 0.45).toFixed(2));
+      const stopLossPerLot = Number((netCost * 0.35).toFixed(2));
+
+      targetBooking = {
+        spotPrice: targetSpot,
+        spotPct: '±4.5%',
+        rule: 'Book profit when implied volatility surges or position reaches +45%',
+        profitPerLot: targetProfitPerLot,
+        profitPct: '+45%'
+      };
+      stopLoss = {
+        spotPrice: S,
+        spotPct: 'Time Stop',
+        rule: 'Time stop: exit if consolidation persists past 5 days or -35% loss',
+        lossPerLot: stopLossPerLot,
+        lossPct: '-35%'
+      };
+      managedRiskReward = `1 : ${(targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(2)}`;
+      capitalPreservedPct = 65;
+      riskProfile = RISK_PROFILES.BALANCED;
+      break;
+    }
+  }
+
+  return {
+    targetBooking,
+    stopLoss,
+    managedRiskReward,
+    capitalPreservedPct,
+    riskProfile
+  };
+}
+
+/**
+ * Scan an underlying asset quote and generate all valid option strategies with exit plans
  */
 export function scanStrategiesForAsset(quote) {
   if (!quote) return [];
@@ -47,7 +281,7 @@ export function scanStrategiesForAsset(quote) {
   {
     const dte = nearExp.dte;
     const T = dte / 365;
-    const strike = atmStrike; // ATM or slightly OTM strike
+    const strike = atmStrike;
     const greeks = calculateGreeks('call', S, strike, T, r, ivDecimal);
     const premium = greeks.price;
     const breakeven = Number((strike + premium).toFixed(2));
@@ -58,6 +292,21 @@ export function scanStrategiesForAsset(quote) {
     ];
 
     const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
+    const netCost = Number((premium * lotSize).toFixed(2));
+    const maxLoss = netCost;
+
+    const exitPlan = buildExitPlan({
+      type: 'LONG_CALL',
+      S,
+      lotSize,
+      netCost,
+      maxProfit: 'Unlimited',
+      maxLoss,
+      isCredit: false,
+      curr,
+      premium,
+      step
+    });
 
     strategies.push({
       id: `${quote.ticker}-LONG-CALL-${strike}`,
@@ -77,19 +326,21 @@ export function scanStrategiesForAsset(quote) {
       dte,
       expiryLabel: nearExp.label,
       spotPrice: S,
-      targetPrice: Number((S * 1.04).toFixed(2)),
+      targetPrice: exitPlan.targetBooking.spotPrice,
+      stopLossPrice: exitPlan.stopLoss.spotPrice,
+      exitPlan,
       legs,
-      netCost: Number((premium * lotSize).toFixed(2)),
+      netCost,
       isCredit: false,
       maxProfit: 'Unlimited',
-      maxLoss: Number((premium * lotSize).toFixed(2)),
+      maxLoss,
       breakevens: [breakeven],
       riskReward: 'Unlimited Upside',
       pop,
       ivRank,
       netDelta: payoff.netDelta,
       netTheta: payoff.netTheta,
-      catalyst: `Bullish momentum breakout with low IV Rank (${ivRank}%). Favorable theta profile with unlimited upside above breakeven ${curr}${breakeven}.`
+      catalyst: `Bullish momentum breakout with low IV Rank (${ivRank}%). Provisioned with disciplined Stop Loss at ${curr}${exitPlan.stopLoss.spotPrice} and Target Booking at ${curr}${exitPlan.targetBooking.spotPrice}.`
     });
   }
 
@@ -118,6 +369,23 @@ export function scanStrategiesForAsset(quote) {
     ];
 
     const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
+    const netCost = Number((netDebit * lotSize).toFixed(2));
+    const maxProfit = Number((maxProfitPerShare * lotSize).toFixed(2));
+    const maxLoss = netCost;
+
+    const exitPlan = buildExitPlan({
+      type: 'BULL_CALL_SPREAD',
+      S,
+      lotSize,
+      netCost,
+      maxProfit,
+      maxLoss,
+      isCredit: false,
+      curr,
+      upperStrike,
+      lowerStrike,
+      step
+    });
 
     strategies.push({
       id: `${quote.ticker}-BULL-CALL-SPREAD-${lowerStrike}-${upperStrike}`,
@@ -137,19 +405,21 @@ export function scanStrategiesForAsset(quote) {
       dte,
       expiryLabel: monthlyExp.label,
       spotPrice: S,
-      targetPrice: Number(upperStrike.toFixed(2)),
+      targetPrice: exitPlan.targetBooking.spotPrice,
+      stopLossPrice: exitPlan.stopLoss.spotPrice,
+      exitPlan,
       legs,
-      netCost: Number((netDebit * lotSize).toFixed(2)),
+      netCost,
       isCredit: false,
-      maxProfit: Number((maxProfitPerShare * lotSize).toFixed(2)),
-      maxLoss: Number((netDebit * lotSize).toFixed(2)),
+      maxProfit,
+      maxLoss,
       breakevens: [breakeven],
       riskReward: `1 : ${(maxProfitPerShare / netDebit).toFixed(2)}`,
       pop,
       ivRank,
       netDelta: payoff.netDelta,
       netTheta: payoff.netTheta,
-      catalyst: `Defines upside target at ${curr}${upperStrike} while hedging against theta decay and IV deflation. Breakeven at ${curr}${breakeven}.`
+      catalyst: `Defines upside target at ${curr}${upperStrike}. Stop Loss limits loss to ${curr}${exitPlan.stopLoss.lossPerLot.toLocaleString()} while booking 70% max spread gain at ${curr}${exitPlan.targetBooking.spotPrice}.`
     });
   }
 
@@ -178,6 +448,23 @@ export function scanStrategiesForAsset(quote) {
     ];
 
     const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
+    const netCost = Number((netCredit * lotSize).toFixed(2));
+    const maxProfit = netCost;
+    const maxLoss = Number((maxLossPerShare * lotSize).toFixed(2));
+
+    const exitPlan = buildExitPlan({
+      type: 'BULL_PUT_SPREAD',
+      S,
+      lotSize,
+      netCost,
+      maxProfit,
+      maxLoss,
+      isCredit: true,
+      curr,
+      shortStrike,
+      longStrike,
+      step
+    });
 
     strategies.push({
       id: `${quote.ticker}-BULL-PUT-SPREAD-${shortStrike}-${longStrike}`,
@@ -197,19 +484,21 @@ export function scanStrategiesForAsset(quote) {
       dte,
       expiryLabel: thetaExp.label,
       spotPrice: S,
-      targetPrice: Number((S * 1.02).toFixed(2)),
+      targetPrice: exitPlan.targetBooking.spotPrice,
+      stopLossPrice: exitPlan.stopLoss.spotPrice,
+      exitPlan,
       legs,
-      netCost: Number((netCredit * lotSize).toFixed(2)),
+      netCost,
       isCredit: true,
-      maxProfit: Number((netCredit * lotSize).toFixed(2)),
-      maxLoss: Number((maxLossPerShare * lotSize).toFixed(2)),
+      maxProfit,
+      maxLoss,
       breakevens: [breakeven],
       riskReward: `1 : ${(netCredit / maxLossPerShare).toFixed(2)}`,
       pop,
       ivRank,
       netDelta: payoff.netDelta,
       netTheta: payoff.netTheta,
-      catalyst: `High-probability theta harvest with cushion down to ${curr}${breakeven}. Win rate is ${pop}%, collecting upfront credit.`
+      catalyst: `High-probability theta harvest with cushion down to ${curr}${breakeven}. Disciplined exit books 50% credit (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}) and cuts loss at 1.5x credit to protect capital.`
     });
   }
 
@@ -231,6 +520,22 @@ export function scanStrategiesForAsset(quote) {
     ];
 
     const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
+    const netCost = Number((premium * lotSize).toFixed(2));
+    const maxProfit = Number(((strike - premium) * lotSize).toFixed(2));
+    const maxLoss = netCost;
+
+    const exitPlan = buildExitPlan({
+      type: 'LONG_PUT',
+      S,
+      lotSize,
+      netCost,
+      maxProfit,
+      maxLoss,
+      isCredit: false,
+      curr,
+      premium,
+      step
+    });
 
     strategies.push({
       id: `${quote.ticker}-LONG-PUT-${strike}`,
@@ -250,19 +555,21 @@ export function scanStrategiesForAsset(quote) {
       dte,
       expiryLabel: nearExp.label,
       spotPrice: S,
-      targetPrice: Number((S * 0.96).toFixed(2)),
+      targetPrice: exitPlan.targetBooking.spotPrice,
+      stopLossPrice: exitPlan.stopLoss.spotPrice,
+      exitPlan,
       legs,
-      netCost: Number((premium * lotSize).toFixed(2)),
+      netCost,
       isCredit: false,
-      maxProfit: Number(((strike - premium) * lotSize).toFixed(2)),
-      maxLoss: Number((premium * lotSize).toFixed(2)),
+      maxProfit,
+      maxLoss,
       breakevens: [breakeven],
       riskReward: `1 : ${((strike - premium) / premium).toFixed(2)}`,
       pop,
       ivRank,
       netDelta: payoff.netDelta,
       netTheta: payoff.netTheta,
-      catalyst: `Protective or speculative downside leverage. Unlocks exponential returns if underlying breaks below support ${curr}${breakeven}.`
+      catalyst: `Protective downside momentum. Provisioned with strict Stop Loss at ${curr}${exitPlan.stopLoss.spotPrice} (-40% premium risk) and Target Profit Booking at ${curr}${exitPlan.targetBooking.spotPrice}.`
     });
   }
 
@@ -291,6 +598,23 @@ export function scanStrategiesForAsset(quote) {
     ];
 
     const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
+    const netCost = Number((netDebit * lotSize).toFixed(2));
+    const maxProfit = Number((maxProfitPerShare * lotSize).toFixed(2));
+    const maxLoss = netCost;
+
+    const exitPlan = buildExitPlan({
+      type: 'BEAR_PUT_SPREAD',
+      S,
+      lotSize,
+      netCost,
+      maxProfit,
+      maxLoss,
+      isCredit: false,
+      curr,
+      upperStrike: higherStrike,
+      lowerStrike,
+      step
+    });
 
     strategies.push({
       id: `${quote.ticker}-BEAR-PUT-SPREAD-${higherStrike}-${lowerStrike}`,
@@ -310,19 +634,21 @@ export function scanStrategiesForAsset(quote) {
       dte,
       expiryLabel: monthlyExp.label,
       spotPrice: S,
-      targetPrice: Number(lowerStrike.toFixed(2)),
+      targetPrice: exitPlan.targetBooking.spotPrice,
+      stopLossPrice: exitPlan.stopLoss.spotPrice,
+      exitPlan,
       legs,
-      netCost: Number((netDebit * lotSize).toFixed(2)),
+      netCost,
       isCredit: false,
-      maxProfit: Number((maxProfitPerShare * lotSize).toFixed(2)),
-      maxLoss: Number((netDebit * lotSize).toFixed(2)),
+      maxProfit,
+      maxLoss,
       breakevens: [breakeven],
       riskReward: `1 : ${(maxProfitPerShare / netDebit).toFixed(2)}`,
       pop,
       ivRank,
       netDelta: payoff.netDelta,
       netTheta: payoff.netTheta,
-      catalyst: `Limits downside premium cost by selling the ${curr}${lowerStrike} Put. Max profit achieved if price drops to or below ${curr}${lowerStrike}.`
+      catalyst: `Limits downside cost by selling ${curr}${lowerStrike} Put. Exit rule secures 70% of max spread profit (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}) while cutting loss if spot rises above ${curr}${exitPlan.stopLoss.spotPrice}.`
     });
   }
 
@@ -353,7 +679,6 @@ export function scanStrategiesForAsset(quote) {
     const lowerBE = Number((putShort - totalCredit).toFixed(2));
     const upperBE = Number((callShort + totalCredit).toFixed(2));
 
-    // Approximate POP for Iron Condor (probability between lowerBE and upperBE)
     const popLower = calculatePOP(S, lowerBE, T, ivDecimal, true);
     const popUpper = calculatePOP(S, upperBE, T, ivDecimal, false);
     const pop = Number((Math.min(95, Math.max(50, (popLower + popUpper) / 2))).toFixed(1));
@@ -366,6 +691,23 @@ export function scanStrategiesForAsset(quote) {
     ];
 
     const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
+    const netCost = Number((totalCredit * lotSize).toFixed(2));
+    const maxProfit = netCost;
+    const maxLoss = Number((maxLossPerShare * lotSize).toFixed(2));
+
+    const exitPlan = buildExitPlan({
+      type: 'IRON_CONDOR',
+      S,
+      lotSize,
+      netCost,
+      maxProfit,
+      maxLoss,
+      isCredit: true,
+      curr,
+      shortStrike: putShort,
+      longStrike: putLong,
+      step
+    });
 
     strategies.push({
       id: `${quote.ticker}-IRON-CONDOR-${putShort}-${callShort}`,
@@ -386,25 +728,26 @@ export function scanStrategiesForAsset(quote) {
       expiryLabel: thetaExp.label,
       spotPrice: S,
       targetPrice: S,
+      stopLossPrice: putShort,
+      exitPlan,
       legs,
-      netCost: Number((totalCredit * lotSize).toFixed(2)),
+      netCost,
       isCredit: true,
-      maxProfit: Number((totalCredit * lotSize).toFixed(2)),
-      maxLoss: Number((maxLossPerShare * lotSize).toFixed(2)),
+      maxProfit,
+      maxLoss,
       breakevens: [lowerBE, upperBE],
       riskReward: `1 : ${(totalCredit / maxLossPerShare).toFixed(2)}`,
       pop,
       ivRank,
       netDelta: payoff.netDelta,
       netTheta: payoff.netTheta,
-      catalyst: `Profits from time decay and volatility contraction as long as underlying trades between ${curr}${lowerBE} and ${curr}${upperBE}. Estimated win rate: ${pop}%.`
+      catalyst: `Profits from time decay and IV crush between ${curr}${lowerBE} and ${curr}${upperBE}. Exit rule books 50% max credit (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}) and stops loss at 1.5x credit to protect capital.`
     });
   }
 
   // -------------------------------------------------------------
   // 7. STRATEGY: Long Straddle (Volatility Expansion)
   // Buy ATM Call + Buy ATM Put (Explosive Breakout Play)
-  // Optimal when IV Rank is very low (< 25%)
   // -------------------------------------------------------------
   {
     const dte = nearExp.dte;
@@ -421,6 +764,21 @@ export function scanStrategiesForAsset(quote) {
     ];
 
     const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
+    const netCost = Number((totalCost * lotSize).toFixed(2));
+    const maxLoss = netCost;
+
+    const exitPlan = buildExitPlan({
+      type: 'LONG_STRADDLE',
+      S,
+      lotSize,
+      netCost,
+      maxProfit: 'Unlimited',
+      maxLoss,
+      isCredit: false,
+      curr,
+      premium: totalCost,
+      step
+    });
 
     strategies.push({
       id: `${quote.ticker}-LONG-STRADDLE-${atmStrike}`,
@@ -440,19 +798,21 @@ export function scanStrategiesForAsset(quote) {
       dte,
       expiryLabel: nearExp.label,
       spotPrice: S,
-      targetPrice: Number(upperBE.toFixed(2)),
+      targetPrice: exitPlan.targetBooking.spotPrice,
+      stopLossPrice: S,
+      exitPlan,
       legs,
-      netCost: Number((totalCost * lotSize).toFixed(2)),
+      netCost,
       isCredit: false,
       maxProfit: 'Unlimited',
-      maxLoss: Number((totalCost * lotSize).toFixed(2)),
+      maxLoss,
       breakevens: [lowerBE, upperBE],
       riskReward: 'Unlimited Dual Wing',
       pop: 46.5,
       ivRank,
       netDelta: payoff.netDelta,
       netTheta: payoff.netTheta,
-      catalyst: `Low IV rank (${ivRank}%) implies underpriced option premiums. Profits if underlying makes a violent move beyond ${curr}${lowerBE} or ${curr}${upperBE}.`
+      catalyst: `Underpriced option volatility. Provisioned with +45% Target Booking (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}) and a strict 5-day / 35% time stop to prevent theta decay.`
     });
   }
 

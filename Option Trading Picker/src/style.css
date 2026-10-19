@@ -767,6 +767,118 @@ body.light-theme .app-title {
   font-size: 0.88rem;
 }
 
+/* Exit Plan & Risk Management (Stop Loss & Target Booking) */
+.strat-exit-box {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.exit-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.exit-header-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.exit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+}
+
+.exit-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  transition: all 0.15s ease;
+}
+
+.target-card {
+  border-color: rgba(16, 185, 129, 0.25);
+  background: rgba(16, 185, 129, 0.04);
+}
+
+.target-card:hover {
+  border-color: var(--emerald-bull);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
+}
+
+.stop-card {
+  border-color: rgba(244, 63, 94, 0.25);
+  background: rgba(244, 63, 94, 0.04);
+}
+
+.stop-card:hover {
+  border-color: var(--rose-bear);
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.15);
+}
+
+.exit-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
+.exit-badge-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.exit-spot {
+  font-size: 0.78rem;
+}
+
+.exit-rule-desc {
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.exit-amount-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.exit-footer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.72rem;
+  border: 1px solid var(--border-subtle);
+}
+
 .strat-catalyst {
   display: flex;
   align-items: flex-start;

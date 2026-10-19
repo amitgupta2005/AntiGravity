@@ -42,6 +42,7 @@ const state = {
     sentiment: 'ALL',
     ivRank: 'ALL',
     minPop: null,
+    riskProfile: 'ALL',
     searchQuery: '',
     sortBy: 'POP_DESC'
   }
@@ -233,8 +234,8 @@ function renderAnalyzerTab() {
     `;
   }
 
-  // Render Payoff Chart
-  renderPayoffChart('payoffChartCanvas', payoff, S, curr, state.isDarkMode);
+  // Render Payoff Chart with Disciplined Stop Loss & Target Profit Thresholds
+  renderPayoffChart('payoffChartCanvas', payoff, S, curr, state.isDarkMode, strat.exitPlan);
 
   // Render Analyzer KPI Grid
   const kpiGrid = document.getElementById('analyzerKpiGrid');
@@ -247,7 +248,7 @@ function renderAnalyzerTab() {
         </span>
       </div>
       <div class="kpi-card">
-        <span class="m-label text-dim">Risk / Reward Ratio</span>
+        <span class="m-label text-dim">Expiration R:R</span>
         <span class="m-val font-mono font-bold text-cyan" style="font-size: 1.15rem;">
           ${strat.riskReward}
         </span>
@@ -259,7 +260,7 @@ function renderAnalyzerTab() {
         </span>
       </div>
       <div class="kpi-card">
-        <span class="m-label text-dim">Max Loss (Risk Capital)</span>
+        <span class="m-label text-dim">Max Loss (At Expiry)</span>
         <span class="m-val font-mono font-bold text-rose" style="font-size: 1.15rem;">
           ${typeof strat.maxLoss === 'number' ? `${curr}${strat.maxLoss.toLocaleString()}` : strat.maxLoss}
         </span>
@@ -276,6 +277,29 @@ function renderAnalyzerTab() {
           Δ: ${payoff.netDelta} • Θ: <span class="${payoff.netTheta >= 0 ? 'text-emerald' : 'text-rose'}">${payoff.netTheta >= 0 ? '+' : ''}${curr}${payoff.netTheta}/d</span>
         </span>
       </div>
+      ${strat.exitPlan ? `
+        <div class="kpi-card highlight-target" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.06);">
+          <span class="m-label text-emerald font-bold">🎯 Target Profit Booking</span>
+          <span class="m-val font-mono font-bold text-emerald" style="font-size: 1.15rem;">
+            ${curr}${strat.exitPlan.targetBooking.spotPrice} (${strat.exitPlan.targetBooking.spotPct})
+          </span>
+          <span class="text-dim font-mono" style="font-size: 0.72rem;">+${curr}${strat.exitPlan.targetBooking.profitPerLot.toLocaleString()} / lot (${strat.exitPlan.targetBooking.profitPct})</span>
+        </div>
+        <div class="kpi-card highlight-stop" style="border-color: rgba(244, 63, 94, 0.4); background: rgba(244, 63, 94, 0.06);">
+          <span class="m-label text-rose font-bold">🛑 Stop Loss Trigger</span>
+          <span class="m-val font-mono font-bold text-rose" style="font-size: 1.15rem;">
+            ${curr}${strat.exitPlan.stopLoss.spotPrice} (${strat.exitPlan.stopLoss.spotPct})
+          </span>
+          <span class="text-dim font-mono" style="font-size: 0.72rem;">-${curr}${strat.exitPlan.stopLoss.lossPerLot.toLocaleString()} / lot (${strat.exitPlan.stopLoss.lossPct})</span>
+        </div>
+        <div class="kpi-card" style="border-color: rgba(0, 242, 254, 0.3); background: rgba(0, 242, 254, 0.05);">
+          <span class="m-label text-cyan font-bold">⚖️ Realized Managed R:R</span>
+          <span class="m-val font-mono font-bold text-cyan" style="font-size: 1.15rem;">
+            ${strat.exitPlan.managedRiskReward}
+          </span>
+          <span class="text-dim font-mono" style="font-size: 0.72rem;">🛡️ Preserves ${strat.exitPlan.capitalPreservedPct}% of Capital</span>
+        </div>
+      ` : ''}
     `;
   }
 
@@ -546,6 +570,15 @@ function setupEventListeners() {
     });
   }
 
+  // Risk Profile Dropdown
+  const riskSelect = document.getElementById('filterRiskProfile');
+  if (riskSelect) {
+    riskSelect.addEventListener('change', (e) => {
+      state.filters.riskProfile = e.target.value;
+      renderScannerTab();
+    });
+  }
+
   // Sort By Dropdown
   const sortSelect = document.getElementById('filterSortBy');
   if (sortSelect) {
@@ -604,6 +637,7 @@ function setupEventListeners() {
       sentiment: 'ALL',
       ivRank: 'ALL',
       minPop: null,
+      riskProfile: 'ALL',
       searchQuery: '',
       sortBy: 'POP_DESC'
     };
@@ -669,6 +703,8 @@ function syncFilterToolbar() {
   if (iv) iv.value = state.filters.ivRank;
   const pop = document.getElementById('filterMinPOP');
   if (pop) pop.value = state.filters.minPop || '';
+  const risk = document.getElementById('filterRiskProfile');
+  if (risk) risk.value = state.filters.riskProfile || 'ALL';
   const sort = document.getElementById('filterSortBy');
   if (sort) sort.value = state.filters.sortBy;
 }

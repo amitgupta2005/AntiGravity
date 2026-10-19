@@ -28,21 +28,31 @@ Automatically classifies market regimes (directional momentum, high/low IV, supp
 * **Delta-Neutral & Income**: Iron Condor (Consolidation harvest), Iron Butterfly (Pinning strike), Covered Call (Buy-Write).
 * **Volatility Breakouts**: Long Straddle & Long Strangle (Compression squeeze).
 
-### 3. Interactive Strategy Payoff Curve
-* **Dual-Curve Payoff Visualizer**: Powered by `Chart.js`, dynamically plots **Expiration P&L** (solid curve with shaded emerald/rose profit & loss zones) alongside **T+0 P&L Today** (neon dashed curve using live Black-Scholes pricing).
-* **Risk & Probability Metrics**: Immediate calculation of Breakeven points, Max Profit, Max Loss, Risk/Reward ratio, and Probability of Profit (POP %).
+### 3. Disciplined Exit Plan: Stop Loss & Target Price Booking
+Designed specifically for disciplined risk managers and less risk-averse traders who prefer controlled, systematic exits rather than holding options into binary expiration or total loss:
+* **🎯 Target Price Booking**: Computes underlying spot target, required percentage move, target option exit price, and currency gain per lot (+50% to +70% target ROI for debit trades; 50% max profit capture for credit spreads and Iron Condors).
+* **🛑 Stop Loss Protection**: Explicit invalidation trigger on underlying spot, option stop-loss cut rule (e.g., cut at -40% to -45% debit loss or 1.5x credit collected), and exact currency risk per lot.
+* **⚖️ Realized Managed Risk/Reward**: Recalculates risk/reward based on the active exit plan (e.g., `1 : 2.1`) rather than unrealistic theoretical expiration assumptions.
+* **🛡️ Capital Preservation**: Quantifies the percentage of capital preserved (typically 55% to 70%) versus holding unmanaged positions to 100% loss at expiration.
+* **Filter by Risk Profile**: Scanner toolbar allows instant filtering by `All Risk Disciplines`, `Low Risk (Conservative Stops & 50% Profit Booking)`, and `Balanced Risk (Disciplined Stop & 55% ROI Target)`.
+* **Visual Chart Thresholds**: Payoff Diagram plots dashed horizontal threshold lines for Target Exit and Stop Loss triggers directly across the P&L curve.
 
-### 4. Institutional 3-Way Option Chain
+### 4. Interactive Strategy Payoff Curve
+* **Dual-Curve Payoff Visualizer**: Powered by `Chart.js`, dynamically plots **Expiration P&L** (solid curve with shaded emerald/rose profit & loss zones) alongside **T+0 P&L Today** (neon dashed curve using live Black-Scholes pricing).
+* **Target & Stop Loss Threshold Lines**: Displays emerald dashed line for Target Profit Exit and rose dashed line for Stop Loss Trigger.
+* **Risk & Probability Metrics**: Immediate calculation of Breakeven points, Max Profit, Max Loss, Managed Risk/Reward ratio, and Probability of Profit (POP %).
+
+### 5. Institutional 3-Way Option Chain
 * Classic institutional trading desk format: **Calls | Strike Price Ladder | Puts**.
 * Comprehensive metrics per strike: **Delta ($\Delta$)**, **IV %**, **Open Interest (OI) Heatmap bars**, **Volume**, **Bid**, **Ask**, and **LTP**.
 * Visual highlights for **ATM (At-The-Money)** and **Max Pain Pin** strikes.
 * **One-Click Leg Insertion**: Direct click on any Bid or Ask price instantly imports that leg into the Strategy Builder.
 
-### 5. Custom Multi-Leg Strategy Builder & Simulator
+### 6. Custom Multi-Leg Strategy Builder & Simulator
 * Construct custom 1 to 4 legged option structures with customized Actions (`BUY` / `SELL`), Types (`CALL` / `PUT`), Strikes, Expirations, Contracts, and Premiums.
 * Aggregates Net Debit/Credit, Total Margin, Net Portfolio Greeks, and plots directly to the interactive Payoff Visualizer.
 
-### 6. Market Pulse & Max Pain Radar
+### 7. Market Pulse & Max Pain Radar
 * Real-time trading session status monitoring for **Wall Street (NYSE/NASDAQ)** and **Dalal Street (NSE/BSE)**.
 * Benchmark index cards with Put-Call Ratio (PCR), IV Rank, and Max Pain strikes.
 * **Elevated IV Rank Leaderboard** (Top candidates for Premium Sellers).
