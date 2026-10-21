@@ -48,14 +48,26 @@
 
       <!-- Live Dynamic Status & Auto Refresh Controls -->
       <div class="live-status-pill" id="liveStatusBadge" title="Dynamic real-time market data feed connected">
-        <span class="live-indicator-dot"></span>
+        <span class="live-indicator-dot" id="liveIndicatorDot"></span>
         <span class="live-text" id="liveStatusText">LIVE FEED</span>
       </div>
 
-      <button id="autoRefreshToggleBtn" class="btn btn-secondary btn-sm auto-refresh-btn" title="Toggle automatic 30s real-time price updates">
-        <i data-lucide="timer" id="autoRefreshIcon"></i>
-        <span id="autoRefreshBtnText">Auto: 30s</span>
-      </button>
+      <!-- Explicit Auto-Refresh ON/OFF Switch Widget -->
+      <div class="auto-refresh-widget" id="autoRefreshWidget" title="Turn automatic 30s price updates ON or OFF">
+        <span class="auto-refresh-label">
+          <i data-lucide="timer" class="timer-icon"></i> Auto:
+        </span>
+        <button 
+          id="autoRefreshToggleBtn" 
+          class="switch-btn active" 
+          role="switch" 
+          aria-checked="true" 
+          title="Click to turn Auto Refresh OFF"
+        >
+          <span class="switch-indicator"></span>
+        </button>
+        <span id="autoRefreshBtnText" class="auto-refresh-tag tag-on">ON (30s)</span>
+      </div>
     </div>
 
     <div class="header-right">

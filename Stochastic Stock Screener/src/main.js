@@ -43,7 +43,7 @@ const state = {
   activeAbortController: null,
   screenerTable: null,
   isScanning: false,
-  autoRefreshEnabled: true,
+  autoRefreshEnabled: typeof localStorage !== 'undefined' ? localStorage.getItem('antigravity_auto_refresh') !== 'off' : true,
   autoRefreshIntervalSec: 30,
   secondsRemaining: 30,
   autoRefreshTimerId: null
@@ -163,7 +163,7 @@ async function startScreening(stocks, universeLabel = '', isBackgroundRefresh = 
 
     const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     if (liveStatusText) {
-      liveStatusText.textContent = `LIVE (${nowStr})`;
+      liveStatusText.textContent = state.autoRefreshEnabled ? `LIVE (${nowStr})` : `SYNCED (${nowStr})`;
     }
 
     if (banner) banner.classList.add('hidden');
@@ -180,31 +180,64 @@ async function startScreening(stocks, universeLabel = '', isBackgroundRefresh = 
 }
 
 /**
- * Setup Dynamic Auto-Refresh Polling Engine
+ * Setup Dynamic Auto-Refresh Polling Engine with explicit ON/OFF toggle switch
  */
 function setupAutoRefresh() {
+  const widget = document.getElementById('autoRefreshWidget');
   const toggleBtn = document.getElementById('autoRefreshToggleBtn');
   const btnText = document.getElementById('autoRefreshBtnText');
-  const icon = document.getElementById('autoRefreshIcon');
+  const liveIndicatorDot = document.getElementById('liveIndicatorDot');
+  const liveStatusText = document.getElementById('liveStatusText');
 
-  const updateButtonDisplay = () => {
-    if (!btnText) return;
+  const updateDisplay = () => {
+    if (!toggleBtn || !btnText) return;
+
     if (state.autoRefreshEnabled) {
-      btnText.textContent = `Auto: ${state.secondsRemaining}s`;
-      toggleBtn?.classList.add('auto-active');
+      toggleBtn.classList.add('active');
+      toggleBtn.setAttribute('aria-checked', 'true');
+      toggleBtn.title = 'Click to turn Auto Refresh OFF';
+      btnText.className = 'auto-refresh-tag tag-on';
+      btnText.textContent = `ON (${state.secondsRemaining}s)`;
+
+      if (liveIndicatorDot) liveIndicatorDot.classList.remove('paused');
+      if (liveStatusText && !state.isScanning) {
+        liveStatusText.textContent = 'LIVE FEED';
+      }
     } else {
-      btnText.textContent = 'Auto: OFF';
-      toggleBtn?.classList.remove('auto-active');
+      toggleBtn.classList.remove('active');
+      toggleBtn.setAttribute('aria-checked', 'false');
+      toggleBtn.title = 'Click to turn Auto Refresh ON';
+      btnText.className = 'auto-refresh-tag tag-off';
+      btnText.textContent = 'OFF';
+
+      if (liveIndicatorDot) liveIndicatorDot.classList.add('paused');
+      if (liveStatusText && !state.isScanning) {
+        liveStatusText.textContent = 'PAUSED';
+      }
     }
   };
 
+  const toggleAutoRefresh = () => {
+    state.autoRefreshEnabled = !state.autoRefreshEnabled;
+    localStorage.setItem('antigravity_auto_refresh', state.autoRefreshEnabled ? 'on' : 'off');
+    if (state.autoRefreshEnabled) {
+      state.secondsRemaining = state.autoRefreshIntervalSec;
+    }
+    updateDisplay();
+  };
+
   if (toggleBtn) {
-    toggleBtn.addEventListener('click', () => {
-      state.autoRefreshEnabled = !state.autoRefreshEnabled;
-      if (state.autoRefreshEnabled) {
-        state.secondsRemaining = state.autoRefreshIntervalSec;
+    toggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleAutoRefresh();
+    });
+  }
+
+  if (widget) {
+    widget.addEventListener('click', (e) => {
+      if (e.target !== toggleBtn && !toggleBtn.contains(e.target)) {
+        toggleAutoRefresh();
       }
-      updateButtonDisplay();
     });
   }
 
@@ -226,10 +259,10 @@ function setupAutoRefresh() {
         startScreening(list, PRESET_UNIVERSES[state.currentUniverseKey]?.name || state.currentUniverseKey, true);
       }
     }
-    updateButtonDisplay();
+    updateDisplay();
   }, 1000);
 
-  updateButtonDisplay();
+  updateDisplay();
 }
 
 /**
