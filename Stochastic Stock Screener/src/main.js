@@ -309,7 +309,7 @@ function setupKpiCardClickFilters() {
 }
 
 /**
- * Export Oversold Stocks below threshold 20 along with chart screenshots in ZIP
+ * Export Oversold Stocks below threshold 20 (Charts Only, nothing else)
  */
 async function exportOversoldWithCharts(explicitOversoldList = null) {
   const list = explicitOversoldList || state.screenedResults.filter(s => (s.slowK ?? 50) < 20);
@@ -319,7 +319,8 @@ async function exportOversoldWithCharts(explicitOversoldList = null) {
     return;
   }
 
-  await runArchiveExport(list, 'Oversold_Stocks_Below_20');
+  // Export ONLY the high-res chart screenshots (.png) in the ZIP, nothing else
+  await runArchiveExport(list, 'Oversold_Stocks_Below_20', { chartsOnly: true });
 }
 
 /**
@@ -330,13 +331,13 @@ async function exportAllWithCharts() {
     alert('No screened stocks available to export.');
     return;
   }
-  await runArchiveExport(state.screenedResults, 'All_Screened_Stocks');
+  await runArchiveExport(state.screenedResults, 'All_Screened_Stocks', { chartsOnly: false });
 }
 
 /**
  * Run Archive Export with live progress modal
  */
-async function runArchiveExport(stocks, packageTitle) {
+async function runArchiveExport(stocks, packageTitle, options = {}) {
   const modal = document.getElementById('exportProgressModal');
   const heading = document.getElementById('exportProgressHeading') || document.getElementById('exportProgressTitle');
   const sub = document.getElementById('exportProgressSubtitle');
@@ -346,8 +347,9 @@ async function runArchiveExport(stocks, packageTitle) {
   if (modal) modal.classList.add('active');
   document.body.style.overflow = 'hidden';
 
-  if (heading) heading.textContent = `Packaging ${stocks.length} Stocks + Charts`;
-  if (sub) sub.textContent = 'Generating high-resolution chart screenshots...';
+  const isChartsOnly = options.chartsOnly === true;
+  if (heading) heading.textContent = isChartsOnly ? `Exporting ${stocks.length} Chart Screenshots` : `Packaging ${stocks.length} Stocks + Charts`;
+  if (sub) sub.textContent = isChartsOnly ? 'Generating high-resolution chart screenshots (charts only)...' : 'Generating high-resolution chart screenshots...';
   if (progressBar) progressBar.style.width = '0%';
 
   try {
@@ -361,7 +363,8 @@ async function runArchiveExport(stocks, packageTitle) {
           text.textContent = `[${current}/${total}] Rendering chart for ${label} (${pct}%)...`;
         }
       },
-      packageTitle
+      packageTitle,
+      options
     );
 
     setTimeout(() => {

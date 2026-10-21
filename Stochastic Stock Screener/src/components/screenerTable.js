@@ -131,10 +131,10 @@ export class ScreenerTable {
           </div>
 
           <div class="toolbar-actions">
-            <!-- Dedicated Oversold + Charts Export Quick Action -->
-            <button class="btn btn-sm btn-export-oversold" id="tableExportOversoldBtn" title="Export all identified stocks below oversold threshold 20 in XLSX, XLS, CSV with chart screenshots">
-              <i data-lucide="package-check"></i>
-              <span>Export Oversold (<20) + Charts</span>
+            <!-- Dedicated Oversold Charts Export Quick Action (Charts Only) -->
+            <button class="btn btn-sm btn-export-oversold" id="tableExportOversoldBtn" title="Export high-resolution PNG chart screenshots for all stocks below oversold threshold 20">
+              <i data-lucide="camera"></i>
+              <span>Export Oversold (&lt;20) Charts (.zip)</span>
               <span class="badge-mini bg-cyan text-dark">${counts.oversold}</span>
             </button>
 

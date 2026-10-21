@@ -154,26 +154,28 @@ export function exportResultsToCSV(screenedStocks, params = {}, customFilename =
 
 /**
  * Export Complete Archive Package (.zip):
- * - Spreadsheets: .xlsx, .xls, .csv
- * - Individual High-Res Chart Screenshots (.png) for every stock in the screened set
- * - README_Report.txt summary
+ * - If options.chartsOnly is true: Exports ONLY the high-res PNG chart screenshots (nothing else)
+ * - Otherwise: Includes spreadsheets (.xlsx, .xls, .csv), screenshots, and tactical summary report
  *
  * @param {Array<Object>} screenedStocks - List of stocks (e.g. oversold stocks)
  * @param {Object} params - Stochastic parameters
  * @param {Function} onProgress - Progress callback: (current, total, currentTicker)
  * @param {String} packageTitle - Custom package title (e.g. 'Oversold_Stocks')
+ * @param {Object} options - { chartsOnly: boolean }
  */
 export async function exportPackageWithChartScreenshots(
   screenedStocks, 
   params = {}, 
   onProgress = null, 
-  packageTitle = 'Oversold_Stocks'
+  packageTitle = 'Oversold_Stocks',
+  options = {}
 ) {
   if (!Array.isArray(screenedStocks) || screenedStocks.length === 0) {
     alert('No screened stocks available to export with charts.');
     return;
   }
 
+  const isChartsOnly = options.chartsOnly === true;
   const zip = new JSZip();
   const kP = params.kPeriod || 4;
   const kS = params.kSmoothing || 3;
@@ -181,27 +183,29 @@ export async function exportPackageWithChartScreenshots(
   const total = screenedStocks.length;
   const timestamp = new Date().toISOString().slice(0, 10);
 
-  // 1. Generate Spreadsheets
-  const rows = buildStockDataRows(screenedStocks, params);
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(rows);
-  setWorksheetColumnWidths(ws);
-  XLSX.utils.book_append_sheet(wb, ws, 'Screened_Stocks');
+  // 1. Generate Spreadsheets (Only if not chartsOnly)
+  if (!isChartsOnly) {
+    const rows = buildStockDataRows(screenedStocks, params);
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    setWorksheetColumnWidths(ws);
+    XLSX.utils.book_append_sheet(wb, ws, 'Screened_Stocks');
 
-  // .xlsx
-  const xlsxBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  zip.file(`${packageTitle}_Stochastic_${kP}_${kS}_${dP}.xlsx`, xlsxBuffer);
+    // .xlsx
+    const xlsxBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    zip.file(`${packageTitle}_Stochastic_${kP}_${kS}_${dP}.xlsx`, xlsxBuffer);
 
-  // .xls
-  const xlsBuffer = XLSX.write(wb, { bookType: 'biff8', type: 'array' });
-  zip.file(`${packageTitle}_Stochastic_${kP}_${kS}_${dP}.xls`, xlsBuffer);
+    // .xls
+    const xlsBuffer = XLSX.write(wb, { bookType: 'biff8', type: 'array' });
+    zip.file(`${packageTitle}_Stochastic_${kP}_${kS}_${dP}.xls`, xlsBuffer);
 
-  // .csv
-  const csvContent = XLSX.utils.sheet_to_csv(ws);
-  zip.file(`${packageTitle}_Stochastic_${kP}_${kS}_${dP}.csv`, csvContent);
+    // .csv
+    const csvContent = XLSX.utils.sheet_to_csv(ws);
+    zip.file(`${packageTitle}_Stochastic_${kP}_${kS}_${dP}.csv`, csvContent);
+  }
 
-  // 2. Generate Chart Screenshots for each stock into /charts/ folder
-  const chartsFolder = zip.folder('chart_screenshots');
+  // 2. Generate Chart Screenshots (.png)
+  const targetFolder = isChartsOnly ? zip : zip.folder('chart_screenshots');
 
   for (let i = 0; i < total; i++) {
     const stock = screenedStocks[i];
@@ -214,7 +218,7 @@ export async function exportPackageWithChartScreenshots(
 
     try {
       const pngBlob = await generateStockChartBlob(stock, { width: 1080, height: 640 });
-      chartsFolder.file(`${cleanSym}_stochastic_${kP}_${kS}_${dP}.png`, pngBlob);
+      targetFolder.file(`${cleanSym}_stochastic_${kP}_${kS}_${dP}.png`, pngBlob);
     } catch (err) {
       console.warn(`Failed to render screenshot for ${ticker}:`, err);
     }
@@ -223,51 +227,53 @@ export async function exportPackageWithChartScreenshots(
     await new Promise(r => setTimeout(r, 20));
   }
 
-  // 3. Add Summary README Report
-  const oversoldBelow20 = screenedStocks.filter(s => (s.slowK ?? 50) < 20).length;
-  const goldenCrosses = screenedStocks.filter(s => s.isBullishCross || (s.signalType && s.signalType.includes('BULLISH_CROSSOVER'))).length;
+  // 3. Add Summary README Report (Only if not chartsOnly)
+  if (!isChartsOnly) {
+    const oversoldBelow20 = screenedStocks.filter(s => (s.slowK ?? 50) < 20).length;
+    const goldenCrosses = screenedStocks.filter(s => s.isBullishCross || (s.signalType && s.signalType.includes('BULLISH_CROSSOVER'))).length;
 
-  const stockStrategySummaries = screenedStocks.map((s, idx) => {
-    const strat = s.strategy || {};
-    return [
-      `[${idx + 1}] ${s.ticker} — ${s.name || s.ticker} (${s.exchange || 'EQUITY'})`,
-      `    Current Close : ${s.price}`,
-      `    Stochastic %K : ${s.slowK ?? 50} | %D: ${s.d ?? 50} | Spread: ${s.spread ?? 0}`,
-      `    Action Signal : ${strat.actionLabel || s.signalLabel}`,
-      `    Buy Entry Zone: ${strat.entryRangeStr || s.price}`,
-      `    Stop Loss     : ${strat.stopLoss || 'N/A'} (-${strat.riskPct || 0}%)`,
-      `    Target 1 (50%): ${strat.target1 || 'N/A'} (+${strat.target1GainPct || 0}%) [Mid-Band %K=50 Exit]`,
-      `    Target 2 (80%): ${strat.target2 || 'N/A'} (+${strat.target2GainPct || 0}%) [Overbought %K>80 Exit]`,
-      `    Risk:Reward   : ${strat.rrRatio || '1 : 2.5'}`,
-      `    Tactical Execution Playbook:`,
-      ...(strat.playbook || []).map(p => `      * ${p}`),
-      ''
+    const stockStrategySummaries = screenedStocks.map((s, idx) => {
+      const strat = s.strategy || {};
+      return [
+        `[${idx + 1}] ${s.ticker} — ${s.name || s.ticker} (${s.exchange || 'EQUITY'})`,
+        `    Current Close : ${s.price}`,
+        `    Stochastic %K : ${s.slowK ?? 50} | %D: ${s.d ?? 50} | Spread: ${s.spread ?? 0}`,
+        `    Action Signal : ${strat.actionLabel || s.signalLabel}`,
+        `    Buy Entry Zone: ${strat.entryRangeStr || s.price}`,
+        `    Stop Loss     : ${strat.stopLoss || 'N/A'} (-${strat.riskPct || 0}%)`,
+        `    Target 1 (50%): ${strat.target1 || 'N/A'} (+${strat.target1GainPct || 0}%) [Mid-Band %K=50 Exit]`,
+        `    Target 2 (80%): ${strat.target2 || 'N/A'} (+${strat.target2GainPct || 0}%) [Overbought %K>80 Exit]`,
+        `    Risk:Reward   : ${strat.rrRatio || '1 : 2.5'}`,
+        `    Tactical Execution Playbook:`,
+        ...(strat.playbook || []).map(p => `      * ${p}`),
+        ''
+      ].join('\n');
+    }).join('\n');
+
+    const reportText = [
+      '=========================================================================',
+      `AntiGravity Stochastic Screener — Quantitative Entry & Exit Strategy Report`,
+      '=========================================================================',
+      `Generated On      : ${new Date().toLocaleString()}`,
+      `Strategy Model    : Stochastic on Closing Basis (${kP}, ${kS}, ${dP})`,
+      `Total Stocks      : ${total}`,
+      `Oversold (< 20)   : ${oversoldBelow20}`,
+      `Golden Crosses    : ${goldenCrosses}`,
+      '-------------------------------------------------------------------------',
+      'ARCHIVE CONTENTS:',
+      `1. ${packageTitle}_Stochastic_${kP}_${kS}_${dP}.xlsx  -> Modern Excel format`,
+      `2. ${packageTitle}_Stochastic_${kP}_${kS}_${dP}.xls   -> Excel 97-2004 Binary format`,
+      `3. ${packageTitle}_Stochastic_${kP}_${kS}_${dP}.csv   -> Comma-Separated Values format`,
+      `4. chart_screenshots/                               -> High-Res PNG Chart Screenshots (${total} stocks)`,
+      '=========================================================================',
+      '',
+      'QUANTITATIVE ENTRY & EXIT STRATEGY BLUEPRINTS FOR IDENTIFIED STOCKS:',
+      '=========================================================================',
+      stockStrategySummaries
     ].join('\n');
-  }).join('\n');
 
-  const reportText = [
-    '=========================================================================',
-    `AntiGravity Stochastic Screener — Quantitative Entry & Exit Strategy Report`,
-    '=========================================================================',
-    `Generated On      : ${new Date().toLocaleString()}`,
-    `Strategy Model    : Stochastic on Closing Basis (${kP}, ${kS}, ${dP})`,
-    `Total Stocks      : ${total}`,
-    `Oversold (< 20)   : ${oversoldBelow20}`,
-    `Golden Crosses    : ${goldenCrosses}`,
-    '-------------------------------------------------------------------------',
-    'ARCHIVE CONTENTS:',
-    `1. ${packageTitle}_Stochastic_${kP}_${kS}_${dP}.xlsx  -> Modern Excel format`,
-    `2. ${packageTitle}_Stochastic_${kP}_${kS}_${dP}.xls   -> Excel 97-2004 Binary format`,
-    `3. ${packageTitle}_Stochastic_${kP}_${kS}_${dP}.csv   -> Comma-Separated Values format`,
-    `4. chart_screenshots/                               -> High-Res PNG Chart Screenshots (${total} stocks)`,
-    '=========================================================================',
-    '',
-    'QUANTITATIVE ENTRY & EXIT STRATEGY BLUEPRINTS FOR IDENTIFIED STOCKS:',
-    '=========================================================================',
-    stockStrategySummaries
-  ].join('\n');
-
-  zip.file('README_SCREENING_REPORT.txt', reportText);
+    zip.file('README_SCREENING_REPORT.txt', reportText);
+  }
 
   // 4. Build and trigger ZIP download
   if (onProgress) {
@@ -275,8 +281,17 @@ export async function exportPackageWithChartScreenshots(
   }
 
   const zipBlob = await zip.generateAsync({ type: 'blob' });
-  const zipFilename = `${packageTitle}_Screenshots_${kP}_${kS}_${dP}_${timestamp}.zip`;
+  const zipFilename = isChartsOnly
+    ? `${packageTitle}_Charts_${kP}_${kS}_${dP}_${timestamp}.zip`
+    : `${packageTitle}_Screenshots_${kP}_${kS}_${dP}_${timestamp}.zip`;
   downloadBlob(zipBlob, zipFilename);
+}
+
+/**
+ * Dedicated helper to export ONLY charts in a ZIP
+ */
+export async function exportChartsOnly(screenedStocks, params = {}, onProgress = null, packageTitle = 'Oversold_Stocks') {
+  return exportPackageWithChartScreenshots(screenedStocks, params, onProgress, packageTitle, { chartsOnly: true });
 }
 
 /**
@@ -298,3 +313,4 @@ export const exportToExcel = exportResultsToExcel;
 export const exportToXLS = exportResultsToXLS;
 export const exportToCSV = exportResultsToCSV;
 export const exportPackageWithCharts = exportPackageWithChartScreenshots;
+

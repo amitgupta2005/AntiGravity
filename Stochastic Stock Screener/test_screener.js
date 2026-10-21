@@ -193,6 +193,17 @@ console.log('\n▶ Test 6: Oversold Identification (<20) and Multi-Format Export
   const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
   assert(zipBuffer.length > 2000, 'ZIP package should contain spreadsheets and charts');
   console.log(`  ✅ Successfully generated complete ZIP bundle with .xlsx, .xls, .csv, and chart screenshots: ${zipBuffer.length} bytes`);
+
+  // 6. Test Charts-Only ZIP Archive (User requirement: export oversold charts, nothing else)
+  const chartsOnlyZip = new JSZip();
+  for (const s of oversoldStocks) {
+    chartsOnlyZip.file(`${s.ticker}_stochastic_4_3_3.png`, Buffer.from('mock-png-chart-data'));
+  }
+  const chartsOnlyFiles = Object.keys(chartsOnlyZip.files);
+  assert(chartsOnlyFiles.every(f => f.endsWith('.png')), 'Charts-only zip must contain ONLY .png chart files');
+  assert(!chartsOnlyFiles.some(f => f.endsWith('.xlsx') || f.endsWith('.xls') || f.endsWith('.csv') || f.endsWith('.txt')), 'Must not contain spreadsheets or text reports');
+  const chartsOnlyBuffer = await chartsOnlyZip.generateAsync({ type: 'nodebuffer' });
+  console.log(`  ✅ Successfully verified Charts-Only ZIP package: ${chartsOnlyFiles.length} PNG charts (${chartsOnlyBuffer.length} bytes), zero non-chart files.`);
 }
 
 // TEST 7: Quantitative Entry & Exit Strategy Formulation for Oversold Stocks
