@@ -195,5 +195,58 @@ console.log('\n▶ Test 6: Oversold Identification (<20) and Multi-Format Export
   console.log(`  ✅ Successfully generated complete ZIP bundle with .xlsx, .xls, .csv, and chart screenshots: ${zipBuffer.length} bytes`);
 }
 
-console.log('\n🎉 ALL 6 TESTS PASSED SUCCESSFULLY! Stochastic Oversold Screener (<20) & Exports with Charts verified.\n');
+// TEST 7: Quantitative Entry & Exit Strategy Formulation for Oversold Stocks
+console.log('\n▶ Test 7: Entry & Exit Strategy Blueprint Formulation for Oversold Stocks');
+{
+  const { computeEntryExitStrategy } = await import('./src/quant/stochastic.js');
+
+  const mockSeries = [];
+  let price = 3000;
+  for (let i = 0; i < 20; i++) {
+    price -= 8;
+    mockSeries.push({
+      date: `Day ${i + 1}`,
+      close: price,
+      slowK: Math.max(5, 50 - i * 2.2),
+      d: Math.max(8, 55 - i * 2.0),
+      spread: -3.0
+    });
+  }
+
+  // Turnaround bar with oversold condition %K = 14.2, %D = 12.0
+  mockSeries.push({
+    date: 'Day 21',
+    close: 2850,
+    slowK: 14.2,
+    d: 12.0,
+    spread: 2.2,
+    signalType: 'BULLISH_CROSSOVER_OVERSOLD'
+  });
+
+  const strat = computeEntryExitStrategy('RELIANCE.NS', 2850, mockSeries, { oversoldThreshold: 20 });
+
+  assert(strat !== null, 'Strategy must be generated');
+  assert(strat.action === 'BUY_CONFIRMED', `Expected BUY_CONFIRMED, got ${strat.action}`);
+  assert(strat.entryMin > 0 && strat.entryMax >= strat.entryMin, 'Valid entry bracket');
+  assert(strat.stopLoss < 2850, `Stop loss (${strat.stopLoss}) must be below current price (2850)`);
+  assert(strat.target1 > 2850, `Target 1 (${strat.target1}) must be above current price (2850)`);
+  assert(strat.target2 > strat.target1, `Target 2 (${strat.target2}) must be above Target 1 (${strat.target1})`);
+  assert(strat.riskPct > 0, 'Risk percent must be positive');
+  assert(strat.target1GainPct > 0, 'Target 1 gain percent must be positive');
+  assert(strat.target2GainPct > strat.target1GainPct, 'Target 2 gain must exceed Target 1 gain');
+  assert(strat.rrValue >= 1.5, `Risk-to-Reward ratio (${strat.rrValue}) should be favorable (>= 1.5)`);
+  assert(Array.isArray(strat.playbook) && strat.playbook.length === 5, 'Playbook should contain 5 tactical rules');
+
+  console.log(`  ✅ Stock: RELIANCE.NS (Close: ₹2,850)`);
+  console.log(`     Action Signal  : ${strat.actionLabel}`);
+  console.log(`     Entry Buy Zone : ${strat.entryRangeStr}`);
+  console.log(`     Stop Loss      : ₹${strat.stopLoss} (-${strat.riskPct}%)`);
+  console.log(`     Target 1 (50%) : ₹${strat.target1} (+${strat.target1GainPct}%) [Mid-Band %K=50 Exit]`);
+  console.log(`     Target 2 (80%) : ₹${strat.target2} (+${strat.target2GainPct}%) [Overbought %K>80 Exit]`);
+  console.log(`     Target R:R     : ${strat.rrRatio}`);
+  console.log(`     Playbook Rules : ${strat.playbook.length} tactical execution steps verified.`);
+}
+
+console.log('\n🎉 ALL 7 TESTS PASSED SUCCESSFULLY! Quantitative Entry & Exit Strategy Blueprint verified.\n');
+
 

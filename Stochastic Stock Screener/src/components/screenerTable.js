@@ -97,7 +97,8 @@ export class ScreenerTable {
                 <th class="sortable ${this.getSortClass('d')}" data-col="d">Signal %D (3)</th>
                 <th class="sortable ${this.getSortClass('spread')}" data-col="spread">Spread (%K-%D)</th>
                 <th>Oscillator Gauge (0-100)</th>
-                <th class="sortable ${this.getSortClass('signal')}" data-col="signal">Stochastic Signal</th>
+                <th class="sortable ${this.getSortClass('signal')}" data-col="signal">Signal</th>
+                <th>Quantitative Entry &amp; Exit Strategy (Buy Zone | SL | Targets)</th>
                 <th class="text-center">Actions</th>
               </tr>
             </thead>
@@ -201,9 +202,34 @@ export class ScreenerTable {
               <span>100</span>
             </div>
           </div>
-        </td>
         <td>
           ${signalBadge}
+        </td>
+        <td>
+          <div class="table-strategy-card ${isOversold ? 'strat-oversold-card' : ''}">
+            <div class="strat-action-line">
+              <span class="strat-action-tag ${r.strategy?.actionBadge || 'badge-neutral'}">${r.strategy?.actionLabel || 'Watchlist'}</span>
+              <span class="strat-rr-pill font-mono" title="Risk-to-Reward Ratio">${r.strategy?.rrRatio || '1 : 2.5'}</span>
+            </div>
+            <div class="strat-levels-compact font-mono">
+              <div class="strat-lvl-row">
+                <span class="strat-lvl-lbl">Buy:</span> 
+                <span class="text-cyan font-semibold">${r.strategy?.entryRangeStr || `${isINR ? '₹' : '$'}${priceVal.toFixed(2)}`}</span>
+              </div>
+              <div class="strat-lvl-row">
+                <span class="strat-lvl-lbl">SL:</span> 
+                <span class="text-rose font-semibold">${isINR ? '₹' : '$'}${r.strategy?.stopLoss != null ? r.strategy.stopLoss.toLocaleString() : '-'} (-${r.strategy?.riskPct || 0}%)</span>
+              </div>
+              <div class="strat-lvl-row">
+                <span class="strat-lvl-lbl">T1:</span> 
+                <span class="text-emerald font-semibold">${isINR ? '₹' : '$'}${r.strategy?.target1 != null ? r.strategy.target1.toLocaleString() : '-'} (+${r.strategy?.target1GainPct || 0}%)</span>
+              </div>
+              <div class="strat-lvl-row">
+                <span class="strat-lvl-lbl">T2:</span> 
+                <span class="text-emerald font-semibold">${isINR ? '₹' : '$'}${r.strategy?.target2 != null ? r.strategy.target2.toLocaleString() : '-'} (+${r.strategy?.target2GainPct || 0}%)</span>
+              </div>
+            </div>
+          </div>
         </td>
         <td class="text-center">
           <div class="row-actions-group">

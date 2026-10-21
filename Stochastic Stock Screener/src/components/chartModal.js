@@ -288,9 +288,73 @@ function renderBreakdownTable(history, curr, stock) {
   if (!container) return;
 
   const recent = history.slice(-10).reverse();
+  const strat = stock.strategy || {};
 
   container.innerHTML = `
-    <h4 class="breakdown-title">
+    <!-- Quantitative Entry & Exit Strategy Blueprint Card -->
+    <div class="strategy-blueprint-card">
+      <div class="strategy-blueprint-header">
+        <div class="blueprint-badge-wrap">
+          <span class="blueprint-icon text-cyan"><i data-lucide="crosshair"></i></span>
+          <div>
+            <h4 class="blueprint-title">Quantitative Entry &amp; Exit Strategy Blueprint</h4>
+            <span class="signal-badge ${strat.actionBadge || 'badge-cyan'}">${strat.actionLabel || 'Oversold Reversal Protocol'}</span>
+          </div>
+        </div>
+        <div class="blueprint-rr-badge">
+          <span class="rr-label">Target R:R Ratio</span>
+          <span class="rr-value">${strat.rrRatio || '1 : 2.8'}</span>
+        </div>
+      </div>
+
+      <div class="strategy-levels-grid">
+        <div class="level-box entry-box">
+          <div class="level-header">
+            <span class="level-title"><i data-lucide="log-in"></i> Buy Entry Zone</span>
+            <span class="level-tag tag-cyan">Limit / Market</span>
+          </div>
+          <div class="level-price text-cyan font-mono">${strat.entryRangeStr || `${curr}${stock.price.toFixed(2)}`}</div>
+          <div class="level-desc">Optimal accumulation zone as %K (${(stock.slowK ?? 50).toFixed(1)}) turns upward above 4-period lowest close.</div>
+        </div>
+
+        <div class="level-box sl-box">
+          <div class="level-header">
+            <span class="level-title"><i data-lucide="shield-alert"></i> Stop Loss (Risk Floor)</span>
+            <span class="level-tag tag-rose font-bold">-${strat.riskPct || 0}%</span>
+          </div>
+          <div class="level-price text-rose font-mono">${curr}${strat.stopLoss != null ? strat.stopLoss.toLocaleString() : 'N/A'}</div>
+          <div class="level-desc">Technical support floor. Invalidate strategy if daily closing price closes below this level.</div>
+        </div>
+
+        <div class="level-box target-box">
+          <div class="level-header">
+            <span class="level-title"><i data-lucide="flag"></i> Target 1 (Mid-Band Exit)</span>
+            <span class="level-tag tag-emerald font-bold">+${strat.target1GainPct || 0}%</span>
+          </div>
+          <div class="level-price text-emerald font-mono">${curr}${strat.target1 != null ? strat.target1.toLocaleString() : 'N/A'}</div>
+          <div class="level-desc">Liquidate 50% position as %K reclaims 50 mid-band equilibrium; advance Stop Loss to Breakeven.</div>
+        </div>
+
+        <div class="level-box target2-box">
+          <div class="level-header">
+            <span class="level-title"><i data-lucide="trophy"></i> Target 2 (Overbought 80 Exit)</span>
+            <span class="level-tag tag-emerald font-bold">+${strat.target2GainPct || 0}%</span>
+          </div>
+          <div class="level-price text-emerald font-mono">${curr}${strat.target2 != null ? strat.target2.toLocaleString() : 'N/A'}</div>
+          <div class="level-desc">Liquidate remaining 50% position as Stochastic %K enters the 80+ overbought exhaustion band.</div>
+        </div>
+      </div>
+
+      <div class="strategy-playbook-box">
+        <h5 class="playbook-title"><i data-lucide="list-checks" class="inline-icon text-cyan"></i> Tactical Execution Playbook</h5>
+        <ol class="playbook-list">
+          ${(strat.playbook || []).map(step => `<li>${step}</li>`).join('')}
+        </ol>
+      </div>
+    </div>
+
+    <!-- Step-by-Step Mathematical Calculation Table -->
+    <h4 class="breakdown-title" style="margin-top: 1.5rem;">
       <i data-lucide="calculator" class="inline-icon text-cyan"></i>
       Stochastic (${stock.kPeriod}, ${stock.kSmoothing}, ${stock.dPeriod}) Closing-Basis Step-by-Step Calculation
     </h4>
@@ -328,3 +392,4 @@ function renderBreakdownTable(history, curr, stock) {
     </div>
   `;
 }
+

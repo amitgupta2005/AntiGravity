@@ -208,6 +208,9 @@ export function screenStockStochastic(ticker, name, candles, options = {}) {
     velocity = Number((latest.slowK - prev1.slowK).toFixed(2));
   }
 
+  // Quantitative Entry & Exit Strategy Formulation
+  const strategy = computeEntryExitStrategy(ticker, currentClose, series, opts);
+
   return {
     ticker: ticker.toUpperCase(),
     name: name || ticker,
@@ -223,6 +226,7 @@ export function screenStockStochastic(ticker, name, candles, options = {}) {
     signalLabel: latest.signalLabel,
     signalSeverity: latest.signalSeverity,
     divergence,
+    strategy,
     isOverbought: latest.slowK >= opts.overboughtThreshold,
     isOversold: latest.slowK <= opts.oversoldThreshold,
     isBullishCross: latest.signalType.includes('BULLISH_CROSSOVER'),
@@ -234,6 +238,130 @@ export function screenStockStochastic(ticker, name, candles, options = {}) {
     history: series.slice(-30) // last 30 bars for mini sparkline or modal inspection
   };
 }
+
+/**
+ * Formulate Quantitative Entry and Exit Strategy for Screened / Oversold Stocks
+ */
+export function computeEntryExitStrategy(ticker, currentPrice, series, opts = {}) {
+  const recentBars = series.slice(-20);
+  const closes = recentBars.map(b => b.close).filter(c => c != null && !isNaN(c));
+  const latest = series[series.length - 1];
+  const kVal = latest?.slowK ?? 50;
+  const dVal = latest?.d ?? 50;
+  const spread = latest?.spread ?? (kVal - dVal);
+  const isGoldenCross = latest?.signalType?.includes('BULLISH_CROSSOVER');
+  const isOversold = kVal <= (opts.oversoldThreshold || 20);
+  const isDeepOversold = kVal <= 10;
+
+  // Calculate Support & Range
+  const kWindow = Math.max(4, opts.kPeriod || 4);
+  const minCloseWindow = Math.min(...closes.slice(-kWindow));
+  const swingLow = Math.min(...closes);
+  const swingHigh = Math.max(...closes);
+
+  // Volatility proxy (Average Absolute Day Move)
+  let sumMoves = 0;
+  let moveCount = 0;
+  for (let i = 1; i < closes.length; i++) {
+    sumMoves += Math.abs(closes[i] - closes[i - 1]);
+    moveCount++;
+  }
+  const avgMove = moveCount > 0 ? (sumMoves / moveCount) : (currentPrice * 0.015);
+
+  // Strategy Action State
+  let action = 'WATCHLIST';
+  let actionLabel = 'Pending Reversal (Watch for %K > %D)';
+  let actionBadge = 'badge-neutral';
+  let conviction = 'Moderate';
+
+  if (isGoldenCross && isOversold) {
+    action = 'BUY_CONFIRMED';
+    actionLabel = '★ Actionable Buy (Golden Cross in Oversold)';
+    actionBadge = 'badge-golden-cross';
+    conviction = 'High (Momentum Reversal Trigger)';
+  } else if (isGoldenCross) {
+    action = 'BUY_MOMENTUM';
+    actionLabel = 'Bullish Crossover Entry';
+    actionBadge = 'badge-bullish-cross';
+    conviction = 'Moderate-High';
+  } else if (isDeepOversold) {
+    action = 'ACCUMULATE_DIP';
+    actionLabel = 'Extreme Capitulation Buy Bracket (%K < 10)';
+    actionBadge = 'badge-deep-oversold';
+    conviction = 'High Reversal Discount';
+  } else if (isOversold) {
+    action = 'OVERSOLD_WATCH';
+    actionLabel = 'Oversold Discount (Await %K Cross Above %D)';
+    actionBadge = 'badge-oversold';
+    conviction = 'Moderate (Wait for Hook)';
+  } else if (kVal > 80) {
+    action = 'OVERBOUGHT_EXIT';
+    actionLabel = 'Overbought Zone (Take Profits / Avoid Longs)';
+    actionBadge = 'badge-overbought';
+    conviction = 'Exhaustion Warning';
+  }
+
+  // Exact Price Levels
+  const entryMin = Number(Math.min(currentPrice, minCloseWindow * 0.998).toFixed(2));
+  const entryMax = Number((currentPrice * 1.004).toFixed(2));
+  const entryMid = currentPrice;
+
+  // Stop Loss: Below Lowest Close / Swing Low with safety buffer (1.2% - 2.5% risk)
+  const technicalFloor = Math.min(minCloseWindow, swingLow);
+  const rawSL = Math.min(currentPrice - avgMove * 1.2, technicalFloor * 0.985);
+  const stopLoss = Number(Math.max(0.01, rawSL).toFixed(2));
+  const riskAmount = Number(Math.max(0.01, currentPrice - stopLoss).toFixed(2));
+  const riskPct = Number(((riskAmount / currentPrice) * 100).toFixed(2));
+
+  // Profit Target 1: Mid-Band Rebound (%K = 50 area -> ~1.5R or 45% of swing range)
+  const target1Distance = Math.max(riskAmount * 1.5, (swingHigh - currentPrice) * 0.45);
+  const target1 = Number((currentPrice + target1Distance).toFixed(2));
+  const target1GainPct = Number((((target1 - currentPrice) / currentPrice) * 100).toFixed(2));
+
+  // Profit Target 2: Overbought Exhaustion (%K > 80 area -> ~2.8R - 3.2R or swing high test)
+  const target2Distance = Math.max(riskAmount * 2.8, (swingHigh - currentPrice) * 0.95);
+  const target2 = Number((currentPrice + Math.max(target1Distance * 1.8, target2Distance)).toFixed(2));
+  const target2GainPct = Number((((target2 - currentPrice) / currentPrice) * 100).toFixed(2));
+
+  // Risk to Reward Ratio
+  const rrRatio = riskAmount > 0 ? Number(((target2 - currentPrice) / riskAmount).toFixed(1)) : 2.5;
+
+  const isINR = ticker.endsWith('.NS') || ticker.endsWith('.BO');
+  const curr = isINR ? '₹' : '$';
+
+  // Step-by-Step Tactical Rules Playbook
+  const playbook = [
+    `1. Entry Zone: Initiate long positions inside ${curr}${entryMin.toLocaleString()} - ${curr}${entryMax.toLocaleString()} as Stochastic %K confirms upward momentum.`,
+    `2. Capital Protection: Place hard Stop Loss at ${curr}${stopLoss.toLocaleString()} (-${riskPct}%). Risk strictly limited to 1-2% portfolio allocation.`,
+    `3. Profit Taking Milestone 1: At Target 1 (${curr}${target1.toLocaleString()}, +${target1GainPct}%), liquidate 50% position and advance Stop Loss to Breakeven (${curr}${currentPrice.toLocaleString()}).`,
+    `4. Profit Taking Milestone 2: At Target 2 (${curr}${target2.toLocaleString()}, +${target2GainPct}%), liquidate remaining 50% as Stochastic %K touches the 80 overbought exhaustion band.`,
+    `5. Invalidation Rule: Exit position immediately if daily closing price closes below Stop Loss (${curr}${stopLoss.toLocaleString()}) before %K reclaims 50.`
+  ];
+
+  return {
+    action,
+    actionLabel,
+    actionBadge,
+    conviction,
+    entryMin,
+    entryMax,
+    entryMid,
+    entryRangeStr: `${curr}${entryMin.toLocaleString()} - ${curr}${entryMax.toLocaleString()}`,
+    stopLoss,
+    riskAmount,
+    riskPct,
+    target1,
+    target1GainPct,
+    target1Condition: 'Mid-Band Equilibrium (%K ~ 50)',
+    target2,
+    target2GainPct,
+    target2Condition: 'Overbought Peak (%K > 80)',
+    rrRatio: `1 : ${rrRatio}`,
+    rrValue: rrRatio,
+    playbook
+  };
+}
+
 
 /**
  * Detect Regular Bullish and Bearish Divergences on a Closing Basis

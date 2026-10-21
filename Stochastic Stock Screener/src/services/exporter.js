@@ -31,9 +31,18 @@ function buildStockDataRows(screenedStocks, params = {}) {
     [`%D (${dP})`]: s.d ?? 0,
     'Spread (%K - %D)': s.spread ?? 0,
     'Oversold Status': (s.slowK ?? 50) < 20 ? '★ BELOW OVERSOLD 20' : (s.slowK ?? 50) > 80 ? 'OVERBOUGHT (>80)' : 'NEUTRAL',
+    'Strategy Action': s.strategy?.actionLabel || s.signalLabel || '',
+    'Entry Buy Zone': s.strategy?.entryRangeStr || `${s.price ?? 0}`,
+    'Stop Loss (Risk Floor)': s.strategy?.stopLoss ?? 0,
+    'Stop Loss Risk (%)': s.strategy?.riskPct != null ? `-${s.strategy.riskPct}%` : '',
+    'Target 1 (Mid-Band 50)': s.strategy?.target1 ?? 0,
+    'Target 1 Gain (%)': s.strategy?.target1GainPct != null ? `+${s.strategy.target1GainPct}%` : '',
+    'Target 2 (Overbought 80)': s.strategy?.target2 ?? 0,
+    'Target 2 Gain (%)': s.strategy?.target2GainPct != null ? `+${s.strategy.target2GainPct}%` : '',
+    'Risk:Reward Ratio': s.strategy?.rrRatio || '1 : 2.5',
     'Signal Type': s.signalType || '',
-    'Signal Label': s.signalLabel || '',
     'Divergence': s.divergence ? s.divergence.label : 'None',
+    'Strategy Execution Playbook': (s.strategy?.playbook || []).join(' | '),
     'Volume': s.volume ? Number(s.volume).toLocaleString() : 'N/A'
   }));
 }
@@ -47,16 +56,25 @@ function setWorksheetColumnWidths(ws) {
     { wch: 14 },
     { wch: 32 },
     { wch: 10 },
-    { wch: 22 },
+    { wch: 20 },
     { wch: 14 },
     { wch: 14 },
     { wch: 16 },
     { wch: 14 },
     { wch: 18 },
     { wch: 24 },
+    { wch: 36 },
+    { wch: 24 },
+    { wch: 22 },
+    { wch: 18 },
+    { wch: 22 },
+    { wch: 18 },
+    { wch: 24 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 26 },
     { wch: 28 },
-    { wch: 34 },
-    { wch: 32 },
+    { wch: 60 },
     { wch: 16 }
   ];
 }
@@ -209,9 +227,27 @@ export async function exportPackageWithChartScreenshots(
   const oversoldBelow20 = screenedStocks.filter(s => (s.slowK ?? 50) < 20).length;
   const goldenCrosses = screenedStocks.filter(s => s.isBullishCross || (s.signalType && s.signalType.includes('BULLISH_CROSSOVER'))).length;
 
+  const stockStrategySummaries = screenedStocks.map((s, idx) => {
+    const strat = s.strategy || {};
+    return [
+      `[${idx + 1}] ${s.ticker} — ${s.name || s.ticker} (${s.exchange || 'EQUITY'})`,
+      `    Current Close : ${s.price}`,
+      `    Stochastic %K : ${s.slowK ?? 50} | %D: ${s.d ?? 50} | Spread: ${s.spread ?? 0}`,
+      `    Action Signal : ${strat.actionLabel || s.signalLabel}`,
+      `    Buy Entry Zone: ${strat.entryRangeStr || s.price}`,
+      `    Stop Loss     : ${strat.stopLoss || 'N/A'} (-${strat.riskPct || 0}%)`,
+      `    Target 1 (50%): ${strat.target1 || 'N/A'} (+${strat.target1GainPct || 0}%) [Mid-Band %K=50 Exit]`,
+      `    Target 2 (80%): ${strat.target2 || 'N/A'} (+${strat.target2GainPct || 0}%) [Overbought %K>80 Exit]`,
+      `    Risk:Reward   : ${strat.rrRatio || '1 : 2.5'}`,
+      `    Tactical Execution Playbook:`,
+      ...(strat.playbook || []).map(p => `      * ${p}`),
+      ''
+    ].join('\n');
+  }).join('\n');
+
   const reportText = [
     '=========================================================================',
-    `AntiGravity Stochastic Screener — Quantitative Export Report`,
+    `AntiGravity Stochastic Screener — Quantitative Entry & Exit Strategy Report`,
     '=========================================================================',
     `Generated On      : ${new Date().toLocaleString()}`,
     `Strategy Model    : Stochastic on Closing Basis (${kP}, ${kS}, ${dP})`,
@@ -224,7 +260,11 @@ export async function exportPackageWithChartScreenshots(
     `2. ${packageTitle}_Stochastic_${kP}_${kS}_${dP}.xls   -> Excel 97-2004 Binary format`,
     `3. ${packageTitle}_Stochastic_${kP}_${kS}_${dP}.csv   -> Comma-Separated Values format`,
     `4. chart_screenshots/                               -> High-Res PNG Chart Screenshots (${total} stocks)`,
-    '========================================================================='
+    '=========================================================================',
+    '',
+    'QUANTITATIVE ENTRY & EXIT STRATEGY BLUEPRINTS FOR IDENTIFIED STOCKS:',
+    '=========================================================================',
+    stockStrategySummaries
   ].join('\n');
 
   zip.file('README_SCREENING_REPORT.txt', reportText);
