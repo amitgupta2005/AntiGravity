@@ -222,6 +222,7 @@ function setupTabNavigation() {
   const tabBtns = document.querySelectorAll('.tab-btn');
   const tabPanes = document.querySelectorAll('.tab-pane');
   const topNavSectorBtn = document.getElementById('topNavSectorDashboardBtn');
+  const topNavHorizonBtn = document.getElementById('topNavHorizonScannerBtn');
   const exitSectorBtn = document.getElementById('exitSectorDashboardBtn');
 
   let previousStockTabId = 'tab-return-model';
@@ -291,7 +292,11 @@ function setupTabNavigation() {
       sectorsPane.classList.remove('active');
     }
 
-    const tabToActivate = targetTabId || previousStockTabId || 'tab-return-model';
+    const tabToActivate = (targetTabId && targetTabId !== 'tab-sectors' && targetTabId !== 'tab-horizon-scanner') 
+      ? targetTabId 
+      : (previousStockTabId && previousStockTabId !== 'tab-sectors' && previousStockTabId !== 'tab-horizon-scanner' 
+          ? previousStockTabId 
+          : 'tab-return-model');
     const targetBtn = document.querySelector(`.tab-btn[data-tab="${tabToActivate}"]`) || document.querySelector('.tab-btn[data-tab="tab-return-model"]');
     if (targetBtn) {
       targetBtn.click();
@@ -385,7 +390,11 @@ function setupTabNavigation() {
       horizonPane.classList.remove('active');
     }
 
-    const tabToActivate = targetTabId || previousStockTabId || 'tab-return-model';
+    const tabToActivate = (targetTabId && targetTabId !== 'tab-horizon-scanner' && targetTabId !== 'tab-sectors') 
+      ? targetTabId 
+      : (previousStockTabId && previousStockTabId !== 'tab-horizon-scanner' && previousStockTabId !== 'tab-sectors' 
+          ? previousStockTabId 
+          : 'tab-return-model');
     const targetBtn = document.querySelector(`.tab-btn[data-tab="${tabToActivate}"]`) || document.querySelector('.tab-btn[data-tab="tab-return-model"]');
     if (targetBtn) {
       targetBtn.click();
@@ -1520,6 +1529,12 @@ function setupNewsFilters() {
  * Add Custom Stock to Universe
  */
 function handleAddCustomStock(newStock) {
+  if (window.exitSectorDashboard && document.body.classList.contains('view-sector-dashboard')) {
+    window.exitSectorDashboard('tab-return-model');
+  }
+  if (window.exitHorizonScanner && document.body.classList.contains('view-horizon-scanner')) {
+    window.exitHorizonScanner('tab-return-model');
+  }
   state.universe[newStock.ticker] = newStock;
 
   const selector = document.getElementById('stockSelector');
@@ -1587,13 +1602,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Custom Stock Modal setup
   setupCustomStockModal(handleAddCustomStock);
 
-  // Sync real-time market indices ticker tape (NIFTY 50, SENSEX, INDIA VIX, S&P 500, NASDAQ, US 10Y YIELD)
+  // 1. Open Horizon Scanner as the Default View on Application Startup
+  openHorizonScanner();
+
+  // 2. Sync real-time market indices ticker tape (NIFTY 50, SENSEX, INDIA VIX, S&P 500, NASDAQ, US 10Y YIELD)
   syncMarketTickerTape();
 
-  // 1. Initialize with real-time live data for default ticker (NVDA)
-  await loadStockRealtime('NVDA');
+  // 3. Preload real-time live data for default ticker (NVDA) in background so Stock Terminal is primed
+  loadStockRealtime('NVDA');
 
-  // 2. Batch-sync real-time quotes for all stocks in the universe so GARP Radar, Quick Chips & Dropdowns display live quotes
+  // 4. Batch-sync real-time quotes for all stocks in the universe so GARP Radar, Quick Chips & Dropdowns display live quotes
   fetchAllUniverseQuotes(state.universe).then(updated => {
     state.universe = updated;
     updateQuickChipsWithLiveData(state.universe);
@@ -1602,17 +1620,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       loadStockRealtime(t);
       document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
     }, state.currentTicker);
-    renderHorizonScanner('horizonScannerContainer', (t) => {
-      loadStockRealtime(t);
-      document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
-    }, (t) => {
-      loadStockRealtime(t);
-      document.querySelector('.tab-btn[data-tab="tab-technicals"]')?.click();
-    });
     refreshIcons();
   });
 
-  // 3. Start continuous automated real-time polling (every 30 seconds)
+  // 5. Start continuous automated real-time polling (every 30 seconds)
   startRealtimePolling();
 
   refreshIcons();
