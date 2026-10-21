@@ -1415,13 +1415,27 @@
               </button>
             </div>
 
-            <!-- Market Filter Pills (All / NSE / US) -->
-            <div class="filter-subgroup">
-              <span class="filter-sublabel text-dim font-mono">Market:</span>
-              <div class="btn-group-toggle" id="rootMacroMarketFilterGroup">
-                <button class="btn-toggle-sm active" data-macro-market="ALL">🌐 All Markets</button>
-                <button class="btn-toggle-sm" data-macro-market="NSE">🇮🇳 NSE India</button>
-                <button class="btn-toggle-sm" data-macro-market="US">🇺🇸 US Equities</button>
+            <!-- Filters Group: Market & Asset Class -->
+            <div style="display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;">
+              <!-- Market Filter Pills (All / NSE / US) -->
+              <div class="filter-subgroup">
+                <span class="filter-sublabel text-dim font-mono">Market:</span>
+                <div class="btn-group-toggle" id="rootMacroMarketFilterGroup">
+                  <button class="btn-toggle-sm active" data-macro-market="ALL">🌐 All Markets</button>
+                  <button class="btn-toggle-sm" data-macro-market="NSE">🇮🇳 NSE India</button>
+                  <button class="btn-toggle-sm" data-macro-market="US">🇺🇸 US Equities</button>
+                </div>
+              </div>
+
+              <!-- Asset Class Filter Pills (All / Stocks / Indices / ETFs) -->
+              <div class="filter-subgroup">
+                <span class="filter-sublabel text-dim font-mono">Asset Class:</span>
+                <div class="btn-group-toggle" id="rootMacroAssetTypeFilterGroup">
+                  <button class="btn-toggle-sm active" data-macro-asset="ALL">All Classes</button>
+                  <button class="btn-toggle-sm" data-macro-asset="STOCK">🏢 Stocks</button>
+                  <button class="btn-toggle-sm" data-macro-asset="INDEX">📈 Indices</button>
+                  <button class="btn-toggle-sm" data-macro-asset="ETF">📦 ETFs</button>
+                </div>
               </div>
             </div>
           </div>

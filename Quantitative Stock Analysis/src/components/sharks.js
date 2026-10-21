@@ -15,6 +15,7 @@ let currentStockRef = null;
 let currentSharksFilter = 'ALL';
 let currentMacroMarket = 'ALL';
 let currentMacroCategory = 'BUYS'; // 'BUYS' | 'LOOKING_TO_ADD' | 'SELLS'
+let currentMacroAssetType = 'ALL'; // 'ALL' | 'STOCK' | 'INDEX' | 'ETF'
 let currentOnSelectStockCallback = null;
 
 // Reactive cache for real-time streaming quotes across macro radar stocks
@@ -426,10 +427,198 @@ export const CURATED_STOCK_SHARKS = {
  */
 export const MACRO_SHARK_TRENDS = {
   BUYS: [
+    // --- NSE INDIA STOCKS ---
+    {
+      ticker: 'TATAMOTORS.NS',
+      name: 'Tata Motors Limited',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'Automotive & EVs',
+      sharksBuying: ['Rekha Jhunjhunwala', 'SBI Mutual Fund', 'ICICI Prudential', 'Norges Bank'],
+      stakeIncreasePct: '+22.4%',
+      netCapitalInflow: '+₹4,200 Cr',
+      conviction: 'DEEP GARP (89/100)',
+      catalyst: 'JLR balance sheet net debt elimination, 70%+ Indian EV dominance, and impending demerger into commercial & passenger vehicles.'
+    },
+    {
+      ticker: 'BEL.NS',
+      name: 'Bharat Electronics Ltd',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'Defense & Aerospace',
+      sharksBuying: ['Ashish Kacholia', 'SBI Mutual Fund', 'LIC of India', 'HDFC MF'],
+      stakeIncreasePct: '+31.0%',
+      netCapitalInflow: '+₹3,850 Cr',
+      conviction: 'ORDER BOOK LEADER (94/100)',
+      catalyst: '₹76,000+ Cr defense electronics order backlog securing 3.85x annual revenue visibility.'
+    },
+    {
+      ticker: 'DIXON.NS',
+      name: 'Dixon Technologies India',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'Electronics EMS',
+      sharksBuying: ['Mukul Agrawal', 'Ashish Kacholia', 'Kotak MF', 'Nippon India'],
+      stakeIncreasePct: '+42.5%',
+      netCapitalInflow: '+₹2,450 Cr',
+      conviction: 'HIGH GROWTH (86/100)',
+      catalyst: 'Massive mobile and IT hardware PLI contract wins; rapid backward integration into display components.'
+    },
+    {
+      ticker: 'RELIANCE.NS',
+      name: 'Reliance Industries Ltd',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'Conglomerate & Energy',
+      sharksBuying: ['LIC of India', 'SBI Mutual Fund', 'Vanguard', 'BlackRock'],
+      stakeIncreasePct: '+14.2%',
+      netCapitalInflow: '+₹6,800 Cr',
+      conviction: 'SOVEREIGN CORE (90/100)',
+      catalyst: 'New Energy gigafactories commissioning, Jio telecom 5G monetization, and retail operating leverage.'
+    },
+    {
+      ticker: 'HDFCBANK.NS',
+      name: 'HDFC Bank Ltd',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'Banking & Financials',
+      sharksBuying: ['GQG Partners', 'Morgan Stanley FII', 'ICICI Prudential', 'Capital Group'],
+      stakeIncreasePct: '+18.5%',
+      netCapitalInflow: '+₹5,600 Cr',
+      conviction: 'VALUE ACCRETION (88/100)',
+      catalyst: 'Post-merger deposit ratio normalization, NIM trough recovery, and high credit quality underwriting.'
+    },
+    {
+      ticker: 'TRENT.NS',
+      name: 'Trent Limited (Tata Group)',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'Retail & Consumer',
+      sharksBuying: ['Rekha Jhunjhunwala', 'Radhakishan Damani', 'Axis Mutual Fund', 'Fidelity'],
+      stakeIncreasePct: '+36.8%',
+      netCapitalInflow: '+₹3,100 Cr',
+      conviction: 'RETAIL ALPHA (93/100)',
+      catalyst: 'Zudio rapid store rollouts delivering 40%+ EBITDA compounding with zero inventory obsolescence.'
+    },
+    {
+      ticker: 'HAL.NS',
+      name: 'Hindustan Aeronautics Ltd',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'Aerospace & Defense',
+      sharksBuying: ['SBI Mutual Fund', 'Kotak Defense Fund', 'LIC of India', 'GIC Singapore'],
+      stakeIncreasePct: '+28.0%',
+      netCapitalInflow: '+₹3,400 Cr',
+      conviction: 'INDIGENOUS DEFENSE (92/100)',
+      catalyst: 'Tejas Mk1A fighter jet assembly ramp-up and GE F414 aero-engine co-production transfer.'
+    },
+    {
+      ticker: 'BHARTIARTL.NS',
+      name: 'Bharti Airtel Ltd',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'Telecom & Enterprise Cloud',
+      sharksBuying: ['Singtel', 'GIC Singapore', 'HDFC Mutual Fund', 'Norges Bank'],
+      stakeIncreasePct: '+16.5%',
+      netCapitalInflow: '+₹4,100 Cr',
+      conviction: 'PRICING POWER (91/100)',
+      catalyst: 'Industry-wide tariff hike expansion driving ARPU to ₹245+ and Airtel B2B data cloud acceleration.'
+    },
+
+    // --- NSE INDIA INDICES ---
+    {
+      ticker: '^NSEI',
+      name: 'NIFTY 50 Index (Benchmark)',
+      market: 'NSE',
+      assetType: 'INDEX',
+      sector: 'Benchmark Indian Equities',
+      sharksBuying: ['EPFO Retirement Trust', 'ADIA (Abu Dhabi)', 'GIC Singapore', 'NPS National Pension'],
+      stakeIncreasePct: '+15.8% (AUM Alloc)',
+      netCapitalInflow: '+₹18,500 Cr',
+      conviction: 'INDIA MACRO ANCHOR (95/100)',
+      catalyst: 'India GDP compounding at 7.0%+, corporate earnings expansion, and systematic DII SIP inflows of ₹25,000+ Cr/month.'
+    },
+    {
+      ticker: '^NSEBANK',
+      name: 'NIFTY Bank Index',
+      market: 'NSE',
+      assetType: 'INDEX',
+      sector: 'Banking & Financial Services',
+      sharksBuying: ['Global Macro Hedge Funds', 'Domestic Mutual Funds', 'Quant Asset Desks'],
+      stakeIncreasePct: '+19.2%',
+      netCapitalInflow: '+₹12,400 Cr',
+      conviction: 'FINANCIAL CYCLE (89/100)',
+      catalyst: 'Multi-year low bank gross NPAs (<2.6%), 14%+ annual credit growth, and private capex credit cycles.'
+    },
+    {
+      ticker: '^CNXIT',
+      name: 'NIFTY IT Index',
+      market: 'NSE',
+      assetType: 'INDEX',
+      sector: 'Information Technology',
+      sharksBuying: ['FII Contrarian Value Funds', 'ICICI Prudential Tech Fund', 'Nomura Asset Mgmt'],
+      stakeIncreasePct: '+22.0%',
+      netCapitalInflow: '+₹7,200 Cr',
+      conviction: 'CONTRARIAN RE-RATING (85/100)',
+      catalyst: 'Global rate-easing cycle accelerating discretionary BFSI tech spend and GenAI enterprise migration.'
+    },
+
+    // --- NSE INDIA ETFS ---
+    {
+      ticker: 'NIFTYBEES.NS',
+      name: 'Nippon India Nifty 50 BeES ETF',
+      market: 'NSE',
+      assetType: 'ETF',
+      sector: 'Broad Market Equity ETF',
+      sharksBuying: ['EPFO Trusts', 'Corporate Treasuries', 'Family Office Asset Desks'],
+      stakeIncreasePct: '+25.4%',
+      netCapitalInflow: '+₹9,800 Cr',
+      conviction: 'CORE ALLOCATION (94/100)',
+      catalyst: 'Institutional lowest-cost (0.04% TER) passive proxy for Nifty 50 compounders with deep intraday liquidity.'
+    },
+    {
+      ticker: 'BANKBEES.NS',
+      name: 'Nippon India Bank BeES ETF',
+      market: 'NSE',
+      assetType: 'ETF',
+      sector: 'Banking Sector ETF',
+      sharksBuying: ['Quant FOFs', 'Institutional High-Net-Worth Portfolios'],
+      stakeIncreasePct: '+21.0%',
+      netCapitalInflow: '+₹5,900 Cr',
+      conviction: 'BANKING PROXY (88/100)',
+      catalyst: 'Systematic overweight allocation across India premier private and public commercial banks.'
+    },
+    {
+      ticker: 'GOLDBEES.NS',
+      name: 'Nippon India Gold BeES ETF',
+      market: 'NSE',
+      assetType: 'ETF',
+      sector: 'Physical Gold Commodity',
+      sharksBuying: ['Sovereign Wealth Funds', 'Private Wealth Families', 'Pension Allocators'],
+      stakeIncreasePct: '+38.5%',
+      netCapitalInflow: '+₹4,500 Cr',
+      conviction: 'SAFE HAVEN HEDGE (92/100)',
+      catalyst: 'De-dollarization global macro reserves accumulation, safe-haven hedging, and real rate declines.'
+    },
+    {
+      ticker: 'ITBEES.NS',
+      name: 'Nippon India IT BeES ETF',
+      market: 'NSE',
+      assetType: 'ETF',
+      sector: 'Technology Sector ETF',
+      sharksBuying: ['DII Thematic Funds', 'Family Offices', 'HNIs'],
+      stakeIncreasePct: '+19.5%',
+      netCapitalInflow: '+₹2,800 Cr',
+      conviction: 'TECH COMPOUNDER (84/100)',
+      catalyst: 'Valuation discount relative to historical Nifty multiple; high dividend yield support.'
+    },
+
+    // --- US EQUITIES STOCKS ---
     {
       ticker: 'NVDA',
       name: 'NVIDIA Corporation',
       market: 'US',
+      assetType: 'STOCK',
       sector: 'Semiconductors & AI',
       sharksBuying: ['Duquesne (Druckenmiller)', 'Appaloosa (Tepper)', 'Coatue (Laffont)', 'Vanguard'],
       stakeIncreasePct: '+34.2%',
@@ -441,7 +630,8 @@ export const MACRO_SHARK_TRENDS = {
       ticker: 'TSM',
       name: 'Taiwan Semiconductor',
       market: 'US',
-      sector: 'Semiconductors',
+      assetType: 'STOCK',
+      sector: 'Semiconductors Foundry',
       sharksBuying: ['Coatue Management', 'Appaloosa', 'Citadel', 'BlackRock'],
       stakeIncreasePct: '+28.5%',
       netCapitalInflow: '+$4.20B',
@@ -449,56 +639,324 @@ export const MACRO_SHARK_TRENDS = {
       catalyst: 'Exclusive 3nm & 2nm advanced packaging dominance for global hyperscalers with pricing power.'
     },
     {
-      ticker: 'TATAMOTORS.NS',
-      name: 'Tata Motors Limited',
-      market: 'NSE',
-      sector: 'Automotive & EVs',
-      sharksBuying: ['Rekha Jhunjhunwala', 'SBI Mutual Fund', 'ICICI Prudential', 'Norges Bank'],
-      stakeIncreasePct: '+22.4%',
-      netCapitalInflow: '+₹4,200 Cr',
-      conviction: 'DEEP GARP (89/100)',
-      catalyst: 'JLR balance sheet net debt elimination, 70%+ Indian EV dominance, and impending demerger.'
-    },
-    {
-      ticker: 'BEL.NS',
-      name: 'Bharat Electronics Ltd',
-      market: 'NSE',
-      sector: 'Defense & Aerospace',
-      sharksBuying: ['Ashish Kacholia', 'SBI Mutual Fund', 'LIC of India', 'HDFC MF'],
-      stakeIncreasePct: '+31.0%',
-      netCapitalInflow: '+₹3,850 Cr',
-      conviction: 'ORDER BOOK LEADER (94/100)',
-      catalyst: '₹76,000+ Cr defense electronics order backlog securing 3.85x annual revenue visibility.'
-    },
-    {
       ticker: 'META',
       name: 'Meta Platforms Inc',
       market: 'US',
+      assetType: 'STOCK',
       sector: 'Technology & AI',
       sharksBuying: ['Pershing Square', 'Duquesne', 'Coatue', 'Tiger Global'],
       stakeIncreasePct: '+19.8%',
       netCapitalInflow: '+$3.95B',
       conviction: 'VERY HIGH (87/100)',
-      catalyst: 'Open source AI model adoption driving advertising conversion efficiency and record margins.'
+      catalyst: 'Open source Llama AI model adoption driving advertising conversion efficiency and record margins.'
     },
     {
-      ticker: 'DIXON.NS',
-      name: 'Dixon Technologies India',
-      market: 'NSE',
-      sector: 'Electronics EMS',
-      sharksBuying: ['Mukul Agrawal', 'Ashish Kacholia', 'Kotak MF', 'Nippon India'],
-      stakeIncreasePct: '+42.5%',
-      netCapitalInflow: '+₹2,450 Cr',
-      conviction: 'HIGH GROWTH (86/100)',
-      catalyst: 'Massive mobile and IT hardware PLI contract wins; rapid backward integration into display components.'
+      ticker: 'AMZN',
+      name: 'Amazon.com Inc',
+      market: 'US',
+      assetType: 'STOCK',
+      sector: 'Cloud AWS & E-Commerce',
+      sharksBuying: ['Third Point (Dan Loeb)', 'Appaloosa', 'Lone Pine Capital'],
+      stakeIncreasePct: '+24.0%',
+      netCapitalInflow: '+$5.20B',
+      conviction: 'CLOUD ACCELERATION (90/100)',
+      catalyst: 'AWS generative AI revenue re-acceleration, retail fulfillment operational margins, and Prime advertising.'
+    },
+    {
+      ticker: 'GOOGL',
+      name: 'Alphabet Inc',
+      market: 'US',
+      assetType: 'STOCK',
+      sector: 'Search, Cloud & AI',
+      sharksBuying: ['Altimeter Capital', 'Bill & Melinda Gates Foundation', 'GQG Partners'],
+      stakeIncreasePct: '+16.2%',
+      netCapitalInflow: '+$4.10B',
+      conviction: 'DEEP GARP (89/100)',
+      catalyst: 'Gemini AI search integration, Google Cloud operating profit surge, and $70B annual share repurchases.'
+    },
+    {
+      ticker: 'AVGO',
+      name: 'Broadcom Inc',
+      market: 'US',
+      assetType: 'STOCK',
+      sector: 'Custom AI Silicon & Infra',
+      sharksBuying: ['Coatue', 'D.E. Shaw', 'Capital Group', 'Vanguard'],
+      stakeIncreasePct: '+31.5%',
+      netCapitalInflow: '+$4.60B',
+      conviction: 'CUSTOM ASIC LEADER (91/100)',
+      catalyst: 'Custom AI XPU accelerators for Meta, Google, and ByteDance coupled with VMware subscription ARR.'
+    },
+    {
+      ticker: 'MU',
+      name: 'Micron Technology',
+      market: 'US',
+      assetType: 'STOCK',
+      sector: 'Memory & HBM3e',
+      sharksBuying: ['Appaloosa (David Tepper)', 'Citadel', 'Millennium Mgmt'],
+      stakeIncreasePct: '+45.0%',
+      netCapitalInflow: '+$2.80B',
+      conviction: 'HBM CAPEX SUPERCYCLE (88/100)',
+      catalyst: 'High Bandwidth Memory (HBM3e) allocated and sold out through calendar 2026; PEG < 0.50 valuation.'
+    },
+    {
+      ticker: 'PLTR',
+      name: 'Palantir Technologies',
+      market: 'US',
+      assetType: 'STOCK',
+      sector: 'Enterprise AI & Defense',
+      sharksBuying: ['Stanley Druckenmiller', 'Renaissance Technologies', 'Citadel'],
+      stakeIncreasePct: '+52.0%',
+      netCapitalInflow: '+$2.20B',
+      conviction: 'COMMERCIAL AI BOOTCAMPS (86/100)',
+      catalyst: 'US commercial AIP revenue surge (+54% YoY), defense contracts, and inclusion into S&P 500 index.'
+    },
+
+    // --- US EQUITIES INDICES ---
+    {
+      ticker: '^GSPC',
+      name: 'S&P 500 Index (Benchmark)',
+      market: 'US',
+      assetType: 'INDEX',
+      sector: 'US Large-Cap Equities',
+      sharksBuying: ['Norway Sovereign GPFG', 'GIC Singapore', 'CalPERS Pension', 'Bridgewater'],
+      stakeIncreasePct: '+14.5% (Macro Futures)',
+      netCapitalInflow: '+$42.0B',
+      conviction: 'GLOBAL MACRO CORE (96/100)',
+      catalyst: 'Corporate earnings expansion to record $275+ EPS, economic productivity, and global liquidity primacy.'
+    },
+    {
+      ticker: '^IXIC',
+      name: 'NASDAQ Composite Index',
+      market: 'US',
+      assetType: 'INDEX',
+      sector: 'Technology & Growth',
+      sharksBuying: ['Global Systematic Quant Funds', 'CTA Trend Followers', 'Millennium'],
+      stakeIncreasePct: '+26.0%',
+      netCapitalInflow: '+$28.5B',
+      conviction: 'TECH COMPOUNDER (93/100)',
+      catalyst: 'Mega-cap software and hardware capex monetization compounding earnings at 18%+ annually.'
+    },
+    {
+      ticker: '^DJI',
+      name: 'Dow Jones Industrial Average',
+      market: 'US',
+      assetType: 'INDEX',
+      sector: 'Industrial & Cyclical Leaders',
+      sharksBuying: ['Value & Dividend Allocation Desks', 'Pension Funds'],
+      stakeIncreasePct: '+12.0%',
+      netCapitalInflow: '+$14.2B',
+      conviction: 'BLUE CHIP STABILITY (87/100)',
+      catalyst: 'Industrial reshoring, Infrastructure Act spending, and steady capital return through dividend growth.'
+    },
+
+    // --- US EQUITIES ETFS ---
+    {
+      ticker: 'SPY',
+      name: 'SPDR S&P 500 ETF Trust',
+      market: 'US',
+      assetType: 'ETF',
+      sector: 'Flagship US Large-Cap ETF',
+      sharksBuying: ['Global Pension Funds', 'Central Bank Sovereign Reserves', 'Macro Hedge Funds'],
+      stakeIncreasePct: '+18.4%',
+      netCapitalInflow: '+$24.5B',
+      conviction: 'GLOBAL LIQUIDITY ANCHOR (97/100)',
+      catalyst: 'Unrivaled global trading liquidity ($35B+/day) serving as the primary vehicle for equity allocation.'
+    },
+    {
+      ticker: 'QQQ',
+      name: 'Invesco QQQ Trust (NASDAQ-100)',
+      market: 'US',
+      assetType: 'ETF',
+      sector: 'Tech Innovation ETF',
+      sharksBuying: ['Multi-Manager Pods', 'Institutional Endowments', 'Family Offices'],
+      stakeIncreasePct: '+22.8%',
+      netCapitalInflow: '+$18.2B',
+      conviction: 'TECH MONOPOLY (94/100)',
+      catalyst: 'Concentrated exposure to the world top 100 non-financial tech leaders driving global AI capital expenditure.'
+    },
+    {
+      ticker: 'SMH',
+      name: 'VanEck Semiconductor ETF',
+      market: 'US',
+      assetType: 'ETF',
+      sector: 'Semiconductor Industry ETF',
+      sharksBuying: ['Tech Thematic Funds', 'Citadel', 'Millennium', 'Two Sigma'],
+      stakeIncreasePct: '+36.0%',
+      netCapitalInflow: '+$6.80B',
+      conviction: 'HARDWARE SUPERCYCLE (91/100)',
+      catalyst: 'Premier proxy for compute, memory, EDA software, and lithography equipment monopolies.'
+    },
+    {
+      ticker: 'GLD',
+      name: 'SPDR Gold Shares ETF',
+      market: 'US',
+      assetType: 'ETF',
+      sector: 'Physical Gold Custody',
+      sharksBuying: ['Macro Hedge Funds (Bridgewater, Tudor Jones)', 'Central Banks'],
+      stakeIncreasePct: '+32.5%',
+      netCapitalInflow: '+$7.40B',
+      conviction: 'MONETARY HEDGE (93/100)',
+      catalyst: 'Sovereign balance sheet debt debasement hedge, central bank bullion buying, and declining real yields.'
     }
   ],
 
   LOOKING_TO_ADD: [
+    // --- NSE INDIA STOCKS ---
+    {
+      ticker: 'KAYNES.NS',
+      name: 'Kaynes Technology India',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'IoT & Defense EMS',
+      sharksBuying: ['Ashish Kacholia', 'SBI MF Emerging Leaders', 'Goldman Sachs FII'],
+      stakeIncreasePct: '+68.0%',
+      netCapitalInflow: '+₹1,180 Cr',
+      conviction: 'HIGH ORDER CONVERSION (85/100)',
+      catalyst: 'Semiconductor OSAT facility sanction and high-margin industrial aerospace EMS contracts.'
+    },
+    {
+      ticker: 'MAZDOCK.NS',
+      name: 'Mazagon Dock Shipbuilders',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'Defense Naval Vessels',
+      sharksBuying: ['Mukul Agrawal', 'LIC of India', 'HDFC Defense Fund'],
+      stakeIncreasePct: '+45.0%',
+      netCapitalInflow: '+₹1,620 Cr',
+      conviction: 'DEFENSE PIPELINE (88/100)',
+      catalyst: 'Project 75I submarine contract and stealth destroyer export orders.'
+    },
+    {
+      ticker: 'TATAPOWER.NS',
+      name: 'The Tata Power Company',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'Clean Energy & Utilities',
+      sharksBuying: ['Tata Sons', 'BlackRock Renewable', 'Vanguard'],
+      stakeIncreasePct: '+28.0%',
+      netCapitalInflow: '+₹2,100 Cr',
+      conviction: 'ENERGY TRANSITION (86/100)',
+      catalyst: '20 GW clean energy generation target and high-margin transmission EPC grid projects.'
+    },
+    {
+      ticker: 'SUZLON.NS',
+      name: 'Suzlon Energy Ltd',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'Wind Renewable Energy',
+      sharksBuying: ['Mukul Agrawal', 'Quant Mutual Fund', 'Bandhan MF'],
+      stakeIncreasePct: '+95.0%',
+      netCapitalInflow: '+₹1,450 Cr',
+      conviction: 'TURNAROUND LEADER (84/100)',
+      catalyst: '5.4 GW record order book, zero net debt balance sheet, and C&I renewable mandates.'
+    },
+    {
+      ticker: 'BSE.NS',
+      name: 'BSE Limited (Exchange)',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'Financial Market Infrastructure',
+      sharksBuying: ['Foreign Portfolio Investors', 'ICICI Prudential', 'Nippon India'],
+      stakeIncreasePct: '+54.0%',
+      netCapitalInflow: '+₹1,320 Cr',
+      conviction: 'MARKET SHARE GAINER (87/100)',
+      catalyst: 'Index derivative turnover market share expansion to 22%+ and clearing corporation operating leverage.'
+    },
+    {
+      ticker: 'KPITTECH.NS',
+      name: 'KPIT Technologies',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'Automotive Software & AI',
+      sharksBuying: ['Ashish Kacholia', 'SBI Mutual Fund', 'Nomura FII'],
+      stakeIncreasePct: '+32.0%',
+      netCapitalInflow: '+₹980 Cr',
+      conviction: 'SDV ACCELERATION (85/100)',
+      catalyst: 'Software-defined vehicle (SDV) architectural multi-year contracts with top global automotive OEMs.'
+    },
+    {
+      ticker: 'POLYCAB.NS',
+      name: 'Polycab India Ltd',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'Cables & Industrial Wires',
+      sharksBuying: ['DSP Mutual Fund', 'Capital Group', 'HDFC MF'],
+      stakeIncreasePct: '+26.0%',
+      netCapitalInflow: '+₹1,250 Cr',
+      conviction: 'INFRASTRUCTURE CAPEX (86/100)',
+      catalyst: 'Real estate construction surge and renewable grid infrastructure capex driving 25%+ domestic volume growth.'
+    },
+    {
+      ticker: 'ADANIENT.NS',
+      name: 'Adani Enterprises Ltd',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'Airports & Green Infra',
+      sharksBuying: ['GQG Partners (Rajiv Jain)', 'IHC Abu Dhabi', 'LIC of India'],
+      stakeIncreasePct: '+38.0%',
+      netCapitalInflow: '+₹2,400 Cr',
+      conviction: 'INFRASTRUCTURE INCUBATOR (83/100)',
+      catalyst: 'Navi Mumbai airport commissioning, green hydrogen manufacturing, and data center buildouts.'
+    },
+
+    // --- NSE INDIA INDICES ---
+    {
+      ticker: '^CNXSC',
+      name: 'NIFTY Smallcap 100 Index',
+      market: 'NSE',
+      assetType: 'INDEX',
+      sector: 'Indian Small-Cap Equities',
+      sharksBuying: ['PMS Wealth Schemes', 'HNIs', 'Quant DII Funds'],
+      stakeIncreasePct: '+42.0%',
+      netCapitalInflow: '+₹6,500 Cr',
+      conviction: 'HIGH BETA ALPHA (86/100)',
+      catalyst: 'Domestic manufacturing localization and capital goods profit margins expanding faster than benchmark.'
+    },
+
+    // --- NSE INDIA ETFS ---
+    {
+      ticker: 'CPSEETF.NS',
+      name: 'CPSE ETF (Public Sector Leaders)',
+      market: 'NSE',
+      assetType: 'ETF',
+      sector: 'Sovereign PSU ETF',
+      sharksBuying: ['Institutional Dividend Portfolios', 'EPFO', 'Sovereign Wealth'],
+      stakeIncreasePct: '+48.0%',
+      netCapitalInflow: '+₹3,900 Cr',
+      conviction: 'PSU DIVIDEND VALUE (88/100)',
+      catalyst: 'Generous 4.5%+ dividend yields, sovereign capex priority, and robust public sector balance sheets.'
+    },
+    {
+      ticker: 'SILVERBEES.NS',
+      name: 'Nippon India Silver BeES ETF',
+      market: 'NSE',
+      assetType: 'ETF',
+      sector: 'Physical Silver Commodity',
+      sharksBuying: ['Commodity Arbitrage Desks', 'Private Wealth Families'],
+      stakeIncreasePct: '+62.0%',
+      netCapitalInflow: '+₹2,100 Cr',
+      conviction: 'INDUSTRIAL GREEN METAL (87/100)',
+      catalyst: 'Structural industrial deficit driven by global solar photovoltaic capacity and electric vehicle electronics.'
+    },
+    {
+      ticker: 'JUNIORBEES.NS',
+      name: 'Nippon India Nifty Next 50 ETF',
+      market: 'NSE',
+      assetType: 'ETF',
+      sector: 'Next-Gen Bluechips ETF',
+      sharksBuying: ['Institutional Endowments', 'Long-Horizon Family Portfolios'],
+      stakeIncreasePct: '+29.0%',
+      netCapitalInflow: '+₹3,200 Cr',
+      conviction: 'FUTURE NIFTY 50 (86/100)',
+      catalyst: 'Higher long-term earnings growth rate (18%+) compared to front-line benchmark index.'
+    },
+
+    // --- US EQUITIES STOCKS ---
     {
       ticker: 'OKLO',
       name: 'Oklo Inc. (Nuclear SMR)',
       market: 'US',
+      assetType: 'STOCK',
       sector: 'Clean Energy & Nuclear',
       sharksBuying: ['Sam Altman / Venture Whales', 'Ken Griffin (Citadel)', 'Peter Thiel Family'],
       stakeIncreasePct: '+185.0% (Starter Positions)',
@@ -510,6 +968,7 @@ export const MACRO_SHARK_TRENDS = {
       ticker: 'ASTS',
       name: 'AST SpaceMobile',
       market: 'US',
+      assetType: 'STOCK',
       sector: 'Space Satellite Telecom',
       sharksBuying: ['Scion (Burry Tactical)', 'Vanguard Special Growth', 'BlackRock'],
       stakeIncreasePct: '+120.0%',
@@ -518,20 +977,10 @@ export const MACRO_SHARK_TRENDS = {
       catalyst: 'Direct-to-cell commercialization with AT&T and Verizon multi-million subscriber commercial contracts.'
     },
     {
-      ticker: 'KAYNES.NS',
-      name: 'Kaynes Technology India',
-      market: 'NSE',
-      sector: 'IoT & Defense EMS',
-      sharksBuying: ['Ashish Kacholia', 'SBI MF Emerging Leaders', 'Goldman Sachs FII'],
-      stakeIncreasePct: '+68.0%',
-      netCapitalInflow: '+₹1,180 Cr',
-      conviction: 'HIGH ORDER CONVERSION (85/100)',
-      catalyst: 'Semiconductor OSAT facility sanction and high-margin industrial aerospace EMS contracts.'
-    },
-    {
       ticker: 'ARM',
       name: 'Arm Holdings plc',
       market: 'US',
+      assetType: 'STOCK',
       sector: 'Semiconductor IP',
       sharksBuying: ['SoftBank (Holding)', 'Coatue', 'Tiger Global', 'Fidelity Growth'],
       stakeIncreasePct: '+35.0%',
@@ -540,56 +989,138 @@ export const MACRO_SHARK_TRENDS = {
       catalyst: 'ARMv9 royalty rate expansion across AI PC and hyperscale custom silicon adoption.'
     },
     {
-      ticker: 'MAZDOCK.NS',
-      name: 'Mazagon Dock Shipbuilders',
-      market: 'NSE',
-      sector: 'Defense Naval Vessels',
-      sharksBuying: ['Mukul Agrawal', 'LIC of India', 'HDFC Defense Fund'],
+      ticker: 'CRWD',
+      name: 'CrowdStrike Holdings',
+      market: 'US',
+      assetType: 'STOCK',
+      sector: 'Cloud Cybersecurity',
+      sharksBuying: ['Lone Pine Capital', 'Coatue', 'Altimeter Capital'],
+      stakeIncreasePct: '+42.0%',
+      netCapitalInflow: '+$1.40B',
+      conviction: 'CYBERSECURITY PLATFORM (85/100)',
+      catalyst: 'Resilient net customer retention post incident, Falcon Flex subscription adoption, and platform consolidation.'
+    },
+    {
+      ticker: 'APP',
+      name: 'AppLovin Corporation',
+      market: 'US',
+      assetType: 'STOCK',
+      sector: 'AI AdTech Software',
+      sharksBuying: ['Point72 (Steve Cohen)', 'Citadel', 'Whale Rock Capital'],
+      stakeIncreasePct: '+88.0%',
+      netCapitalInflow: '+$1.65B',
+      conviction: 'ADTECH PROFITABILITY (89/100)',
+      catalyst: 'AXON 2.0 AI advertising engine driving 70%+ software EBITDA margins and e-commerce web campaign expansion.'
+    },
+    {
+      ticker: 'VRT',
+      name: 'Vertiv Holdings Co',
+      market: 'US',
+      assetType: 'STOCK',
+      sector: 'Datacenter Power & Cooling',
+      sharksBuying: ['Third Point (Dan Loeb)', 'Duquesne', 'BlackRock'],
+      stakeIncreasePct: '+64.0%',
+      netCapitalInflow: '+$1.90B',
+      conviction: 'DATACENTER INFRASTRUCTURE (88/100)',
+      catalyst: 'Liquid cooling backlog surge to record $7.5B as AI server rack power densities exceed 100 kW/rack.'
+    },
+    {
+      ticker: 'CEG',
+      name: 'Constellation Energy Corp',
+      market: 'US',
+      assetType: 'STOCK',
+      sector: 'Nuclear Power Utilities',
+      sharksBuying: ['Viking Global', 'Greenlight Capital', 'Millennium'],
+      stakeIncreasePct: '+55.0%',
+      netCapitalInflow: '+$2.10B',
+      conviction: 'NUCLEAR BASELOAD (87/100)',
+      catalyst: '20-year Microsoft power purchase agreement to restart Crane Clean Energy Center at premium power tariffs.'
+    },
+    {
+      ticker: 'COIN',
+      name: 'Coinbase Global Inc',
+      market: 'US',
+      assetType: 'STOCK',
+      sector: 'Crypto Financial Infrastructure',
+      sharksBuying: ['ARK Invest (Cathie Wood)', 'Citadel Securities', 'Jane Street'],
       stakeIncreasePct: '+45.0%',
-      netCapitalInflow: '+₹1,620 Cr',
-      conviction: 'DEFENSE PIPELINE (88/100)',
-      catalyst: 'Project 75I submarine contract and stealth destroyer export orders.'
+      netCapitalInflow: '+$1.15B',
+      conviction: 'INSTITUTIONAL CUSTODY (83/100)',
+      catalyst: 'Spot Bitcoin/Ethereum ETF custodian fee monopoly and Base Layer-2 network transaction fee acceleration.'
+    },
+
+    // --- US EQUITIES INDICES ---
+    {
+      ticker: '^RUT',
+      name: 'Russell 2000 Index',
+      market: 'US',
+      assetType: 'INDEX',
+      sector: 'US Small-Cap Equities',
+      sharksBuying: ['Macro Hedge Funds', 'Small-Cap Turnaround Desks', 'Renaissance'],
+      stakeIncreasePct: '+38.0% (Futures Longs)',
+      netCapitalInflow: '+$16.5B',
+      conviction: 'RATE-CUT EXPANSION (86/100)',
+      catalyst: 'Federal Reserve rate-cutting cycle significantly lowering floating debt service burdens for domestic small caps.'
+    },
+
+    // --- US EQUITIES ETFS ---
+    {
+      ticker: 'IWM',
+      name: 'iShares Russell 2000 ETF',
+      market: 'US',
+      assetType: 'ETF',
+      sector: 'Small-Cap Growth ETF',
+      sharksBuying: ['Systematic Quant Pods', 'Tactical Macro Traders'],
+      stakeIncreasePct: '+41.0%',
+      netCapitalInflow: '+$9.40B',
+      conviction: 'VALUATION RECOVERY (85/100)',
+      catalyst: 'Valuation multiple discount relative to S&P 500 at 25-year extremes triggering institutional rotation.'
+    },
+    {
+      ticker: 'TLT',
+      name: 'iShares 20+ Year Treasury Bond ETF',
+      market: 'US',
+      assetType: 'ETF',
+      sector: 'Long-Term Sovereign Treasuries',
+      sharksBuying: ['Bridgewater (Ray Dalio)', 'PIMCO Total Return', 'Multi-Asset Funds'],
+      stakeIncreasePct: '+34.0%',
+      netCapitalInflow: '+$11.8B',
+      conviction: 'DURATION LOCK-IN (89/100)',
+      catalyst: 'Locking in historically attractive 4.5%+ long-term yield ahead of global sovereign monetary easing cycle.'
+    },
+    {
+      ticker: 'XLE',
+      name: 'Energy Select Sector SPDR ETF',
+      market: 'US',
+      assetType: 'ETF',
+      sector: 'Energy Sector ETF',
+      sharksBuying: ['Greenlight Capital', 'Buffett Capital Partners (Indirect)'],
+      stakeIncreasePct: '+24.0%',
+      netCapitalInflow: '+$4.20B',
+      conviction: 'CASH FLOW YIELD (84/100)',
+      catalyst: '8%+ free cash flow yields, disciplined upstream capital allocation, and record shareholder cash returns.'
+    },
+    {
+      ticker: 'URNM',
+      name: 'Sprott Uranium Miners ETF',
+      market: 'US',
+      assetType: 'ETF',
+      sector: 'Nuclear Fuel Thematic ETF',
+      sharksBuying: ['Commodity Macro Funds', 'Family Offices', 'Resource Quant Funds'],
+      stakeIncreasePct: '+72.0%',
+      netCapitalInflow: '+$1.35B',
+      conviction: 'SUPPLY DEFICIT (88/100)',
+      catalyst: 'Multi-year global nuclear utility contracting deficit compounded by major producer supply reductions.'
     }
   ],
 
   SELLS: [
-    {
-      ticker: 'AAPL',
-      name: 'Apple Inc.',
-      market: 'US',
-      sector: 'Consumer Electronics',
-      sharksSelling: ['Berkshire Hathaway (Warren Buffett)', 'Appaloosa Management'],
-      stakeReductionPct: '-49.0% (Massive Trim)',
-      netCapitalOutflow: '-$22.5B',
-      conviction: 'PROFIT REALIZATION (54/100)',
-      reason: 'Buffett rotating historic gains into cash fortress; China revenue slowdown and antitrust regulatory scrutiny.'
-    },
-    {
-      ticker: 'TSLA',
-      name: 'Tesla Inc.',
-      market: 'US',
-      sector: 'Automotive & Clean Energy',
-      sharksSelling: ['Scion Asset Mgmt (Burry)', 'Bridgewater (Dalio)', 'Pershing Square'],
-      stakeReductionPct: '-32.0%',
-      netCapitalOutflow: '-$4.80B',
-      conviction: 'VALUATION CAUTION (48/100)',
-      reason: 'Automotive gross margin compression from global price competition; robotaxi regulatory uncertainty.'
-    },
-    {
-      ticker: 'INTC',
-      name: 'Intel Corporation',
-      market: 'US',
-      sector: 'Semiconductors',
-      sharksSelling: ['Coatue Management', 'Appaloosa', 'Citadel', 'Duquesne'],
-      stakeReductionPct: '-78.0% (Near Total Exit)',
-      netCapitalOutflow: '-$3.10B',
-      conviction: 'STRUCTURAL LAGGER (32/100)',
-      reason: 'Loss of datacenter server share to AMD and complete absence in AI accelerator market; Foundry cash burn.'
-    },
+    // --- NSE INDIA STOCKS ---
     {
       ticker: 'PAYTM.NS',
       name: 'One97 Communications Ltd',
       market: 'NSE',
+      assetType: 'STOCK',
       sector: 'Fintech Payments',
       sharksSelling: ['SoftBank Group', 'Warren Buffett (Exited)', 'Ant Group'],
       stakeReductionPct: '-100% (Clean Exit by Key Whales)',
@@ -601,15 +1132,203 @@ export const MACRO_SHARK_TRENDS = {
       ticker: 'ZEEL.NS',
       name: 'Zee Entertainment Enterprises',
       market: 'NSE',
+      assetType: 'STOCK',
       sector: 'Media & Entertainment',
       sharksSelling: ['LIC of India', 'Nippon India MF', 'ICICI Prudential'],
       stakeReductionPct: '-41.0%',
       netCapitalOutflow: '-₹1,450 Cr',
       conviction: 'M&A TERMINATION (35/100)',
       reason: 'Merger termination, competitive OTT disruption, and corporate governance overhang.'
+    },
+    {
+      ticker: 'INDUSINDBK.NS',
+      name: 'IndusInd Bank Ltd',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'Private Banking & MFI',
+      sharksSelling: ['Foreign Portfolio Investors', 'Nomura', 'BNP Paribas'],
+      stakeReductionPct: '-28.0%',
+      netCapitalOutflow: '-₹2,100 Cr',
+      conviction: 'CREDIT ASSET QUALITY (44/100)',
+      reason: 'Microfinance institution (MFI) loan slippages and net interest margin compression.'
+    },
+    {
+      ticker: 'WIPRO.NS',
+      name: 'Wipro Limited',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'IT Consulting & Services',
+      sharksSelling: ['FII Institutional Sellers', 'DII Rebalancing Desks'],
+      stakeReductionPct: '-35.0%',
+      netCapitalOutflow: '-₹2,800 Cr',
+      conviction: 'REVENUE LAGGER (42/100)',
+      reason: 'Consecutive quarters of organic revenue contraction and lagged margin recovery versus Tier-1 IT peers.'
+    },
+    {
+      ticker: 'UPL.NS',
+      name: 'UPL Limited',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'Agrochemicals & Crop Protection',
+      sharksSelling: ['Institutional Sellers', 'SBI Mutual Fund', 'BlackRock'],
+      stakeReductionPct: '-44.0%',
+      netCapitalOutflow: '-₹1,950 Cr',
+      conviction: 'DELEVERAGING OVERHANG (40/100)',
+      reason: 'Global channel destocking in agrochemicals, elevated debt service burden, and weak pricing realization.'
+    },
+    {
+      ticker: 'IDEA.NS',
+      name: 'Vodafone Idea Ltd',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'Telecom Services',
+      sharksSelling: ['Institutional FOFs', 'LIC (Trimming)', 'Foreign Value Funds'],
+      stakeReductionPct: '-65.0%',
+      netCapitalOutflow: '-₹1,600 Cr',
+      conviction: 'SUBSCRIBER CHURN (31/100)',
+      reason: 'Persistent monthly subscriber loss to Jio/Airtel, bank debt refinancing delays, and 5G capex underinvestment.'
+    },
+    {
+      ticker: 'DELHIVERY.NS',
+      name: 'Delhivery Limited',
+      market: 'NSE',
+      assetType: 'STOCK',
+      sector: 'Logistics & Express Parcel',
+      sharksSelling: ['SoftBank Group (Trimming)', 'Tiger Global', 'CPPIB'],
+      stakeReductionPct: '-52.0%',
+      netCapitalOutflow: '-₹1,850 Cr',
+      conviction: 'MARGIN COMPRESSION (43/100)',
+      reason: 'Large e-commerce marketplace in-sourcing of logistics and express parcel volume pricing pressure.'
+    },
+
+    // --- NSE INDIA ETFS ---
+    {
+      ticker: 'AUTOBEES.NS',
+      name: 'Nippon India Auto BeES ETF',
+      market: 'NSE',
+      assetType: 'ETF',
+      sector: 'Automotive Sector ETF',
+      sharksSelling: ['Tactical Sector Rotators', 'PMS Desks'],
+      stakeReductionPct: '-24.0%',
+      netCapitalOutflow: '-₹1,200 Cr',
+      conviction: 'PROFIT REALIZATION (49/100)',
+      reason: 'Trimming post-peak passenger vehicle inventory buildup and normalization of dealer discounts.'
+    },
+
+    // --- US EQUITIES STOCKS ---
+    {
+      ticker: 'AAPL',
+      name: 'Apple Inc.',
+      market: 'US',
+      assetType: 'STOCK',
+      sector: 'Consumer Electronics',
+      sharksSelling: ['Berkshire Hathaway (Warren Buffett)', 'Appaloosa Management'],
+      stakeReductionPct: '-49.0% (Historic Trim)',
+      netCapitalOutflow: '-$22.5B',
+      conviction: 'PROFIT REALIZATION (54/100)',
+      reason: 'Buffett rotating historic gains into cash fortress; China revenue slowdown and antitrust regulatory scrutiny.'
+    },
+    {
+      ticker: 'TSLA',
+      name: 'Tesla Inc.',
+      market: 'US',
+      assetType: 'STOCK',
+      sector: 'Automotive & Clean Energy',
+      sharksSelling: ['Scion Asset Mgmt (Burry)', 'Bridgewater (Dalio)', 'Pershing Square'],
+      stakeReductionPct: '-32.0%',
+      netCapitalOutflow: '-$4.80B',
+      conviction: 'VALUATION CAUTION (48/100)',
+      reason: 'Automotive gross margin compression from global price competition; robotaxi regulatory uncertainty.'
+    },
+    {
+      ticker: 'INTC',
+      name: 'Intel Corporation',
+      market: 'US',
+      assetType: 'STOCK',
+      sector: 'Semiconductors',
+      sharksSelling: ['Coatue Management', 'Appaloosa', 'Citadel', 'Duquesne'],
+      stakeReductionPct: '-78.0% (Near Total Exit)',
+      netCapitalOutflow: '-$3.10B',
+      conviction: 'STRUCTURAL LAGGER (32/100)',
+      reason: 'Loss of datacenter server share to AMD and complete absence in AI accelerator market; Foundry cash burn.'
+    },
+    {
+      ticker: 'NKE',
+      name: 'NIKE Inc.',
+      market: 'US',
+      assetType: 'STOCK',
+      sector: 'Footwear & Athletic Apparel',
+      sharksSelling: ['Pershing Square (Ackman Exit)', 'Lone Pine', 'Fidelity'],
+      stakeReductionPct: '-58.0%',
+      netCapitalOutflow: '-$3.60B',
+      conviction: 'INNOVATION STALL (45/100)',
+      reason: 'Product innovation lag, direct-to-consumer channel friction, and market share losses to On Holding and Hoka.'
+    },
+    {
+      ticker: 'SBUX',
+      name: 'Starbucks Corporation',
+      market: 'US',
+      assetType: 'STOCK',
+      sector: 'Retail & Consumer Foodservice',
+      sharksSelling: ['Pershing Square', 'Bridgewater', 'T. Rowe Price'],
+      stakeReductionPct: '-42.0%',
+      netCapitalOutflow: '-$2.90B',
+      conviction: 'TRAFFIC HEADWINDS (47/100)',
+      reason: 'North America transaction count declines and fierce China price competition from Luckin Coffee.'
+    },
+    {
+      ticker: 'PFE',
+      name: 'Pfizer Inc.',
+      market: 'US',
+      assetType: 'STOCK',
+      sector: 'Biopharmaceuticals',
+      sharksSelling: ['Institutional Healthcare Funds', 'Vanguard', 'State Street'],
+      stakeReductionPct: '-46.0%',
+      netCapitalOutflow: '-$4.10B',
+      conviction: 'PATENT CLIFF (44/100)',
+      reason: 'Severe post-Covid vaccine revenue cliff, heavy Seagen acquisition debt, and impending loss of patent exclusivity.'
+    },
+    {
+      ticker: 'BA',
+      name: 'The Boeing Company',
+      market: 'US',
+      assetType: 'STOCK',
+      sector: 'Commercial Aerospace & Defense',
+      sharksSelling: ['T. Rowe Price', 'Capital Group', 'BlackRock'],
+      stakeReductionPct: '-62.0%',
+      netCapitalOutflow: '-$5.80B',
+      conviction: 'OPERATIONAL CRISIS (36/100)',
+      reason: 'FAA 737-MAX production caps, IAM machinist labor strike cash burn, and multi-billion-dollar dilutive equity raises.'
+    },
+
+    // --- US EQUITIES ETFS ---
+    {
+      ticker: 'ARKK',
+      name: 'ARK Innovation ETF',
+      market: 'US',
+      assetType: 'ETF',
+      sector: 'Speculative Tech ETF',
+      sharksSelling: ['Institutional FOF Allocators', 'Quantitative Risk Desks'],
+      stakeReductionPct: '-75.0%',
+      netCapitalOutflow: '-$6.20B',
+      conviction: 'SPECULATIVE REDUCTION (34/100)',
+      reason: 'Persistent fundamental underperformance, lack of portfolio free cash flow, and institutional risk-off rotation.'
+    },
+    {
+      ticker: 'XLF',
+      name: 'Financial Select Sector SPDR ETF',
+      market: 'US',
+      assetType: 'ETF',
+      sector: 'Financial Sector ETF',
+      sharksSelling: ['Quantitative Macro Hedgers', 'Institutional Rebalancers'],
+      stakeReductionPct: '-21.0%',
+      netCapitalOutflow: '-$4.50B',
+      conviction: 'TACTICAL ROTATION (50/100)',
+      reason: 'Profit taking following strong bank index rally ahead of net interest margin compression.'
     }
   ]
 };
+;
 
 /**
  * Fetch a single live quote from Yahoo Finance API proxy
@@ -1136,14 +1855,17 @@ function renderMacroSharkRadar(onSelectStock) {
 
   const dataset = MACRO_SHARK_TRENDS[currentMacroCategory] || MACRO_SHARK_TRENDS.BUYS;
   const filtered = dataset.filter(item => {
-    if (currentMacroMarket === 'ALL') return true;
-    return item.market === currentMacroMarket;
+    if (currentMacroMarket !== 'ALL' && item.market !== currentMacroMarket) return false;
+    if (currentMacroAssetType !== 'ALL' && item.assetType !== currentMacroAssetType) return false;
+    return true;
   });
 
   if (filtered.length === 0) {
+    const marketLabel = currentMacroMarket === 'NSE' ? 'NSE India' : (currentMacroMarket === 'US' ? 'US Equities' : 'All Markets');
+    const assetLabel = currentMacroAssetType === 'STOCK' ? 'Stocks' : (currentMacroAssetType === 'INDEX' ? 'Indices' : (currentMacroAssetType === 'ETF' ? 'ETFs' : 'All Classes'));
     container.innerHTML = `
       <div style="text-align: center; padding: 40px; color: var(--text-dim);">
-        No macro trends recorded for market "${currentMacroMarket}" in category "${currentMacroCategory}".
+        No macro trends recorded for market "${marketLabel}" and asset class "${assetLabel}" in category "${currentMacroCategory}".
       </div>
     `;
     return;
@@ -1154,8 +1876,8 @@ function renderMacroSharkRadar(onSelectStock) {
       <table class="macro-radar-table">
         <thead>
           <tr>
-            <th>Ticker &amp; Company</th>
-            <th>Market &amp; Sector</th>
+            <th>Ticker &amp; Asset</th>
+            <th>Market, Type &amp; Sector</th>
             <th>Live Market Price</th>
             <th>${currentMacroCategory === 'SELLS' ? 'Whales Trimming' : 'Prominent Sharks Allocating'}</th>
             <th>${currentMacroCategory === 'SELLS' ? 'Stake Reduction' : 'Stake Expansion'}</th>
@@ -1206,8 +1928,13 @@ function renderMacroSharkRadar(onSelectStock) {
                   </div>
                 </td>
                 <td>
-                  <div style="display: flex; flex-direction: column; gap: 2px;">
-                    <span class="result-tag" style="font-size: 0.68rem; padding: 1px 6px;">${item.market === 'NSE' ? '🇮🇳 NSE India' : '🇺🇸 US Market'}</span>
+                  <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+                      <span class="result-tag" style="font-size: 0.68rem; padding: 1px 6px;">${item.market === 'NSE' ? '🇮🇳 NSE India' : '🇺🇸 US Market'}</span>
+                      <span class="asset-type-tag ${item.assetType === 'INDEX' ? 'tag-index' : item.assetType === 'ETF' ? 'tag-etf' : 'tag-stock'}">
+                        ${item.assetType === 'INDEX' ? '📈 INDEX' : item.assetType === 'ETF' ? '📦 ETF' : '🏢 STOCK'}
+                      </span>
+                    </div>
                     <span style="font-size: 0.72rem; color: var(--text-dim);">${item.sector}</span>
                   </div>
                 </td>
@@ -1379,6 +2106,19 @@ export function setupRootMacroRadarControls(onSelectStock) {
         document.querySelectorAll('#rootMacroMarketFilterGroup .btn-toggle-sm').forEach(b => b.classList.remove('active'));
         e.currentTarget.classList.add('active');
         currentMacroMarket = e.currentTarget.getAttribute('data-macro-market') || 'ALL';
+        renderMacroSharkRadar(onSelectStock);
+      });
+    }
+  });
+
+  // Macro Asset Class Filter Buttons (All, Stocks, Indices, ETFs)
+  document.querySelectorAll('#rootMacroAssetTypeFilterGroup .btn-toggle-sm').forEach(btn => {
+    if (!btn.dataset.wired) {
+      btn.dataset.wired = 'true';
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('#rootMacroAssetTypeFilterGroup .btn-toggle-sm').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        currentMacroAssetType = e.currentTarget.getAttribute('data-macro-asset') || e.currentTarget.getAttribute('data-macro-asset-type') || 'ALL';
         renderMacroSharkRadar(onSelectStock);
       });
     }
