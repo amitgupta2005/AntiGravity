@@ -279,6 +279,11 @@ function setupTabNavigation() {
     if (sectorsPane) {
       sectorsPane.classList.add('active');
     }
+    const sectorTabBtn = document.querySelector('.tab-btn[data-tab="tab-sectors"]');
+    if (sectorTabBtn) {
+      sectorTabBtn.classList.add('active');
+      sectorTabBtn.setAttribute('aria-selected', 'true');
+    }
     if (topNavSectorBtn) {
       topNavSectorBtn.classList.add('active');
     }
@@ -301,6 +306,12 @@ function setupTabNavigation() {
 
     if (topNavSectorBtn) {
       topNavSectorBtn.classList.remove('active');
+    }
+
+    const sectorTabBtn = document.querySelector('.tab-btn[data-tab="tab-sectors"]');
+    if (sectorTabBtn) {
+      sectorTabBtn.classList.remove('active');
+      sectorTabBtn.setAttribute('aria-selected', 'false');
     }
 
     const sectorsPane = document.getElementById('tab-sectors');
@@ -407,6 +418,12 @@ function setupTabNavigation() {
       topNavHorizonBtn.classList.remove('active');
     }
 
+    const horizonTabBtn = document.querySelector('.tab-btn[data-tab="tab-horizon-scanner"]');
+    if (horizonTabBtn) {
+      horizonTabBtn.classList.remove('active');
+      horizonTabBtn.setAttribute('aria-selected', 'false');
+    }
+
     const horizonPane = document.getElementById('tab-horizon-scanner');
     if (horizonPane) {
       horizonPane.classList.remove('active');
@@ -497,6 +514,12 @@ function setupTabNavigation() {
 
     if (topNavSharksRadarBtn) {
       topNavSharksRadarBtn.classList.remove('active');
+    }
+
+    const sharksRadarTabBtn = document.querySelector('.tab-btn[data-tab="tab-sharks-radar"]');
+    if (sharksRadarTabBtn) {
+      sharksRadarTabBtn.classList.remove('active');
+      sharksRadarTabBtn.setAttribute('aria-selected', 'false');
     }
 
     const sharksRadarPane = document.getElementById('tab-sharks-radar');

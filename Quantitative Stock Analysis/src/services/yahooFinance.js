@@ -8,6 +8,8 @@
 import { STOCKS_DATA } from '../data/stocks.js';
 import { calculatePEG, calculatePeterLynchFairValue, calculateProjectedReturn, calculateQuantScore } from '../quant/engine.js';
 
+export const getBaseUrl = () => typeof window !== 'undefined' ? '' : 'http://localhost:5173';
+
 export function getCurrencySymbol(stock) {
   if (!stock) return '$';
   if (stock.currencySymbol) return stock.currencySymbol;
@@ -364,7 +366,7 @@ export async function resolveTickerSymbol(input) {
 
   // 5. Try direct chart fetch for the upper ticker (e.g. AAPL, NVDA, TSLA)
   try {
-    const directRes = await fetch(`/api/yahoo/chart/${encodeURIComponent(upper)}?range=5d&interval=1d`);
+    const directRes = await fetch(`${getBaseUrl()}/api/yahoo/chart/${encodeURIComponent(upper)}?range=5d&interval=1d`);
     if (directRes.ok) {
       const d = await directRes.json();
       if (d?.chart?.result?.[0]?.meta) {
@@ -378,7 +380,7 @@ export async function resolveTickerSymbol(input) {
   // 6. Try appending .NS for Indian tickers (e.g. TATAPOWER -> TATAPOWER.NS, ITC -> ITC.NS)
   try {
     const nseSym = `${upper}.NS`;
-    const nseRes = await fetch(`/api/yahoo/chart/${encodeURIComponent(nseSym)}?range=5d&interval=1d`);
+    const nseRes = await fetch(`${getBaseUrl()}/api/yahoo/chart/${encodeURIComponent(nseSym)}?range=5d&interval=1d`);
     if (nseRes.ok) {
       const d = await nseRes.json();
       if (d?.chart?.result?.[0]?.meta) {
@@ -412,7 +414,7 @@ export async function searchYahooStocks(query) {
   const cleanUpper = clean.toUpperCase();
 
   try {
-    const res = await fetch(`/api/yahoo/search?q=${encodeURIComponent(clean)}&quotesCount=15&newsCount=0`);
+    const res = await fetch(`${getBaseUrl()}/api/yahoo/search?q=${encodeURIComponent(clean)}&quotesCount=15&newsCount=0`);
     let quotes = [];
     if (res.ok) {
       const data = await res.json();
@@ -499,17 +501,17 @@ export async function fetchLiveStockData(ticker) {
   // 1. Fetch live 1-year daily chart series from Yahoo Finance
   try {
     let fetchSym = sym;
-    chartRes = await fetch(`/api/yahoo/chart/${encodeURIComponent(fetchSym)}?range=1y&interval=1d`);
+    chartRes = await fetch(`${getBaseUrl()}/api/yahoo/chart/${encodeURIComponent(fetchSym)}?range=1y&interval=1d`);
     
     // Fallback for Tata Motors if recent NSE demerger symbol reclassification triggers 404
     if (!chartRes.ok && sym === 'TATAMOTORS.NS') {
       fetchSym = 'TMCV.NS';
-      chartRes = await fetch(`/api/yahoo/chart/${encodeURIComponent(fetchSym)}?range=1y&interval=1d`);
+      chartRes = await fetch(`${getBaseUrl()}/api/yahoo/chart/${encodeURIComponent(fetchSym)}?range=1y&interval=1d`);
     }
 
     // Try without .NS if failed, or with .NS if failed
     if (!chartRes.ok && !fetchSym.includes('.')) {
-      chartRes = await fetch(`/api/yahoo/chart/${encodeURIComponent(fetchSym + '.NS')}?range=1y&interval=1d`);
+      chartRes = await fetch(`${getBaseUrl()}/api/yahoo/chart/${encodeURIComponent(fetchSym + '.NS')}?range=1y&interval=1d`);
       if (chartRes.ok) {
         sym = fetchSym + '.NS';
       }
@@ -522,7 +524,7 @@ export async function fetchLiveStockData(ticker) {
         if (searchMatches && searchMatches.length > 0) {
           const topSym = searchMatches[0].symbol;
           if (topSym && topSym !== fetchSym) {
-            const retryRes = await fetch(`/api/yahoo/chart/${encodeURIComponent(topSym)}?range=1y&interval=1d`);
+            const retryRes = await fetch(`${getBaseUrl()}/api/yahoo/chart/${encodeURIComponent(topSym)}?range=1y&interval=1d`);
             if (retryRes.ok) {
               chartRes = retryRes;
               sym = topSym;
@@ -639,7 +641,7 @@ export async function fetchLiveStockData(ticker) {
       ? (companyName && companyName !== sym ? encodeURIComponent(companyName.split(' ')[0] + ' ' + (companyName.split(' ')[1] || '')) : encodeURIComponent(sym.replace(/\.(NS|BO)$/i, '')))
       : encodeURIComponent(sym);
 
-    const searchRes = await fetch(`/api/yahoo/search?q=${newsQuery}&quotesCount=4&newsCount=8`);
+    const searchRes = await fetch(`${getBaseUrl()}/api/yahoo/search?q=${newsQuery}&quotesCount=4&newsCount=8`);
     if (searchRes.ok) {
       const searchData = await searchRes.json();
       const topQuote = searchData.quotes?.find(q => q.symbol === sym) || searchData.quotes?.[0];
