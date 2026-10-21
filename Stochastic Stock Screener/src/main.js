@@ -44,8 +44,8 @@ const state = {
   screenerTable: null,
   isScanning: false,
   autoRefreshEnabled: typeof localStorage !== 'undefined' ? localStorage.getItem('antigravity_auto_refresh') !== 'off' : true,
-  autoRefreshIntervalSec: 30,
-  secondsRemaining: 30,
+  autoRefreshIntervalSec: typeof localStorage !== 'undefined' ? (parseInt(localStorage.getItem('antigravity_auto_refresh_interval'), 10) || 30) : 30,
+  secondsRemaining: typeof localStorage !== 'undefined' ? (parseInt(localStorage.getItem('antigravity_auto_refresh_interval'), 10) || 30) : 30,
   autoRefreshTimerId: null
 };
 
@@ -180,51 +180,59 @@ async function startScreening(stocks, universeLabel = '', isBackgroundRefresh = 
 }
 
 /**
- * Setup Dynamic Auto-Refresh Polling Engine with explicit ON/OFF toggle switch
+ * Update UI for Auto-Refresh button, tag, and indicator dot
  */
-function setupAutoRefresh() {
-  const widget = document.getElementById('autoRefreshWidget');
+function updateAutoRefreshDisplay() {
   const toggleBtn = document.getElementById('autoRefreshToggleBtn');
   const btnText = document.getElementById('autoRefreshBtnText');
   const liveIndicatorDot = document.getElementById('liveIndicatorDot');
   const liveStatusText = document.getElementById('liveStatusText');
 
-  const updateDisplay = () => {
-    if (!toggleBtn || !btnText) return;
+  if (!toggleBtn || !btnText) return;
 
-    if (state.autoRefreshEnabled) {
-      toggleBtn.classList.add('active');
-      toggleBtn.setAttribute('aria-checked', 'true');
-      toggleBtn.title = 'Click to turn Auto Refresh OFF';
-      btnText.className = 'auto-refresh-tag tag-on';
-      btnText.textContent = `ON (${state.secondsRemaining}s)`;
+  if (state.autoRefreshEnabled) {
+    toggleBtn.classList.add('active');
+    toggleBtn.setAttribute('aria-checked', 'true');
+    toggleBtn.title = 'Click to turn Auto Refresh OFF';
+    btnText.className = 'auto-refresh-tag tag-on';
+    btnText.textContent = `ON (${state.secondsRemaining}s)`;
 
-      if (liveIndicatorDot) liveIndicatorDot.classList.remove('paused');
-      if (liveStatusText && !state.isScanning) {
-        liveStatusText.textContent = 'LIVE FEED';
-      }
-    } else {
-      toggleBtn.classList.remove('active');
-      toggleBtn.setAttribute('aria-checked', 'false');
-      toggleBtn.title = 'Click to turn Auto Refresh ON';
-      btnText.className = 'auto-refresh-tag tag-off';
-      btnText.textContent = 'OFF';
-
-      if (liveIndicatorDot) liveIndicatorDot.classList.add('paused');
-      if (liveStatusText && !state.isScanning) {
-        liveStatusText.textContent = 'PAUSED';
-      }
+    if (liveIndicatorDot) liveIndicatorDot.classList.remove('paused');
+    if (liveStatusText && !state.isScanning) {
+      liveStatusText.textContent = 'LIVE FEED';
     }
-  };
+  } else {
+    toggleBtn.classList.remove('active');
+    toggleBtn.setAttribute('aria-checked', 'false');
+    toggleBtn.title = 'Click to turn Auto Refresh ON';
+    btnText.className = 'auto-refresh-tag tag-off';
+    btnText.textContent = 'OFF';
 
-  const toggleAutoRefresh = () => {
-    state.autoRefreshEnabled = !state.autoRefreshEnabled;
-    localStorage.setItem('antigravity_auto_refresh', state.autoRefreshEnabled ? 'on' : 'off');
-    if (state.autoRefreshEnabled) {
-      state.secondsRemaining = state.autoRefreshIntervalSec;
+    if (liveIndicatorDot) liveIndicatorDot.classList.add('paused');
+    if (liveStatusText && !state.isScanning) {
+      liveStatusText.textContent = 'PAUSED';
     }
-    updateDisplay();
-  };
+  }
+}
+
+/**
+ * Toggle Auto-Refresh ON/OFF
+ */
+function toggleAutoRefresh(forcedState = null) {
+  state.autoRefreshEnabled = forcedState !== null ? forcedState : !state.autoRefreshEnabled;
+  localStorage.setItem('antigravity_auto_refresh', state.autoRefreshEnabled ? 'on' : 'off');
+  if (state.autoRefreshEnabled) {
+    state.secondsRemaining = state.autoRefreshIntervalSec;
+  }
+  updateAutoRefreshDisplay();
+}
+
+/**
+ * Setup Dynamic Auto-Refresh Polling Engine with explicit ON/OFF toggle switch
+ */
+function setupAutoRefresh() {
+  const widget = document.getElementById('autoRefreshWidget');
+  const toggleBtn = document.getElementById('autoRefreshToggleBtn');
 
   if (toggleBtn) {
     toggleBtn.addEventListener('click', (e) => {
@@ -259,10 +267,10 @@ function setupAutoRefresh() {
         startScreening(list, PRESET_UNIVERSES[state.currentUniverseKey]?.name || state.currentUniverseKey, true);
       }
     }
-    updateDisplay();
+    updateAutoRefreshDisplay();
   }, 1000);
 
-  updateDisplay();
+  updateAutoRefreshDisplay();
 }
 
 /**
@@ -510,6 +518,8 @@ function setupSettingsModal() {
   const openModal = () => {
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
+    if (autoRefreshToggleInp) autoRefreshToggleInp.checked = state.autoRefreshEnabled;
+    if (autoRefreshIntervalInp) autoRefreshIntervalInp.value = String(state.autoRefreshIntervalSec);
   };
 
   const closeModal = () => {
@@ -529,6 +539,8 @@ function setupSettingsModal() {
   const obInp = document.getElementById('paramOverbought');
   const osInp = document.getElementById('paramOversold');
   const closeOnlyInp = document.getElementById('paramClosingBasis');
+  const autoRefreshToggleInp = document.getElementById('paramAutoRefreshToggle');
+  const autoRefreshIntervalInp = document.getElementById('paramAutoRefreshInterval');
 
   if (saveBtn) {
     saveBtn.addEventListener('click', () => {
@@ -538,6 +550,18 @@ function setupSettingsModal() {
       state.stochasticParams.overboughtThreshold = parseInt(obInp.value, 10) || 80;
       state.stochasticParams.oversoldThreshold = parseInt(osInp.value, 10) || 20;
       state.stochasticParams.useClosingOnly = closeOnlyInp.checked;
+
+      // Handle Auto-Refresh settings from modal
+      if (autoRefreshToggleInp) {
+        state.autoRefreshEnabled = autoRefreshToggleInp.checked;
+        localStorage.setItem('antigravity_auto_refresh', state.autoRefreshEnabled ? 'on' : 'off');
+      }
+      if (autoRefreshIntervalInp) {
+        state.autoRefreshIntervalSec = parseInt(autoRefreshIntervalInp.value, 10) || 30;
+        localStorage.setItem('antigravity_auto_refresh_interval', String(state.autoRefreshIntervalSec));
+      }
+      state.secondsRemaining = state.autoRefreshIntervalSec;
+      updateAutoRefreshDisplay();
 
       // Update banner pill displays
       const pillK = document.getElementById('currentKPeriod');
@@ -563,6 +587,8 @@ function setupSettingsModal() {
       obInp.value = 80;
       osInp.value = 20;
       closeOnlyInp.checked = true;
+      if (autoRefreshToggleInp) autoRefreshToggleInp.checked = true;
+      if (autoRefreshIntervalInp) autoRefreshIntervalInp.value = "30";
     });
   }
 }
