@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stochastic Stock Screener (4,3,3) | Closing-Basis Quantitative Scanner</title>
+  <meta name="description" content="Professional Quantitative Stock Screener evaluating Stocks on a Closing Basis using Stochastic Oscillator (4,3,3). Supports custom XLSX and CSV document uploads, live charts, and signals." />
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body class="dark-theme">
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="brand-logo">
+        <div class="logo-orb">
+          <i data-lucide="activity"></i>
+        </div>
+        <div class="brand-text">
+          <div class="brand-title">Stochastic Screener</div>
+          <div class="brand-tag">Closing-Basis (4, 3, 3)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-center">
+      <div class="universe-selector-box">
+        <label for="universeSelect" class="universe-label">
+          <i data-lucide="layers"></i> Universe:
+        </label>
+        <select id="universeSelect" class="universe-dropdown">
+          <option value="nifty50" selected>🇮🇳 Nifty 50 (India Benchmark)</option>
+          <option value="niftyNext50">🇮🇳 Nifty Next 50 (High Momentum)</option>
+          <option value="usMegaTech">🇺🇸 US Mega Tech &amp; Giants</option>
+          <option value="etfs">🌐 Global &amp; Sector ETFs</option>
+          <option value="custom" disabled id="customUniverseOption">📄 Custom Uploaded List</option>
+        </select>
+      </div>
+
+      <button id="rescanUniverseBtn" class="btn btn-secondary btn-icon" title="Re-screen selected universe">
+        <i data-lucide="refresh-cw"></i>
+      </button>
+    </div>
+
+    <div class="header-right">
+      <!-- Upload Document Trigger -->
+      <button id="openUploadModalBtn" class="btn btn-primary" title="Upload XLSX or CSV list of stocks">
+        <i data-lucide="file-up"></i>
+        <span>Upload Document</span>
+        <span class="btn-sub-tag">.xlsx / .csv</span>
+      </button>
+
+      <!-- Export Dropdown -->
+      <div class="dropdown-wrapper">
+        <button id="exportDropdownBtn" class="btn btn-secondary" title="Export current screened results">
+          <i data-lucide="download"></i>
+          <span>Export</span>
+          <i data-lucide="chevron-down" class="dropdown-arrow"></i>
+        </button>
+        <div id="exportMenu" class="dropdown-menu">
+          <a href="#" id="exportExcelBtn" class="dropdown-item">
+            <i data-lucide="file-spreadsheet" class="text-emerald"></i>
+            <span>Export to Excel (.xlsx)</span>
+          </a>
+          <a href="#" id="exportCsvBtn" class="dropdown-item">
+            <i data-lucide="file-text" class="text-cyan"></i>
+            <span>Export to CSV (.csv)</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Settings / Parameters Drawer Trigger -->
+      <button id="openSettingsBtn" class="btn btn-secondary btn-icon" title="Configure Stochastic Parameters (4,3,3)">
+        <i data-lucide="sliders"></i>
+      </button>
+
+      <!-- Theme Toggle -->
+      <button id="themeToggleBtn" class="btn btn-secondary btn-icon" title="Toggle Light/Dark Theme">
+        <i data-lucide="sun" id="themeIcon"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Screening Banner / Batch Progress -->
+  <section id="batchProgressBanner" class="batch-progress-banner hidden">
+    <div class="batch-banner-content">
+      <div class="batch-status-info">
+        <span class="spinner-sm"></span>
+        <span id="batchProgressText" class="batch-text">Screening stocks on closing basis...</span>
+      </div>
+      <div class="batch-progress-track">
+        <div id="batchProgressBar" class="batch-progress-fill" style="width: 0%;"></div>
+      </div>
+      <button id="cancelBatchBtn" class="btn-cancel-batch" title="Cancel screening queue">
+        <i data-lucide="x"></i> Stop
+      </button>
+    </div>
+  </section>
+
+  <!-- Main Application Body -->
+  <main class="app-main">
+    <!-- Active Universe & Strategy Info Banner -->
+    <section class="strategy-banner">
+      <div class="banner-left">
+        <h1 class="page-title">Close-Only Stochastic Stock Screener</h1>
+        <p class="page-description">
+          Scanning equities using mathematical Stochastic Oscillator evaluated strictly on <strong>Closing Prices</strong>: 
+          <code>LowestClose(4)</code> and <code>HighestClose(4)</code> with <code>3-period SMA Smoothing</code>.
+          Eliminates intra-day wick noise to deliver pristine momentum reversal and divergence signals.
+        </p>
+      </div>
+      <div class="banner-right">
+        <div class="param-pills">
+          <span class="param-pill"><strong>%K Period:</strong> <span id="currentKPeriod">4</span></span>
+          <span class="param-pill"><strong>%K Smooth:</strong> <span id="currentKSmooth">3</span></span>
+          <span class="param-pill"><strong>%D Period:</strong> <span id="currentDPeriod">3</span></span>
+          <span class="param-pill pill-highlight"><strong>Basis:</strong> Close Only</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quantitative Summary KPI Cards -->
+    <section id="kpi-container" class="kpi-section">
+      <!-- Injected by kpiBar.js -->
+    </section>
+
+    <!-- Screener Table Section -->
+    <section id="table-container" class="screener-table-section">
+      <!-- Injected by screenerTable.js -->
+    </section>
+  </main>
+
+  <!-- Document Upload Modal (XLSX & CSV) -->
+  <div id="uploadModal" class="modal-overlay">
+    <div class="modal-dialog upload-modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-title-icon text-cyan"><i data-lucide="upload-cloud"></i></div>
+          <div>
+            <h2 class="modal-title">Upload Stock Document</h2>
+            <p class="modal-subtitle">Analyze any custom portfolio or stock watchlist with Stochastic (4,3,3)</p>
+          </div>
+        </div>
+        <button id="closeUploadModalBtn" class="btn-close-modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Drag & Drop Zone -->
+        <div id="uploadDropZone" class="upload-dropzone">
+          <input type="file" id="stockFileInput" accept=".xlsx, .xls, .csv" style="display: none;" />
+          <div class="dropzone-content">
+            <i data-lucide="file-spreadsheet" class="dropzone-hero-icon"></i>
+            <h3 class="dropzone-heading">Drag and drop your spreadsheet here</h3>
+            <p class="dropzone-instruction">
+              Supports <strong>.xlsx, .xls</strong> and <strong>.csv</strong> documents.
+            </p>
+            <button type="button" class="btn btn-outline-cyan">Browse Computer</button>
+          </div>
+        </div>
+
+        <!-- Sample Download Templates -->
+        <div class="sample-templates-box">
+          <span class="templates-label">Need a template format?</span>
+          <div class="templates-links">
+            <button id="downloadSampleXlsxBtn" class="btn-link-template">
+              <i data-lucide="download"></i> Sample_Stocks_List.xlsx
+            </button>
+            <button id="downloadSampleCsvBtn" class="btn-link-template">
+              <i data-lucide="download"></i> Sample_Stocks_List.csv
+            </button>
+          </div>
+        </div>
+
+        <!-- Preview Container -->
+        <div id="uploadPreviewContainer" class="upload-preview-container" style="display: none;">
+          <!-- Dynamically populated upon parsing -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="cancelUploadModalBtn">Cancel</button>
+        <button type="button" class="btn btn-primary" id="applyUploadedStocksBtn" disabled>
+          Screen Uploaded Stocks Now &rarr;
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Stock Deep Dive Chart Modal -->
+  <div id="chartModal" class="modal-overlay">
+    <div class="modal-dialog chart-modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div>
+            <div class="modal-stock-header-row">
+              <span id="modalStockTicker" class="modal-stock-ticker font-mono">RELIANCE.NS</span>
+              <span id="modalStockName" class="modal-stock-name">Reliance Industries Ltd</span>
+              <span id="modalSignal" class="badge">Bullish Golden Cross</span>
+            </div>
+            <div class="modal-price-strip">
+              <span id="modalStockPrice" class="modal-price-main font-mono">₹2,950.00</span>
+              <span id="modalStockChange" class="modal-metric-sub text-emerald">+1.45%</span>
+            </div>
+          </div>
+        </div>
+        <button id="closeChartModalBtn" class="btn-close-modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Quantitative Summary Pill Bar -->
+        <div class="modal-kpi-bar">
+          <div class="modal-kpi-item">
+            <span class="modal-kpi-label">%K (4, 3)</span>
+            <span id="modalSlowK" class="modal-kpi-val text-cyan font-mono">18.50</span>
+          </div>
+          <div class="modal-kpi-item">
+            <span class="modal-kpi-label">%D (3 Signal)</span>
+            <span id="modalD" class="modal-kpi-val text-amber font-mono">16.20</span>
+          </div>
+          <div class="modal-kpi-item">
+            <span class="modal-kpi-label">Spread (%K - %D)</span>
+            <span id="modalSpread" class="modal-kpi-val font-mono">+2.30</span>
+          </div>
+          <div class="modal-kpi-item">
+            <span class="modal-kpi-label">Basis</span>
+            <span class="modal-kpi-val text-muted">Closing Price Only</span>
+          </div>
+        </div>
+
+        <!-- Dual Chart Containers -->
+        <div class="charts-container">
+          <!-- Price Chart -->
+          <div class="chart-box">
+            <div class="chart-header">
+              <span class="chart-title">Daily Closing Price History (Last 30-60 Trading Days)</span>
+            </div>
+            <div class="chart-canvas-wrapper" style="height: 220px;">
+              <canvas id="modalPriceChartCanvas"></canvas>
+            </div>
+          </div>
+
+          <!-- Stochastic Sub-Chart -->
+          <div class="chart-box">
+            <div class="chart-header">
+              <span class="chart-title">
+                Stochastic Oscillator Sub-Chart (%K: Cyan 4,3 | %D: Amber 3 | Oversold: 20 | Overbought: 80)
+              </span>
+            </div>
+            <div class="chart-canvas-wrapper" style="height: 200px;">
+              <canvas id="modalStochChartCanvas"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- 10-bar Mathematical Step-by-Step Breakdown Table -->
+        <div id="modalBreakdownContainer" class="modal-breakdown-wrapper">
+          <!-- Injected by chartModal.js -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings / Parameter Modal -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal-dialog settings-modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-title-icon text-amber"><i data-lucide="sliders"></i></div>
+          <div>
+            <h2 class="modal-title">Stochastic Model Parameters</h2>
+            <p class="modal-subtitle">Configure formula inputs (Default: 4, 3, 3 on Closing Basis)</p>
+          </div>
+        </div>
+        <button id="closeSettingsModalBtn" class="btn-close-modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="settings-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="paramKPeriod">Fast %K Period (%K)</label>
+              <input type="number" id="paramKPeriod" value="4" min="2" max="50" class="form-input" />
+              <span class="form-help">Number of closing bars to calculate Lowest &amp; Highest Close.</span>
+            </div>
+            <div class="form-group">
+              <label for="paramKSmooth">%K Smoothing (Slow %K)</label>
+              <input type="number" id="paramKSmooth" value="3" min="1" max="20" class="form-input" />
+              <span class="form-help">SMA smoothing window applied to raw Fast %K.</span>
+            </div>
+            <div class="form-group">
+              <label for="paramDPeriod">%D Period (Signal Line)</label>
+              <input type="number" id="paramDPeriod" value="3" min="1" max="20" class="form-input" />
+              <span class="form-help">SMA signal line smoothing window of Slow %K.</span>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="paramOversold">Oversold Threshold</label>
+              <input type="number" id="paramOversold" value="20" min="5" max="40" class="form-input" />
+              <span class="form-help">Default: 20 (Deep buy zone)</span>
+            </div>
+            <div class="form-group">
+              <label for="paramOverbought">Overbought Threshold</label>
+              <input type="number" id="paramOverbought" value="80" min="60" max="95" class="form-input" />
+              <span class="form-help">Default: 80 (Exhaustion top zone)</span>
+            </div>
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label class="custom-checkbox-label">
+              <input type="checkbox" id="paramClosingBasis" checked />
+              <span class="checkbox-custom"></span>
+              <span class="checkbox-text">
+                <strong>Strict Closing Price Basis (Recommended)</strong>
+                <span class="text-muted block">Evaluates Lowest Close &amp; Highest Close, removing intraday wick noise.</span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="resetParamsBtn">Reset to 4, 3, 3</button>
+        <button type="button" class="btn btn-primary" id="saveParamsBtn">Apply &amp; Re-screen</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
