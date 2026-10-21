@@ -1,21 +1,33 @@
 /**
  * Live Market Data Service & Batch Screening Queue
  * Fetches historical daily closing prices from Yahoo Finance API proxy
- * and executes stochastic quantitative screening.
+ * and executes stochastic quantitative screening with zero-delay baseline.
  */
 
 import { screenStockStochastic } from '../quant/stochastic.js';
 
 const getBaseUrl = () => (typeof window !== 'undefined' ? '' : 'http://localhost:5175');
 
+// In-memory cache for recent candles (TTL: 90 seconds)
+const candleCache = new Map();
+const CACHE_TTL_MS = 90 * 1000;
+
 /**
  * Fetch historical daily closing candles for a stock
  */
-export async function fetchStockCandles(symbol, range = '3mo', interval = '1d') {
+export async function fetchStockCandles(symbol, range = '3mo', interval = '1d', forceRefresh = false) {
   let cleanSym = symbol.trim().toUpperCase();
   if (cleanSym === 'TATAMOTORS.NS') cleanSym = 'TMCV.NS';
 
   const isINR = cleanSym.endsWith('.NS') || cleanSym.endsWith('.BO');
+  const cacheKey = `${cleanSym}_${range}_${interval}`;
+
+  if (!forceRefresh && candleCache.has(cacheKey)) {
+    const cached = candleCache.get(cacheKey);
+    if (Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return cached.candles;
+    }
+  }
 
   try {
     const url = `${getBaseUrl()}/api/yahoo/chart/${encodeURIComponent(cleanSym)}?range=${range}&interval=${interval}`;
@@ -57,9 +69,14 @@ export async function fetchStockCandles(symbol, range = '3mo', interval = '1d') 
       }
     }
 
+    candleCache.set(cacheKey, { timestamp: Date.now(), candles });
     return candles;
   } catch (err) {
     console.warn(`Live candle fetch failed for ${symbol}:`, err.message);
+    // Return cached candles if available even if stale
+    if (candleCache.has(cacheKey)) {
+      return candleCache.get(cacheKey).candles;
+    }
     // Generate synthetic realistic market series as deterministic fallback
     return generateSyntheticCandles(symbol, isINR);
   }
@@ -68,7 +85,7 @@ export async function fetchStockCandles(symbol, range = '3mo', interval = '1d') 
 /**
  * Generate realistic synthetic candles if offline or network fails
  */
-function generateSyntheticCandles(symbol, isINR = false) {
+export function generateSyntheticCandles(symbol, isINR = false) {
   let basePrice = isINR ? 1850 : 185;
   const sym = symbol.toUpperCase();
   if (sym.includes('RELIANCE')) basePrice = 2950;
@@ -116,11 +133,44 @@ function generateSyntheticCandles(symbol, isINR = false) {
 }
 
 /**
+ * Generate instant zero-delay baseline results for any universe
+ * Ensures the screen is NEVER blank on initial load or universe switch.
+ *
+ * @param {Array<Object>} stockList
+ * @param {Object} stochasticOptions
+ * @returns {Array<Object>}
+ */
+export function getInstantBaselineResults(stockList, stochasticOptions) {
+  if (!Array.isArray(stockList)) return [];
+
+  return stockList.map(stockItem => {
+    const isINR = stockItem.ticker.endsWith('.NS') || stockItem.ticker.endsWith('.BO') || stockItem.exchange === 'NSE';
+    const candles = generateSyntheticCandles(stockItem.ticker, isINR);
+    const screened = screenStockStochastic(
+      stockItem.ticker,
+      stockItem.name || stockItem.ticker,
+      candles,
+      stochasticOptions
+    );
+
+    if (screened) {
+      screened.exchange = stockItem.exchange || (stockItem.ticker.endsWith('.NS') ? 'NSE' : 'US');
+      screened.sector = stockItem.sector || 'Equities';
+      screened.source = stockItem.source || 'Preset';
+      screened.isLive = false;
+      screened.lastUpdated = null;
+      return screened;
+    }
+    return null;
+  }).filter(Boolean);
+}
+
+/**
  * Execute Batch Screening Queue with progress callback and cancel controller
  *
  * @param {Array<Object>} stockList - Array of { ticker, name, exchange, sector }
  * @param {Object} stochasticOptions - { kPeriod: 4, kSmoothing: 3, dPeriod: 3, useClosingOnly: true }
- * @param {Function} onProgress - Callback (completed, total, currentItem, currentResult)
+ * @param {Function} onProgress - Callback (completed, total, currentItem, currentResult, allResults)
  * @param {AbortSignal} signal - Optional abort signal
  * @returns {Promise<Array<Object>>} Screened stocks array
  */
@@ -156,6 +206,8 @@ export async function runBatchScreening(stockList, stochasticOptions, onProgress
           screened.exchange = stockItem.exchange || (stockItem.ticker.endsWith('.NS') ? 'NSE' : 'US');
           screened.sector = stockItem.sector || 'Equities';
           screened.source = stockItem.source || 'Preset';
+          screened.isLive = true;
+          screened.lastUpdated = Date.now();
           return screened;
         }
       } catch (err) {
@@ -174,12 +226,12 @@ export async function runBatchScreening(stockList, stochasticOptions, onProgress
       }
       if (onProgress) {
         const processedCount = Math.min(total, i + c + 1);
-        onProgress(processedCount, total, stock, res);
+        onProgress(processedCount, total, stock, res, results);
       }
     }
 
     // Brief yield for UI responsiveness
-    await new Promise(r => setTimeout(r, 40));
+    await new Promise(r => setTimeout(r, 30));
   }
 
   return results;

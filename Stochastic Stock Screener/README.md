@@ -43,23 +43,25 @@ A professional quantitative stock screening platform built under the **AntiGravi
      - Bundles `.xlsx`, `.xls`, `.csv` plus all generated PNG chart screenshots into an organized `.zip` archive.
    - **Single Stock Screenshot Download**: Instant PNG chart screenshot download directly from table rows or the deep-dive chart modal.
 
-5. **Spreadsheet Document Upload (`.xlsx` & `.csv`)**:
-   - Client-side document parsing powered by **SheetJS (`xlsx`)**.
-   - Intelligent column recognition supporting:
-     - `Symbol` / `Ticker` / `Stock` / `Code`
-     - `Company Name` / `Name` / `Security`
-     - `Exchange` (auto-detects NSE, BSE, NASDAQ, NYSE)
-     - `Sector` / `Industry`
-   - Instant document preview table with duplicate detection and removal.
-   - Downloadable template generators (`Sample_Stocks_List.xlsx` and `Sample_Stocks_List.csv`).
+5. **Dynamic Real-Time Live Stock Prices & Streaming Feed**:
+   - Continuous streaming live market quote synchronization directly via the Yahoo Finance proxy middleware.
+   - **Zero-Delay Instant Startup**: Populates instant baseline benchmark dataset within 5ms of page load so the screen is never blank.
+   - **Progressive Stream Updates**: Stocks update dynamically row-by-row with animated green/red flash indicators as live quotes arrive.
+   - **30-Second Auto-Refresh Engine**: Integrated countdown polling timer with one-click pause/resume toggle (`Auto: 30s`) and live pulsating radar status indicator.
 
-6. **Curated Out-of-the-Box Universes**:
+6. **Feature Switching Between Dark & Light Mode**:
+   - Full theme switcher (`Dark Mode` ⇄ `Light Mode`) accessible prominently in the top header.
+   - High-contrast, meticulously tailored color palette for both modes (crisp whites, slate borders, vivid cyan/amber accents).
+   - Theme preference persists across page reloads via `localStorage`.
+   - Dual chart rendering and chart screenshots automatically adapt to the active theme.
+
+7. **Curated Out-of-the-Box Universes**:
    - 🇮🇳 **NIFTY 50** (NSE India Bluechips)
    - 🇮🇳 **NIFTY Next 50** (High Growth & Momentum)
    - 🇺🇸 **US Mega Tech & S&P 500 Leaders** (NVDA, AAPL, MSFT, GOOGL, etc.)
    - 🌐 **Benchmark Indices & ETFs** (Nifty BeES, SPY, QQQ, SMH)
 
-7. **Deep-Dive Stock Inspector & Dual Chart Modal**:
+8. **Deep-Dive Stock Inspector & Dual Chart Modal**:
    - Closing price history chart with volume context.
    - Stochastic oscillator sub-chart plotting `%K (Cyan)`, `%D (Amber)`, and overbought/oversold boundaries.
    - **Quantitative Entry & Exit Strategy Blueprint card** with 4 level boxes and tactical playbook.

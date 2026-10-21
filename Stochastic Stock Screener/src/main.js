@@ -1,22 +1,25 @@
 /**
  * Main Application Controller
- * Orchestrates Quantitative Stochastic Screener (4, 3, 3), document upload pipeline,
- * batch queue, oversold screening (<20), multi-format exports (.xlsx, .xls, .csv),
+ * Orchestrates Quantitative Stochastic Screener (4, 3, 3) on a strict Closing Basis,
+ * dynamic real-time live stock price streaming, auto-refresh polling,
+ * Light/Dark mode switching, oversold screening (<20), multi-format exports (.xlsx, .xls, .csv),
  * and high-res chart screenshots packaging.
  */
 
 import * as lucide from 'lucide';
 import { renderKpiBar } from './components/kpiBar.js';
 import { ScreenerTable } from './components/screenerTable.js';
-import { setupUploadModal } from './components/uploadModal.js';
-import { setupChartModal } from './components/chartModal.js';
+import { setupChartModal, openStockChartModal } from './components/chartModal.js';
 import { 
   exportToExcel, 
   exportToXLS, 
   exportToCSV, 
   exportPackageWithCharts 
 } from './services/exporter.js';
-import { runBatchScreening } from './services/marketData.js';
+import { 
+  runBatchScreening, 
+  getInstantBaselineResults 
+} from './services/marketData.js';
 import { DEFAULT_STOCHASTIC_PARAMS } from './quant/stochastic.js';
 import { PRESET_UNIVERSES, getUniverseList } from './data/presets.js';
 
@@ -26,17 +29,21 @@ window.lucide = lucide;
 // Global Application State
 const state = {
   currentUniverseKey: 'nifty50',
-  customStockList: null,
-  customListName: '',
   screenedResults: [],
   stochasticParams: { ...DEFAULT_STOCHASTIC_PARAMS },
   activeAbortController: null,
   screenerTable: null,
-  isScanning: false
+  isScanning: false,
+  autoRefreshEnabled: true,
+  autoRefreshIntervalSec: 30,
+  secondsRemaining: 30,
+  autoRefreshTimerId: null
 };
 
-// Initialize Application
-document.addEventListener('DOMContentLoaded', () => {
+// Safe Application Initialization (guards against module execution timing)
+function initApp() {
+  applySavedTheme();
+
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
     window.lucide.createIcons();
   }
@@ -49,23 +56,33 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Setup Modals & Handlers
-  setupUploadModal(handleUploadedStocks);
   setupChartModal();
   setupSettingsModal();
   setupExportDropdown();
   setupThemeToggle();
   setupUniverseSelector();
   setupOversoldQuickFilter();
+  setupAutoRefresh();
 
-  // Run initial screening on Nifty 50
+  // Run initial screening on Nifty 50 with instant zero-delay baseline
   const initialUniverse = getUniverseList('nifty50');
   startScreening(initialUniverse, 'Nifty 50');
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
 
 /**
- * Start Batch Quantitative Screening
+ * Start Batch Quantitative Screening with Progressive Live Streaming
+ *
+ * @param {Array<Object>} stocks - List of stock objects
+ * @param {string} universeLabel - Human-readable universe name
+ * @param {boolean} isBackgroundRefresh - True if triggered by 30s auto-refresh
  */
-async function startScreening(stocks, universeLabel = '') {
+async function startScreening(stocks, universeLabel = '', isBackgroundRefresh = false) {
   if (!stocks || stocks.length === 0) {
     alert('No stocks available to screen.');
     return;
@@ -81,26 +98,49 @@ async function startScreening(stocks, universeLabel = '') {
   const banner = document.getElementById('batchProgressBanner');
   const progressBar = document.getElementById('batchProgressBar');
   const progressText = document.getElementById('batchProgressText');
+  const liveStatusText = document.getElementById('liveStatusText');
+  const rescanIcon = document.getElementById('rescanIcon');
 
-  if (banner) banner.classList.remove('hidden');
-  if (progressBar) progressBar.style.width = '0%';
-  if (progressText) {
-    progressText.textContent = `Analyzing ${stocks.length} stocks using Stochastic (${state.stochasticParams.kPeriod}, ${state.stochasticParams.kSmoothing}, ${state.stochasticParams.dPeriod}) Close-Basis...`;
+  if (rescanIcon) rescanIcon.classList.add('spin-active');
+
+  // STEP 1: ZERO-DELAY INSTANT BASELINE DISPLAY
+  // If table is currently empty or changing universe, display instant baseline so screen is NEVER blank
+  if (!isBackgroundRefresh || state.screenedResults.length === 0) {
+    const instantBaseline = getInstantBaselineResults(stocks, state.stochasticParams);
+    state.screenedResults = instantBaseline;
+    state.screenerTable.setResults(state.screenedResults);
+    renderKpiBar(state.screenedResults);
+    setupKpiCardClickFilters();
   }
 
-  // Temporary clear table during first batch run
-  state.screenerTable.setResults([]);
-  renderKpiBar([]);
+  if (banner && !isBackgroundRefresh) {
+    banner.classList.remove('hidden');
+    if (progressBar) progressBar.style.width = '0%';
+    if (progressText) {
+      progressText.textContent = `Analyzing ${stocks.length} stocks using Stochastic (${state.stochasticParams.kPeriod}, ${state.stochasticParams.kSmoothing}, ${state.stochasticParams.dPeriod}) Close-Basis...`;
+    }
+  }
+
+  if (liveStatusText) {
+    liveStatusText.textContent = 'SYNCING LIVE...';
+  }
 
   try {
+    // STEP 2: STREAMING REAL-TIME LIVE MARKET QUOTES
     const results = await runBatchScreening(
       stocks,
       state.stochasticParams,
-      (completed, total, currentItem, currentResult) => {
+      (completed, total, currentItem, currentResult, allCurrentResults) => {
         const pct = Math.round((completed / total) * 100);
         if (progressBar) progressBar.style.width = `${pct}%`;
         if (progressText) {
-          progressText.textContent = `[${completed}/${total}] Screening ${currentItem.ticker} on closing basis... (${pct}%)`;
+          progressText.textContent = `[${completed}/${total}] Streaming live closing quote for ${currentItem.ticker}... (${pct}%)`;
+        }
+
+        // Dynamically update the row in real-time as each quote arrives
+        if (currentResult && state.screenerTable) {
+          state.screenerTable.updateSingleStock(currentResult, true);
+          renderKpiBar(state.screenedResults);
         }
       },
       state.activeAbortController.signal
@@ -109,41 +149,78 @@ async function startScreening(stocks, universeLabel = '') {
     state.screenedResults = results;
     state.isScanning = false;
 
-    // Render Table & KPI Bar
-    state.screenerTable.setResults(results);
-    renderKpiBar(results);
-
-    // Attach KPI Card click filters
+    // Refresh KPI card click filters
     setupKpiCardClickFilters();
 
+    const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    if (liveStatusText) {
+      liveStatusText.textContent = `LIVE (${nowStr})`;
+    }
+
     if (banner) banner.classList.add('hidden');
+    if (rescanIcon) rescanIcon.classList.remove('spin-active');
+
+    // Reset countdown for next auto-refresh cycle
+    state.secondsRemaining = state.autoRefreshIntervalSec;
   } catch (err) {
     console.error('Batch screening encountered an error:', err);
     state.isScanning = false;
     if (banner) banner.classList.add('hidden');
+    if (rescanIcon) rescanIcon.classList.remove('spin-active');
   }
 }
 
 /**
- * Handle Custom Stocks List uploaded by user (.xlsx or .csv)
+ * Setup Dynamic Auto-Refresh Polling Engine
  */
-function handleUploadedStocks(uploadedData) {
-  state.customStockList = uploadedData.stocks;
-  state.customListName = uploadedData.fileName;
+function setupAutoRefresh() {
+  const toggleBtn = document.getElementById('autoRefreshToggleBtn');
+  const btnText = document.getElementById('autoRefreshBtnText');
+  const icon = document.getElementById('autoRefreshIcon');
 
-  const universeSelect = document.getElementById('universeSelect');
-  const customOption = document.getElementById('customUniverseOption');
+  const updateButtonDisplay = () => {
+    if (!btnText) return;
+    if (state.autoRefreshEnabled) {
+      btnText.textContent = `Auto: ${state.secondsRemaining}s`;
+      toggleBtn?.classList.add('auto-active');
+    } else {
+      btnText.textContent = 'Auto: OFF';
+      toggleBtn?.classList.remove('auto-active');
+    }
+  };
 
-  if (customOption) {
-    customOption.disabled = false;
-    customOption.textContent = `📄 ${uploadedData.fileName} (${uploadedData.validCount} Stocks)`;
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      state.autoRefreshEnabled = !state.autoRefreshEnabled;
+      if (state.autoRefreshEnabled) {
+        state.secondsRemaining = state.autoRefreshIntervalSec;
+      }
+      updateButtonDisplay();
+    });
   }
-  if (universeSelect) {
-    universeSelect.value = 'custom';
+
+  // Clear any existing timer
+  if (state.autoRefreshTimerId) {
+    clearInterval(state.autoRefreshTimerId);
   }
 
-  state.currentUniverseKey = 'custom';
-  startScreening(state.customStockList, uploadedData.fileName);
+  // 1-second interval loop
+  state.autoRefreshTimerId = setInterval(() => {
+    if (!state.autoRefreshEnabled) return;
+
+    if (!state.isScanning) {
+      state.secondsRemaining -= 1;
+      if (state.secondsRemaining <= 0) {
+        state.secondsRemaining = state.autoRefreshIntervalSec;
+        // Trigger background live refresh
+        const list = getUniverseList(state.currentUniverseKey);
+        startScreening(list, PRESET_UNIVERSES[state.currentUniverseKey]?.name || state.currentUniverseKey, true);
+      }
+    }
+    updateButtonDisplay();
+  }, 1000);
+
+  updateButtonDisplay();
 }
 
 /**
@@ -158,24 +235,15 @@ function setupUniverseSelector() {
     universeSelect.addEventListener('change', (e) => {
       const key = e.target.value;
       state.currentUniverseKey = key;
-
-      if (key === 'custom' && state.customStockList) {
-        startScreening(state.customStockList, state.customListName);
-      } else {
-        const list = getUniverseList(key);
-        startScreening(list, PRESET_UNIVERSES[key]?.name || key);
-      }
+      const list = getUniverseList(key);
+      startScreening(list, PRESET_UNIVERSES[key]?.name || key);
     });
   }
 
   if (rescanBtn) {
     rescanBtn.addEventListener('click', () => {
-      if (state.currentUniverseKey === 'custom' && state.customStockList) {
-        startScreening(state.customStockList, state.customListName);
-      } else {
-        const list = getUniverseList(state.currentUniverseKey);
-        startScreening(list, PRESET_UNIVERSES[state.currentUniverseKey]?.name || state.currentUniverseKey);
-      }
+      const list = getUniverseList(state.currentUniverseKey);
+      startScreening(list, PRESET_UNIVERSES[state.currentUniverseKey]?.name || state.currentUniverseKey);
     });
   }
 
@@ -186,6 +254,8 @@ function setupUniverseSelector() {
         const banner = document.getElementById('batchProgressBanner');
         if (banner) banner.classList.add('hidden');
         state.isScanning = false;
+        const rescanIcon = document.getElementById('rescanIcon');
+        if (rescanIcon) rescanIcon.classList.remove('spin-active');
       }
     });
   }
@@ -236,7 +306,7 @@ async function exportOversoldWithCharts(explicitOversoldList = null) {
   const list = explicitOversoldList || state.screenedResults.filter(s => (s.slowK ?? 50) < 20);
 
   if (!list || list.length === 0) {
-    alert('No stocks currently identified below oversold threshold 20 in this universe.\n\nTip: You can upload your own watchlist or switch universes (e.g. Nifty Next 50, US Tech) to screen for oversold stocks.');
+    alert('No stocks currently identified below oversold threshold 20 in this universe.\n\nTip: You can switch universes (e.g. Nifty Next 50, US Tech) to screen for deep-discount oversold stocks.');
     return;
   }
 
@@ -435,12 +505,8 @@ function setupSettingsModal() {
       closeModal();
 
       // Trigger re-screen
-      if (state.currentUniverseKey === 'custom' && state.customStockList) {
-        startScreening(state.customStockList, state.customListName);
-      } else {
-        const list = getUniverseList(state.currentUniverseKey);
-        startScreening(list, PRESET_UNIVERSES[state.currentUniverseKey]?.name || state.currentUniverseKey);
-      }
+      const list = getUniverseList(state.currentUniverseKey);
+      startScreening(list, PRESET_UNIVERSES[state.currentUniverseKey]?.name || state.currentUniverseKey);
     });
   }
 
@@ -457,23 +523,48 @@ function setupSettingsModal() {
 }
 
 /**
- * Setup Theme Toggle (Dark / Light)
+ * Apply saved theme on initial boot
+ */
+function applySavedTheme() {
+  const saved = localStorage.getItem('antigravity_stoch_theme');
+  const isLight = saved === 'light';
+
+  document.body.classList.toggle('light-theme', isLight);
+  document.body.classList.toggle('dark-theme', !isLight);
+
+  updateThemeButtonUI(isLight);
+}
+
+/**
+ * Update Theme Toggle Button UI elements
+ */
+function updateThemeButtonUI(isLight) {
+  const themeIcon = document.getElementById('themeIcon');
+  const themeText = document.getElementById('themeToggleText');
+
+  if (themeIcon) {
+    themeIcon.setAttribute('data-lucide', isLight ? 'moon' : 'sun');
+  }
+  if (themeText) {
+    themeText.textContent = isLight ? 'Dark Mode' : 'Light Mode';
+  }
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
+/**
+ * Setup Theme Toggle Feature (Dark / Light Mode Switching)
  */
 function setupThemeToggle() {
   const toggleBtn = document.getElementById('themeToggleBtn');
-  const themeIcon = document.getElementById('themeIcon');
-
   if (!toggleBtn) return;
 
   toggleBtn.addEventListener('click', () => {
-    const isLight = document.body.classList.toggle('light-theme');
-    document.body.classList.toggle('dark-theme', !isLight);
+    const isNowLight = document.body.classList.toggle('light-theme');
+    document.body.classList.toggle('dark-theme', !isNowLight);
 
-    if (themeIcon) {
-      themeIcon.setAttribute('data-lucide', isLight ? 'moon' : 'sun');
-      if (window.lucide && typeof window.lucide.createIcons === 'function') {
-        window.lucide.createIcons();
-      }
-    }
+    localStorage.setItem('antigravity_stoch_theme', isNowLight ? 'light' : 'dark');
+    updateThemeButtonUI(isNowLight);
   });
 }

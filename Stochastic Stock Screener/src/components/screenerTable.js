@@ -23,6 +23,72 @@ export class ScreenerTable {
     this.render();
   }
 
+  updateSingleStock(updatedStock, flash = true) {
+    if (!updatedStock) return;
+    const ticker = updatedStock.ticker || updatedStock.symbol;
+    const idx = this.allResults.findIndex(x => (x.ticker || x.symbol) === ticker);
+    if (idx !== -1) {
+      this.allResults[idx] = updatedStock;
+    } else {
+      this.allResults.push(updatedStock);
+    }
+
+    const row = this.container?.querySelector(`tr.stock-row[data-ticker="${ticker}"]`);
+    if (row) {
+      const temp = document.createElement('tbody');
+      temp.innerHTML = this.renderRow(updatedStock);
+      const newRow = temp.firstElementChild;
+      if (newRow) {
+        if (flash) {
+          const chg = updatedStock.changePct || 0;
+          newRow.classList.add(chg >= 0 ? 'row-flash-green' : 'row-flash-red');
+          setTimeout(() => {
+            newRow.classList.remove('row-flash-green', 'row-flash-red');
+          }, 1400);
+        }
+        row.replaceWith(newRow);
+        this.attachRowEvents(newRow);
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+          window.lucide.createIcons({ root: newRow });
+        }
+      }
+      this.updateCountsAndFooter();
+    } else {
+      // Re-render if row wasn't previously in DOM
+      this.render();
+    }
+  }
+
+  updateCountsAndFooter() {
+    if (!this.container) return;
+    const counts = this.calculateCounts();
+    const filtered = this.getFilteredAndSortedResults();
+
+    const tabBadges = {
+      all: this.container.querySelector('.filter-tab[data-filter="all"] .tab-badge'),
+      oversold: this.container.querySelector('.filter-tab[data-filter="oversold"] .tab-badge'),
+      bullishCross: this.container.querySelector('.filter-tab[data-filter="bullishCross"] .tab-badge'),
+      bearishCross: this.container.querySelector('.filter-tab[data-filter="bearishCross"] .tab-badge'),
+      overbought: this.container.querySelector('.filter-tab[data-filter="overbought"] .tab-badge'),
+      divergence: this.container.querySelector('.filter-tab[data-filter="divergence"] .tab-badge')
+    };
+
+    if (tabBadges.all) tabBadges.all.textContent = counts.all;
+    if (tabBadges.oversold) tabBadges.oversold.textContent = counts.oversold;
+    if (tabBadges.bullishCross) tabBadges.bullishCross.textContent = counts.bullishCross;
+    if (tabBadges.bearishCross) tabBadges.bearishCross.textContent = counts.bearishCross;
+    if (tabBadges.overbought) tabBadges.overbought.textContent = counts.overbought;
+    if (tabBadges.divergence) tabBadges.divergence.textContent = counts.divergence;
+
+    const exportBadge = this.container.querySelector('#tableExportOversoldBtn .badge-mini');
+    if (exportBadge) exportBadge.textContent = counts.oversold;
+
+    const footerText = this.container.querySelector('.table-footer span:first-child');
+    if (footerText) {
+      footerText.innerHTML = `Showing <strong>${filtered.length}</strong> of <strong>${this.allResults.length}</strong> stocks ${this.currentFilter === 'oversold' ? '<span class="text-cyan font-bold">(Filtered: Below Oversold Threshold 20)</span>' : ''}`;
+    }
+  }
+
   setFilter(filterName) {
     this.currentFilter = filterName;
     if (filterName === 'oversold') {
@@ -164,6 +230,7 @@ export class ScreenerTable {
             <span class="stock-sym">${sym}</span>
             <span class="stock-sector">${sector}</span>
             ${isOversold ? '<span class="oversold-pill-mini">OVERSOLD</span>' : ''}
+            ${r.isLive ? '<span class="live-dot-tag" title="Live real-time feed active"><span class="live-dot-ping"></span>LIVE</span>' : ''}
           </div>
           <div class="stock-name" title="${this.escapeHtml(name)}">${this.escapeHtml(name)}</div>
         </td>
@@ -202,6 +269,7 @@ export class ScreenerTable {
               <span>100</span>
             </div>
           </div>
+        </td>
         <td>
           ${signalBadge}
         </td>
@@ -309,7 +377,7 @@ export class ScreenerTable {
   renderEmptyState() {
     return `
       <tr>
-        <td colspan="9" class="empty-table-cell">
+        <td colspan="10" class="empty-table-cell">
           <div class="empty-state-content">
             <div class="empty-icon"><i data-lucide="filter-x"></i></div>
             <div class="empty-title">
@@ -317,7 +385,7 @@ export class ScreenerTable {
             </div>
             <div class="empty-desc">
               ${this.currentFilter === 'oversold' 
-                ? 'All evaluated stocks in this universe are currently trading above %K 20. Select another universe or upload custom watchlists.' 
+                ? 'All evaluated stocks in this universe are currently trading above %K 20. Switch universe to Nifty Next 50 or US Tech to find deep-value opportunities.' 
                 : `Try selecting a different filter tab or clearing your search term "${this.escapeHtml(this.searchQuery)}".`}
             </div>
             ${this.searchQuery || this.currentFilter !== 'all' ? `
@@ -478,43 +546,49 @@ export class ScreenerTable {
       });
     });
 
-    // Inspect buttons & row clicks
-    const inspectBtns = this.container.querySelectorAll('button[data-action="inspect"]');
-    inspectBtns.forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    // Attach row events
+    const rows = this.container.querySelectorAll('.stock-row');
+    rows.forEach(row => this.attachRowEvents(row));
+  }
+
+  attachRowEvents(row) {
+    if (!row) return;
+
+    // Inspect button
+    const inspectBtn = row.querySelector('button[data-action="inspect"]');
+    if (inspectBtn) {
+      inspectBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const sym = btn.getAttribute('data-ticker');
+        const sym = inspectBtn.getAttribute('data-ticker');
         const item = this.allResults.find(x => (x.ticker || x.symbol) === sym);
         if (item) {
           const isDark = document.body.classList.contains('dark-theme') || !document.body.classList.contains('light-theme');
           openStockChartModal(item, isDark);
         }
       });
-    });
+    }
 
-    // Individual stock screenshot download buttons
-    const screenshotBtns = this.container.querySelectorAll('button[data-action="screenshot"]');
-    screenshotBtns.forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    // Screenshot button
+    const screenshotBtn = row.querySelector('button[data-action="screenshot"]');
+    if (screenshotBtn) {
+      screenshotBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const sym = btn.getAttribute('data-ticker');
+        const sym = screenshotBtn.getAttribute('data-ticker');
         const item = this.allResults.find(x => (x.ticker || x.symbol) === sym);
         if (item) {
           downloadStockChartScreenshot(item);
         }
       });
-    });
+    }
 
-    const rows = this.container.querySelectorAll('.stock-row');
-    rows.forEach(row => {
-      row.addEventListener('click', () => {
-        const sym = row.getAttribute('data-ticker');
-        const item = this.allResults.find(x => (x.ticker || x.symbol) === sym);
-        if (item) {
-          const isDark = document.body.classList.contains('dark-theme') || !document.body.classList.contains('light-theme');
-          openStockChartModal(item, isDark);
-        }
-      });
+    // Row click
+    row.addEventListener('click', () => {
+      const sym = row.getAttribute('data-ticker');
+      const item = this.allResults.find(x => (x.ticker || x.symbol) === sym);
+      if (item) {
+        const isDark = document.body.classList.contains('dark-theme') || !document.body.classList.contains('light-theme');
+        openStockChartModal(item, isDark);
+      }
     });
   }
 

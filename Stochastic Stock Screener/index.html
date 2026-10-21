@@ -39,23 +39,26 @@
           <option value="niftyNext50">🇮🇳 Nifty Next 50 (High Momentum)</option>
           <option value="usMegaTech">🇺🇸 US Mega Tech &amp; Giants</option>
           <option value="etfs">🌐 Global &amp; Sector ETFs</option>
-          <option value="custom" disabled id="customUniverseOption">📄 Custom Uploaded List</option>
         </select>
       </div>
 
-      <button id="rescanUniverseBtn" class="btn btn-secondary btn-icon" title="Re-screen selected universe">
-        <i data-lucide="refresh-cw"></i>
+      <button id="rescanUniverseBtn" class="btn btn-secondary btn-icon" title="Re-screen selected universe with latest prices">
+        <i data-lucide="refresh-cw" id="rescanIcon"></i>
+      </button>
+
+      <!-- Live Dynamic Status & Auto Refresh Controls -->
+      <div class="live-status-pill" id="liveStatusBadge" title="Dynamic real-time market data feed connected">
+        <span class="live-indicator-dot"></span>
+        <span class="live-text" id="liveStatusText">LIVE FEED</span>
+      </div>
+
+      <button id="autoRefreshToggleBtn" class="btn btn-secondary btn-sm auto-refresh-btn" title="Toggle automatic 30s real-time price updates">
+        <i data-lucide="timer" id="autoRefreshIcon"></i>
+        <span id="autoRefreshBtnText">Auto: 30s</span>
       </button>
     </div>
 
     <div class="header-right">
-      <!-- Upload Document Trigger -->
-      <button id="openUploadModalBtn" class="btn btn-primary" title="Upload XLSX or CSV list of stocks">
-        <i data-lucide="file-up"></i>
-        <span>Upload Document</span>
-        <span class="btn-sub-tag">.xlsx / .csv</span>
-      </button>
-
       <!-- Export Dropdown -->
       <div class="dropdown-wrapper">
         <button id="exportDropdownBtn" class="btn btn-secondary" title="Export current screened results">
@@ -96,9 +99,10 @@
         <i data-lucide="sliders"></i>
       </button>
 
-      <!-- Theme Toggle -->
-      <button id="themeToggleBtn" class="btn btn-secondary btn-icon" title="Toggle Light/Dark Theme">
+      <!-- Theme Toggle (Dark / Light) -->
+      <button id="themeToggleBtn" class="btn btn-secondary theme-toggle-btn" title="Toggle Light/Dark Theme">
         <i data-lucide="sun" id="themeIcon"></i>
+        <span id="themeToggleText">Light Mode</span>
       </button>
     </div>
   </header>
@@ -158,61 +162,7 @@
     </section>
   </main>
 
-  <!-- Document Upload Modal (XLSX & CSV) -->
-  <div id="uploadModal" class="modal-overlay">
-    <div class="modal-dialog upload-modal-dialog">
-      <div class="modal-header">
-        <div class="modal-title-wrap">
-          <div class="modal-title-icon text-cyan"><i data-lucide="upload-cloud"></i></div>
-          <div>
-            <h2 class="modal-title">Upload Stock Document</h2>
-            <p class="modal-subtitle">Analyze any custom portfolio or stock watchlist with Stochastic (4,3,3)</p>
-          </div>
-        </div>
-        <button id="closeUploadModalBtn" class="btn-close-modal">&times;</button>
-      </div>
 
-      <div class="modal-body">
-        <!-- Drag & Drop Zone -->
-        <div id="uploadDropZone" class="upload-dropzone">
-          <input type="file" id="stockFileInput" accept=".xlsx, .xls, .csv" style="display: none;" />
-          <div class="dropzone-content">
-            <i data-lucide="file-spreadsheet" class="dropzone-hero-icon"></i>
-            <h3 class="dropzone-heading">Drag and drop your spreadsheet here</h3>
-            <p class="dropzone-instruction">
-              Supports <strong>.xlsx, .xls</strong> and <strong>.csv</strong> documents.
-            </p>
-            <button type="button" class="btn btn-outline-cyan">Browse Computer</button>
-          </div>
-        </div>
-
-        <!-- Sample Download Templates -->
-        <div class="sample-templates-box">
-          <span class="templates-label">Need a template format?</span>
-          <div class="templates-links">
-            <button id="downloadSampleXlsxBtn" class="btn-link-template">
-              <i data-lucide="download"></i> Sample_Stocks_List.xlsx
-            </button>
-            <button id="downloadSampleCsvBtn" class="btn-link-template">
-              <i data-lucide="download"></i> Sample_Stocks_List.csv
-            </button>
-          </div>
-        </div>
-
-        <!-- Preview Container -->
-        <div id="uploadPreviewContainer" class="upload-preview-container" style="display: none;">
-          <!-- Dynamically populated upon parsing -->
-        </div>
-      </div>
-
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" id="cancelUploadModalBtn">Cancel</button>
-        <button type="button" class="btn btn-primary" id="applyUploadedStocksBtn" disabled>
-          Screen Uploaded Stocks Now &rarr;
-        </button>
-      </div>
-    </div>
-  </div>
 
   <!-- Interactive Stock Deep Dive Chart Modal -->
   <div id="chartModal" class="modal-overlay">
