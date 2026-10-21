@@ -7,6 +7,7 @@
  */
 
 import { HORIZONS, HORIZON_LABELS } from '../data/horizonUniverse.js';
+export { HORIZONS, HORIZON_LABELS };
 import { calculatePEG, calculatePeterLynchFairValue, calculateProjectedReturn } from './engine.js';
 
 /**
