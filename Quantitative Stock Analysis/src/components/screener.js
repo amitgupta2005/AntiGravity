@@ -101,7 +101,7 @@ export function renderScreenerTable(stocksUniverse, onSelectStock, activeTicker 
     return `
       <tr class="${isSelected ? 'selected-stock-row' : isGarp ? 'garp-row-highlight' : ''}" data-ticker="${s.ticker}">
         <td>
-          <div class="table-stock-cell">
+          <div class="table-stock-cell" data-ticker="${s.ticker}" style="cursor: pointer;" title="Click to analyze ${s.ticker} in Terminal">
             <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
               <span class="ticker-sym">${s.ticker}</span>
               <span class="badge ${isNSE ? 'badge-strong-buy' : 'badge-neutral'}" style="font-size: 0.65rem; padding: 1px 5px; border-radius: 4px;">
@@ -138,10 +138,20 @@ export function renderScreenerTable(stocksUniverse, onSelectStock, activeTicker 
     `;
   }).join('');
 
-  // Wire up click handlers
+  // Wire up click handlers for buttons and stock cells
   tableBody.querySelectorAll('.select-stock-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       const ticker = e.currentTarget.getAttribute('data-ticker');
+      if (ticker && onSelectStock) {
+        onSelectStock(ticker);
+      }
+    });
+  });
+
+  tableBody.querySelectorAll('.table-stock-cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+      const ticker = cell.getAttribute('data-ticker');
       if (ticker && onSelectStock) {
         onSelectStock(ticker);
       }

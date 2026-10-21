@@ -4666,6 +4666,76 @@ body.light-theme .sharks-radar-hero-banner {
   border: 1px solid var(--border-subtle);
 }
 
+/* Comprehensive Navigation Hover Polish */
+.market-ticker-tape .tape-item[data-ticker] {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.market-ticker-tape .tape-item[data-ticker]:hover {
+  background: rgba(0, 242, 254, 0.08);
+  border-color: rgba(0, 242, 254, 0.35);
+  transform: translateY(-1px);
+}
+
+.market-ticker-tape .tape-item[data-ticker]:hover .tape-label {
+  color: var(--cyan-primary);
+}
+
+.h-clickable-asset {
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.h-clickable-asset:hover .h-ticker,
+.h-clickable-asset:hover strong {
+  color: var(--cyan-primary) !important;
+  text-decoration: underline;
+}
+
+.quant-stock-info-clickable {
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.quant-stock-info-clickable:hover .quant-stock-ticker {
+  color: var(--cyan-primary) !important;
+  text-decoration: underline;
+}
+
+.table-stock-cell {
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.table-stock-cell:hover .ticker-sym {
+  color: var(--cyan-primary) !important;
+  text-decoration: underline;
+}
+
+.news-link-title {
+  color: var(--text-main);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+
+.news-link-title:hover {
+  color: var(--cyan-primary) !important;
+  text-decoration: underline;
+}
+
+.logo-area[role="button"] {
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.logo-area[role="button"]:hover {
+  opacity: 0.9;
+  transform: scale(1.01);
+}
+
+
 
 
 

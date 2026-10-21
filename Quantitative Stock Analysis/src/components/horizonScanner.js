@@ -353,7 +353,7 @@ function renderCardsView(items) {
           <div class="h-card" data-ticker="${asset.ticker}">
             <!-- Card Header -->
             <div class="h-card-top">
-              <div class="h-asset-info">
+              <div class="h-asset-info h-clickable-asset" data-ticker="${asset.ticker}" style="cursor: pointer;" title="Click to analyze ${asset.displayTicker} in Stock Terminal">
                 <span class="h-flag">${asset.market === 'US' ? '🇺🇸' : '🇮🇳'}</span>
                 <div>
                   <div class="h-ticker-row">
@@ -572,10 +572,10 @@ function renderTableView(items) {
             return `
               <tr class="h-table-row">
                 <td>
-                  <div class="table-asset-cell">
+                  <div class="table-asset-cell h-clickable-asset" data-ticker="${asset.ticker}" style="cursor: pointer;" title="Click to analyze ${asset.displayTicker} in Stock Terminal">
                     <span class="h-flag">${asset.market === 'US' ? '🇺🇸' : '🇮🇳'}</span>
                     <div>
-                      <strong class="font-mono">${asset.displayTicker}</strong>
+                      <strong class="font-mono text-cyan-hover">${asset.displayTicker}</strong>
                       <span class="text-dim d-block" style="font-size: 0.72rem;">${asset.name}</span>
                     </div>
                   </div>
@@ -728,6 +728,17 @@ function attachHorizonEventListeners(containerId, onSelectAssetForModel, onSelec
       renderHorizonScanner(containerId, onSelectAssetForModel, onSelectAssetForTechnicals);
     });
   }
+
+  // Action: Clickable Asset Header & Cell
+  container.querySelectorAll('.h-clickable-asset').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const ticker = el.dataset.ticker;
+      if (ticker && typeof onSelectAssetForModel === 'function') {
+        onSelectAssetForModel(ticker);
+      }
+    });
+  });
 
   // Action: Simulate in Model Button
   container.querySelectorAll('.btn-action-model').forEach(btn => {

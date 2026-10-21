@@ -13,31 +13,31 @@
 <body class="view-horizon-scanner">
   <!-- Real-time Market Indices Ticker Tape -->
   <div class="market-ticker-tape" id="marketTickerTape">
-    <div class="tape-item">
+    <div class="tape-item" data-ticker="^NSEI" title="Click to analyze NIFTY 50 Benchmark Index">
       <span class="tape-label">🇮🇳 NIFTY 50 (NSE)</span>
-      <span class="tape-val text-emerald" id="tapeNifty">22,721.95 (+1.60%)</span>
+      <span class="tape-val text-emerald" id="tapeNifty">Syncing Live...</span>
     </div>
-    <div class="tape-item">
+    <div class="tape-item" data-ticker="^BSESN" title="Click to analyze SENSEX Benchmark Index">
       <span class="tape-label">🇮🇳 SENSEX (BSE)</span>
-      <span class="tape-val text-emerald" id="tapeSensex">73,033.78 (+1.54%)</span>
+      <span class="tape-val text-emerald" id="tapeSensex">Syncing Live...</span>
     </div>
-    <div class="tape-item">
+    <div class="tape-item" data-ticker="^INDIAVIX" title="Click to view India Volatility Index">
       <span class="tape-label">🇮🇳 INDIA VIX</span>
-      <span class="tape-val text-emerald" id="tapeIndiaVix">13.82 (-2.10%)</span>
+      <span class="tape-val text-emerald" id="tapeIndiaVix">Syncing Live...</span>
     </div>
-    <div class="tape-item">
+    <div class="tape-item" data-ticker="^GSPC" title="Click to analyze S&P 500 Large-Cap Index">
       <span class="tape-label">🇺🇸 S&P 500</span>
-      <span class="tape-val text-emerald" id="tapeSp500">5,864.67 (+0.77%)</span>
+      <span class="tape-val text-emerald" id="tapeSp500">Syncing Live...</span>
     </div>
-    <div class="tape-item">
+    <div class="tape-item" data-ticker="^IXIC" title="Click to analyze NASDAQ Composite Index">
       <span class="tape-label">🇺🇸 NASDAQ</span>
-      <span class="tape-val text-emerald" id="tapeNasdaq">18,502.61 (+1.12%)</span>
+      <span class="tape-val text-emerald" id="tapeNasdaq">Syncing Live...</span>
     </div>
-    <div class="tape-item">
+    <div class="tape-item" id="tapeUs10YItem" title="US 10-Year Treasury Yield Benchmark">
       <span class="tape-label">US 10Y YIELD</span>
-      <span class="tape-val text-rose" id="tapeUs10Y">5.22% (-0.02%)</span>
+      <span class="tape-val text-rose" id="tapeUs10Y">Syncing Live...</span>
     </div>
-    <div class="tape-item">
+    <div class="tape-item" id="tapeGarpRegimeItem" title="Peter Lynch Quantitative GARP Active Factor">
       <span class="tape-label">GARP PEG &lt; 1 REGIME</span>
       <span class="tape-val text-cyan">ACTIVE (Alpha Factor +4.8%)</span>
     </div>
@@ -46,7 +46,7 @@
   <div class="app-container">
     <!-- Header -->
     <header class="app-header">
-      <div class="logo-area">
+      <div class="logo-area" id="brandLogoBtn" role="button" tabindex="0" title="Return to Horizon Scanner (Home)" style="cursor: pointer;">
         <div class="logo-icon">
           <i data-lucide="line-chart"></i>
         </div>

@@ -1922,7 +1922,7 @@ function renderMacroSharkRadar(onSelectStock) {
             return `
               <tr class="macro-radar-row" data-ticker="${item.ticker}">
                 <td>
-                  <div class="table-stock-cell">
+                  <div class="table-stock-cell" data-ticker="${item.ticker}" style="cursor: pointer;" title="Load ${item.ticker} into terminal valuation model">
                     <span class="ticker-sym">${item.ticker}</span>
                     <span class="ticker-name">${item.name}</span>
                   </div>
@@ -1977,8 +1977,19 @@ function renderMacroSharkRadar(onSelectStock) {
 
   // Attach button click listeners
   container.querySelectorAll('.btn-analyze-shark-stock').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       const ticker = btn.getAttribute('data-ticker');
+      if (ticker && onSelectStock) {
+        onSelectStock(ticker);
+      }
+    });
+  });
+
+  // Attach click listener on stock cell
+  container.querySelectorAll('.table-stock-cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+      const ticker = cell.getAttribute('data-ticker');
       if (ticker && onSelectStock) {
         onSelectStock(ticker);
       }

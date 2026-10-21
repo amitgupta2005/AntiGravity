@@ -2225,7 +2225,7 @@ function renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors, 
         </div>
 
         <div class="quant-stock-title-row">
-          <div>
+          <div class="quant-stock-info-clickable" data-ticker="${stock.ticker}" style="cursor: pointer;" title="Click to analyze ${stock.ticker} in Terminal">
             <h3 class="quant-stock-ticker">
               ${stock.ticker} <span class="quant-market-badge">${stock.market} ${stock.flag}</span>
             </h3>
@@ -2315,8 +2315,19 @@ function renderSelectedSectorQuantPicks(sectorId, onSelectStock, sortedSectors, 
 
   // Attach button click listeners
   container.querySelectorAll('.btn-analyze-quant-stock').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       const ticker = btn.getAttribute('data-ticker');
+      if (ticker && onSelectStock) {
+        onSelectStock(ticker);
+      }
+    });
+  });
+
+  // Attach click listener for quant stock ticker & name
+  container.querySelectorAll('.quant-stock-info-clickable').forEach(el => {
+    el.addEventListener('click', () => {
+      const ticker = el.getAttribute('data-ticker');
       if (ticker && onSelectStock) {
         onSelectStock(ticker);
       }

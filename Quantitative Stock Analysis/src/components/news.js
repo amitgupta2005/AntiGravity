@@ -42,6 +42,10 @@ export function renderNewsFeed(stock, filter = 'ALL') {
     const scoreFormatted = item.sentimentScore >= 0 ? `+${item.sentimentScore.toFixed(2)}` : item.sentimentScore.toFixed(2);
     const dateDisplay = item.formattedDate || item.time || 'Today';
     
+    const articleUrl = (item.link && item.link.startsWith('http')) 
+      ? item.link 
+      : `https://finance.yahoo.com/quote/${encodeURIComponent(stock.ticker)}/news/`;
+    
     return `
       <article class="news-card" data-id="${item.id || idx}">
         <div class="news-header">
@@ -58,12 +62,17 @@ export function renderNewsFeed(stock, filter = 'ALL') {
           </div>
         </div>
         <h4 class="news-title">
-          ${item.link && item.link !== '#' ? `<a href="${item.link}" target="_blank" rel="noopener noreferrer" class="news-link-title">${item.title}</a>` : item.title}
+          <a href="${articleUrl}" target="_blank" rel="noopener noreferrer" class="news-link-title" title="Open live news story on Yahoo Finance">
+            ${item.title}
+          </a>
         </h4>
         <p class="news-summary">${item.summary}</p>
         <div class="news-footer">
-          <span class="impact-tag"><i data-lucide="zap" class="inline-icon"></i> Catalyst: EPS Growth & Valuation Impact</span>
-          ${item.link && item.link !== '#' ? `<a href="${item.link}" target="_blank" rel="noopener noreferrer" class="read-more-link">Read on Yahoo Finance <i data-lucide="arrow-right" class="inline-icon"></i></a>` : `<span class="read-more-link">Analysis Verified <i data-lucide="check-circle-2" class="inline-icon verified-icon"></i></span>`}
+          <span class="impact-tag"><i data-lucide="zap" class="inline-icon"></i> Catalyst: EPS Growth &amp; Valuation Impact</span>
+          <a href="${articleUrl}" target="_blank" rel="noopener noreferrer" class="read-more-link" title="Read full coverage on Yahoo Finance">
+            <span>Read on Yahoo Finance</span>
+            <i data-lucide="arrow-right" class="inline-icon"></i>
+          </a>
         </div>
       </article>
     `;

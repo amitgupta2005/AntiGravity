@@ -689,6 +689,35 @@ function setupTabNavigation() {
       if (sharkTabBtn) sharkTabBtn.click();
     });
   }
+
+  // Navigable Brand Logo Button (navigates to Horizon Scanner)
+  const brandLogoBtn = document.getElementById('brandLogoBtn');
+  if (brandLogoBtn) {
+    brandLogoBtn.addEventListener('click', () => {
+      openHorizonScanner();
+    });
+  }
+
+  // Navigable Real-Time Market Ticker Tape Items
+  document.querySelectorAll('#marketTickerTape .tape-item[data-ticker]').forEach(item => {
+    item.addEventListener('click', () => {
+      const ticker = item.getAttribute('data-ticker');
+      if (ticker) {
+        if (window.exitSectorDashboard && document.body.classList.contains('view-sector-dashboard')) {
+          window.exitSectorDashboard('tab-return-model');
+        }
+        if (window.exitHorizonScanner && document.body.classList.contains('view-horizon-scanner')) {
+          window.exitHorizonScanner('tab-return-model');
+        }
+        if (window.exitSharksRadar && document.body.classList.contains('view-sharks-radar')) {
+          window.exitSharksRadar('tab-return-model');
+        }
+        const searchInput = document.getElementById('stockSearchInput');
+        if (searchInput) searchInput.value = ticker;
+        loadStockRealtime(ticker);
+      }
+    });
+  });
 }
 
 /**

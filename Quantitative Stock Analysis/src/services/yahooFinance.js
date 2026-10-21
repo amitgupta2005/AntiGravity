@@ -936,9 +936,8 @@ export async function fetchRealtimeHorizonUniverse(universe) {
 
     const { meta, closes } = found.value;
     const livePrice = meta.regularMarketPrice || meta.chartPreviousClose || asset.price;
-    const prevClose = meta.chartPreviousClose || livePrice;
-    const change = Number((meta.fulldayChange ?? (livePrice - prevClose)).toFixed(2));
-    const changePercent = Number((meta.regularMarketChangePercent ?? ((change / prevClose) * 100)).toFixed(2));
+    const change = Number((meta.fulldayChange ?? meta.regularMarketChange ?? 0).toFixed(2));
+    const changePercent = Number((meta.regularMarketChangePercent ?? meta.fulldayChangePercent ?? 0).toFixed(2));
 
     // Dynamic 50-SMA directly from live historical closes
     let sma50 = asset.sma50;
