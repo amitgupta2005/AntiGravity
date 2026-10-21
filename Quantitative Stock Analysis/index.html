@@ -119,6 +119,12 @@
           <span class="top-nav-ytd-tag">YTD</span>
         </button>
 
+        <button id="topNavHorizonScannerBtn" class="btn btn-outline btn-horizon-scanner" title="Launch Quant Horizon Scanner (Stocks, ETFs & Indices)">
+          <i data-lucide="compass" class="inline-icon text-cyan"></i>
+          <span>Horizon Scanner</span>
+          <span class="top-nav-horizon-tag font-mono">1D–5Y</span>
+        </button>
+
         <button id="openCustomStockBtn" class="btn btn-outline" title="Simulate Any Custom Stock or Ticker">
           <i data-lucide="plus-circle" class="inline-icon"></i>
           <span>+ Custom Model</span>
@@ -285,6 +291,11 @@
       <button class="tab-btn" data-tab="tab-screener" role="tab" aria-selected="false">
         <i data-lucide="radar" class="inline-icon"></i>
         <span>GARP Radar (PEG &lt; 1)</span>
+      </button>
+      <button class="tab-btn highlight-horizon-tab" data-tab="tab-horizon-scanner" role="tab" aria-selected="false">
+        <i data-lucide="compass" class="inline-icon text-cyan"></i>
+        <span>Quant Horizon Scanner</span>
+        <span class="nav-badge-horizon font-mono">1D–5Y</span>
       </button>
     </nav>
 
@@ -1368,6 +1379,11 @@
             </table>
           </div>
         </div>
+      </section>
+
+      <!-- TAB 9: Quant Horizon Scanner (Stocks, ETFs & Indices) -->
+      <section id="tab-horizon-scanner" class="tab-pane" role="tabpanel">
+        <div id="horizonScannerContainer"></div>
       </section>
     </main>
   </div>

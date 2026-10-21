@@ -133,6 +133,23 @@ Quantitative Stock Analysis is an institutional-grade, responsive quantitative e
   - Interactive Market Filters: Filter consensus radar by **All Markets 🌐**, **NSE India 🇮🇳**, and **US Equities 🇺🇸**.
   - One-Click Terminal Analysis: Every stock in the macro radar features an **"Analyze"** button that immediately loads the stock into the core valuation engine and technical terminal.
 
+### 13. 🧭 Quant Horizon Scanner (Stocks, ETFs & Indices for 1D to >2Y Investing)
+- **Multi-Asset Recommendation Universe**: Covers **Equities**, **ETFs** (e.g. `NIFTYBEES.NS`, `BANKBEES.NS`, `GOLDBEES.NS`, `ITBEES.NS`, `MON100.NS`, `SPY`, `QQQ`, `SMH`, `XLE`, `IWM`), and **Benchmark Indices** (e.g. `NIFTY 50`, `BANK NIFTY`, `SENSEX`, `S&P 500`, `NASDAQ 100`, `RUSSELL 2000`) across Indian (NSE) and US markets.
+- **Three Dedicated Time Horizons**:
+  - **⚡ Short-Term (1 Day to 6 Months)**: Algorithms screen for technical momentum breakouts, RSI sweet-spots (55–68), 50-day SMA trend continuation, ATR volatility buffers, precise target prices, disciplined stop loss limits, and asymmetric Risk:Reward ratios (> 1:2.0).
+  - **📈 Medium-Term (6 Months to 2 Years)**: Screens for Peter Lynch GARP ($PEG < 1.0$), earnings acceleration (> 15–30% EPS CAGR), business cycle re-ratings, operating margin expansion, and 1.25-year projected target prices with margin of safety.
+  - **🏛️ Long-Term (> 2 Years)**: Multi-year wealth compounding engine evaluating Piotroski F-Scores (out of 9), high and durable ROE/ROIC (> 20%), low debt-to-equity (< 0.50), economic moats, and 3-to-5-year compounding multipliers ($P_0 \cdot (1 + \text{CAGR})^3$).
+- **Interactive Multi-Factor Control Panel**:
+  - **Horizon Filter**: `All Horizons`, `⚡ Short-Term (1D–6M)`, `📈 Medium-Term (6M–2Y)`, `🏛️ Long-Term (>2Y)`.
+  - **Asset Filter**: `All Assets`, `🏢 Stocks`, `📦 ETFs`, `📊 Indices`.
+  - **Market Filter**: `🌐 Global (All)`, `🇮🇳 NSE India`, `🇺🇸 US Market`.
+  - **Conviction Filter**: `All Convictions`, `⭐ Strong Buy (Score ≥ 85)`, `✅ Buy (Score ≥ 70)`.
+  - **Sort By**: Quant Score, Target Upside %, Expected CAGR, or Ticker (A-Z).
+  - **View Modes**: Interactive **Card View** (glassmorphic cards with quant scores, targets, stops, and institutional theses) and dense **Table View** (tabular matrix with sortable columns).
+- **One-Click Synergy**:
+  - **"Simulate in Model"**: One click loads the recommended asset directly into the interactive Expected Return & PEG Valuation simulator.
+  - **"Technicals"**: Instantly opens technical candlestick and momentum charts for the selected instrument.
+
 ---
 
 ## 📐 Mathematical & Quantitative Formulas

@@ -66,6 +66,7 @@ import { renderOrderBook, updateOrderBookTheme, resizeOrderBookChart } from './c
 import { renderSectorsDashboard } from './components/sectors.js';
 import { renderBigSharksView, updateSharkChartTheme, getOrGenerateSharkData } from './components/sharks.js';
 import { renderScreenerTable, setupScreenerControls } from './components/screener.js';
+import { renderHorizonScanner } from './components/horizonScanner.js';
 import { setupCustomStockModal } from './components/customStockModal.js';
 import { 
   fetchLiveStockData, 
@@ -298,6 +299,17 @@ function setupTabNavigation() {
     });
   }
 
+  const topNavHorizonBtn = document.getElementById('topNavHorizonScannerBtn');
+  if (topNavHorizonBtn) {
+    topNavHorizonBtn.addEventListener('click', () => {
+      if (document.body.classList.contains('view-sector-dashboard')) {
+        exitSectorDashboard('tab-horizon-scanner');
+      } else {
+        document.querySelector('.tab-btn[data-tab="tab-horizon-scanner"]')?.click();
+      }
+    });
+  }
+
   if (exitSectorBtn) {
     exitSectorBtn.addEventListener('click', () => {
       exitSectorDashboard();
@@ -314,6 +326,13 @@ function setupTabNavigation() {
       }
       if (topNavSectorBtn) {
         topNavSectorBtn.classList.remove('active');
+      }
+      if (topNavHorizonBtn) {
+        if (targetId === 'tab-horizon-scanner') {
+          topNavHorizonBtn.classList.add('active');
+        } else {
+          topNavHorizonBtn.classList.remove('active');
+        }
       }
 
       tabBtns.forEach(b => {
@@ -355,6 +374,14 @@ function setupTabNavigation() {
               loadStockRealtime(t);
               document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
             }, state.currentTicker);
+          } else if (targetId === 'tab-horizon-scanner') {
+            renderHorizonScanner('horizonScannerContainer', (t) => {
+              loadStockRealtime(t);
+              document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
+            }, (t) => {
+              loadStockRealtime(t);
+              document.querySelector('.tab-btn[data-tab="tab-technicals"]')?.click();
+            });
           }
         }
       }
@@ -1423,6 +1450,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       loadStockRealtime(t);
       document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
     }, state.currentTicker);
+    renderHorizonScanner('horizonScannerContainer', (t) => {
+      loadStockRealtime(t);
+      document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
+    }, (t) => {
+      loadStockRealtime(t);
+      document.querySelector('.tab-btn[data-tab="tab-technicals"]')?.click();
+    });
     refreshIcons();
   });
 

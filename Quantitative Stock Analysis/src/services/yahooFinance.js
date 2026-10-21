@@ -618,7 +618,7 @@ export async function fetchLiveStockData(ticker) {
 
   // First check STOCK_ALIASES for curated metadata
   const aliasKey = sym.replace(/\.(NS|BO)$/i, '').toUpperCase();
-  const aliasMatch = STOCK_ALIASES[sym] || STOCK_ALIASES[aliasKey] || STOCK_ALIASES[sym.toUpperCase()] || STOCK_ALIASES[rawTicker.toUpperCase()];
+  const aliasMatch = STOCK_ALIASES[sym] || STOCK_ALIASES[aliasKey] || STOCK_ALIASES[sym.toUpperCase()] || (typeof ticker === 'string' ? STOCK_ALIASES[ticker.toUpperCase()] : null);
   if (aliasMatch) {
     if (aliasMatch.name && (!existing?.name || companyName === sym)) {
       companyName = aliasMatch.name;
