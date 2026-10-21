@@ -6,7 +6,7 @@
  * and high-res chart screenshots packaging.
  */
 
-import * as lucide from 'lucide';
+import { createIcons, icons } from 'lucide';
 import { renderKpiBar } from './components/kpiBar.js';
 import { ScreenerTable } from './components/screenerTable.js';
 import { setupChartModal, openStockChartModal } from './components/chartModal.js';
@@ -23,8 +23,17 @@ import {
 import { DEFAULT_STOCHASTIC_PARAMS } from './quant/stochastic.js';
 import { PRESET_UNIVERSES, getUniverseList } from './data/presets.js';
 
-// Attach lucide globally
-window.lucide = lucide;
+// Attach safe lucide helper globally with icons bundle automatically pre-configured
+window.lucide = {
+  createIcons: (options = {}) => {
+    try {
+      return createIcons({ icons, ...options });
+    } catch (err) {
+      console.warn('Lucide icon rendering warning:', err);
+    }
+  },
+  icons
+};
 
 // Global Application State
 const state = {
