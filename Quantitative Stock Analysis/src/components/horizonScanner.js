@@ -119,29 +119,36 @@ export function renderHorizonScanner(containerId, onSelectAssetForModel, onSelec
         </div>
       </div>
 
-      <!-- Quick KPI Horizon Stats -->
-      <div class="horizon-stats-row">
-        <div class="horizon-stat-pill" data-horizon="SHORT_TERM">
-          <span class="stat-horizon-icon text-amber">⚡</span>
-          <div>
-            <span class="stat-horizon-val">${countShort} Setups</span>
-            <span class="stat-horizon-lbl text-dim">Short-Term (1D–6M)</span>
+      <!-- Quick KPI Horizon Stats & Exit Action -->
+      <div class="horizon-header-actions-wrap" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <div class="horizon-stats-row">
+          <div class="horizon-stat-pill" data-horizon="SHORT_TERM">
+            <span class="stat-horizon-icon text-amber">⚡</span>
+            <div>
+              <span class="stat-horizon-val">${countShort} Setups</span>
+              <span class="stat-horizon-lbl text-dim">Short-Term (1D–6M)</span>
+            </div>
+          </div>
+          <div class="horizon-stat-pill" data-horizon="MEDIUM_TERM">
+            <span class="stat-horizon-icon text-cyan">📈</span>
+            <div>
+              <span class="stat-horizon-val">${countMedium} Setups</span>
+              <span class="stat-horizon-lbl text-dim">Medium-Term (6M–2Y)</span>
+            </div>
+          </div>
+          <div class="horizon-stat-pill" data-horizon="LONG_TERM">
+            <span class="stat-horizon-icon text-emerald">🏛️</span>
+            <div>
+              <span class="stat-horizon-val">${countLong} Setups</span>
+              <span class="stat-horizon-lbl text-dim">Long-Term (&gt;2Y)</span>
+            </div>
           </div>
         </div>
-        <div class="horizon-stat-pill" data-horizon="MEDIUM_TERM">
-          <span class="stat-horizon-icon text-cyan">📈</span>
-          <div>
-            <span class="stat-horizon-val">${countMedium} Setups</span>
-            <span class="stat-horizon-lbl text-dim">Medium-Term (6M–2Y)</span>
-          </div>
-        </div>
-        <div class="horizon-stat-pill" data-horizon="LONG_TERM">
-          <span class="stat-horizon-icon text-emerald">🏛️</span>
-          <div>
-            <span class="stat-horizon-val">${countLong} Setups</span>
-            <span class="stat-horizon-lbl text-dim">Long-Term (&gt;2Y)</span>
-          </div>
-        </div>
+
+        <button id="exitHorizonScannerBtn" class="btn btn-outline btn-sm btn-exit-sector-view" title="Return to Stock Analysis Terminal">
+          <i data-lucide="arrow-left" class="inline-icon"></i>
+          <span id="exitHorizonScannerLabel">Back to Stock Terminal</span>
+        </button>
       </div>
     </div>
 
@@ -567,6 +574,16 @@ function renderTableView(items) {
 function attachHorizonEventListeners(containerId, onSelectAssetForModel, onSelectAssetForTechnicals) {
   const container = document.getElementById(containerId);
   if (!container) return;
+
+  // Exit Horizon Scanner View Button
+  const exitBtn = container.querySelector('#exitHorizonScannerBtn');
+  if (exitBtn) {
+    exitBtn.addEventListener('click', () => {
+      if (typeof window.exitHorizonScanner === 'function') {
+        window.exitHorizonScanner();
+      }
+    });
+  }
 
   // Horizon Filter Chips
   container.querySelectorAll('#horizonFilterGroup .h-chip').forEach(btn => {

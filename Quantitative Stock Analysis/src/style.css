@@ -2864,12 +2864,16 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 /* ==========================================================================
-   Sector Dashboard Full-View Mode: Hide Stock Card & Nav Tabs
+   Sector Dashboard & Horizon Scanner Full-View Mode: Hide Stock Card & Nav Tabs
    ========================================================================== */
 body.view-sector-dashboard #stockHeroCard,
 body.view-sector-dashboard .stock-hero-card,
 body.view-sector-dashboard .nav-tabs,
-body.view-sector-dashboard .quick-stock-chips-row {
+body.view-sector-dashboard .quick-stock-chips-row,
+body.view-horizon-scanner #stockHeroCard,
+body.view-horizon-scanner .stock-hero-card,
+body.view-horizon-scanner .nav-tabs,
+body.view-horizon-scanner .quick-stock-chips-row {
   display: none !important;
 }
 

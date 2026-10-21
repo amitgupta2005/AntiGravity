@@ -193,6 +193,17 @@ function setupThemeEngine() {
         loadStockRealtime(t);
       }, isDark);
     }
+
+    const isHorizonActive = document.getElementById('tab-horizon-scanner')?.classList.contains('active');
+    if (isHorizonActive) {
+      renderHorizonScanner('horizonScannerContainer', (t) => {
+        if (window.exitHorizonScanner) window.exitHorizonScanner('tab-return-model');
+        loadStockRealtime(t);
+      }, (t) => {
+        if (window.exitHorizonScanner) window.exitHorizonScanner('tab-technicals');
+        loadStockRealtime(t);
+      });
+    }
   };
 
   applyTheme(state.isDarkMode);
@@ -221,11 +232,19 @@ function setupTabNavigation() {
   };
 
   const openSectorDashboard = () => {
+    // If currently in Horizon Scanner mode, exit it first
+    if (document.body.classList.contains('view-horizon-scanner')) {
+      document.body.classList.remove('view-horizon-scanner');
+      if (topNavHorizonBtn) topNavHorizonBtn.classList.remove('active');
+      const horizonPane = document.getElementById('tab-horizon-scanner');
+      if (horizonPane) horizonPane.classList.remove('active');
+    }
+
     // Save currently active stock tab so user returns to it seamlessly
     const activeStockBtn = document.querySelector('.nav-tabs .tab-btn.active');
     if (activeStockBtn) {
       const activeId = activeStockBtn.getAttribute('data-tab');
-      if (activeId && activeId !== 'tab-sectors') {
+      if (activeId && activeId !== 'tab-sectors' && activeId !== 'tab-horizon-scanner') {
         previousStockTabId = activeId;
       }
     }
@@ -285,9 +304,98 @@ function setupTabNavigation() {
     refreshIcons();
   };
 
+  const handleStockSelectionFromHorizon = (ticker, targetTab = 'tab-return-model') => {
+    exitHorizonScanner(targetTab);
+    loadStockRealtime(ticker);
+  };
+
+  const openHorizonScanner = () => {
+    // If currently in Sector Dashboard mode, exit it first
+    if (document.body.classList.contains('view-sector-dashboard')) {
+      document.body.classList.remove('view-sector-dashboard');
+      if (topNavSectorBtn) topNavSectorBtn.classList.remove('active');
+      const sectorsPane = document.getElementById('tab-sectors');
+      if (sectorsPane) sectorsPane.classList.remove('active');
+    }
+
+    // Save currently active stock tab so user returns to it seamlessly
+    const activeStockBtn = document.querySelector('.nav-tabs .tab-btn.active');
+    if (activeStockBtn) {
+      const activeId = activeStockBtn.getAttribute('data-tab');
+      if (activeId && activeId !== 'tab-sectors' && activeId !== 'tab-horizon-scanner') {
+        previousStockTabId = activeId;
+      }
+    }
+
+    // Enter Horizon Scanner Full-View Mode (Hides Stock Card & Nav Tabs)
+    document.body.classList.add('view-horizon-scanner');
+
+    tabBtns.forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-selected', 'false');
+    });
+    tabPanes.forEach(p => p.classList.remove('active'));
+
+    const horizonPane = document.getElementById('tab-horizon-scanner');
+    if (horizonPane) {
+      horizonPane.classList.add('active');
+    }
+    const horizonTabBtn = document.querySelector('.tab-btn[data-tab="tab-horizon-scanner"]');
+    if (horizonTabBtn) {
+      horizonTabBtn.classList.add('active');
+      horizonTabBtn.setAttribute('aria-selected', 'true');
+    }
+    if (topNavHorizonBtn) {
+      topNavHorizonBtn.classList.add('active');
+    }
+
+    // Update exit button label with active stock ticker
+    const exitLabel = document.getElementById('exitHorizonScannerLabel');
+    if (exitLabel && state.currentTicker) {
+      exitLabel.textContent = `Back to Stock Terminal (${state.currentTicker})`;
+    }
+
+    renderHorizonScanner('horizonScannerContainer', (t) => {
+      handleStockSelectionFromHorizon(t, 'tab-return-model');
+    }, (t) => {
+      handleStockSelectionFromHorizon(t, 'tab-technicals');
+    });
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    refreshIcons();
+  };
+
+  const exitHorizonScanner = (targetTabId = null) => {
+    // Exit Horizon Scanner Mode (Unhides Stock Card & Nav Tabs)
+    document.body.classList.remove('view-horizon-scanner');
+
+    if (topNavHorizonBtn) {
+      topNavHorizonBtn.classList.remove('active');
+    }
+
+    const horizonPane = document.getElementById('tab-horizon-scanner');
+    if (horizonPane) {
+      horizonPane.classList.remove('active');
+    }
+
+    const tabToActivate = targetTabId || previousStockTabId || 'tab-return-model';
+    const targetBtn = document.querySelector(`.tab-btn[data-tab="${tabToActivate}"]`) || document.querySelector('.tab-btn[data-tab="tab-return-model"]');
+    if (targetBtn) {
+      targetBtn.click();
+    } else {
+      const pane = document.getElementById(tabToActivate);
+      if (pane) pane.classList.add('active');
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    refreshIcons();
+  };
+
   // Expose methods globally for seamless transitions
   window.openSectorDashboard = openSectorDashboard;
   window.exitSectorDashboard = exitSectorDashboard;
+  window.openHorizonScanner = openHorizonScanner;
+  window.exitHorizonScanner = exitHorizonScanner;
 
   if (topNavSectorBtn) {
     topNavSectorBtn.addEventListener('click', () => {
@@ -299,13 +407,12 @@ function setupTabNavigation() {
     });
   }
 
-  const topNavHorizonBtn = document.getElementById('topNavHorizonScannerBtn');
   if (topNavHorizonBtn) {
     topNavHorizonBtn.addEventListener('click', () => {
-      if (document.body.classList.contains('view-sector-dashboard')) {
-        exitSectorDashboard('tab-horizon-scanner');
+      if (document.body.classList.contains('view-horizon-scanner')) {
+        exitHorizonScanner();
       } else {
-        document.querySelector('.tab-btn[data-tab="tab-horizon-scanner"]')?.click();
+        openHorizonScanner();
       }
     });
   }
@@ -320,19 +427,27 @@ function setupTabNavigation() {
     btn.addEventListener('click', () => {
       const targetId = btn.getAttribute('data-tab');
 
-      // Clicking any stock tab exits Sector Dashboard mode
+      // Intercept special full-screen views
+      if (targetId === 'tab-sectors') {
+        openSectorDashboard();
+        return;
+      } else if (targetId === 'tab-horizon-scanner') {
+        openHorizonScanner();
+        return;
+      }
+
+      // Clicking any regular stock tab exits Sector Dashboard & Horizon Scanner modes
       if (document.body.classList.contains('view-sector-dashboard')) {
         document.body.classList.remove('view-sector-dashboard');
+      }
+      if (document.body.classList.contains('view-horizon-scanner')) {
+        document.body.classList.remove('view-horizon-scanner');
       }
       if (topNavSectorBtn) {
         topNavSectorBtn.classList.remove('active');
       }
       if (topNavHorizonBtn) {
-        if (targetId === 'tab-horizon-scanner') {
-          topNavHorizonBtn.classList.add('active');
-        } else {
-          topNavHorizonBtn.classList.remove('active');
-        }
+        topNavHorizonBtn.classList.remove('active');
       }
 
       tabBtns.forEach(b => {
@@ -350,39 +465,27 @@ function setupTabNavigation() {
         targetPane.classList.add('active');
       }
 
-      if (targetId === 'tab-sectors') {
-        openSectorDashboard();
-      } else {
-        const stock = state.universe[state.currentTicker] || { ticker: state.currentTicker, price: 100 };
-        if (stock) {
-          if (targetId === 'tab-technicals' || targetId === 'tab-fundamentals') {
-            updateAllCharts(stock, state.isDarkMode);
-          } else if (targetId === 'tab-orderbook') {
-            requestAnimationFrame(() => {
-              renderOrderBook(stock, state.isDarkMode);
-            });
-          } else if (targetId === 'tab-big-sharks') {
-            renderBigSharksView(stock, state.isDarkMode, (t) => {
-              loadStockRealtime(t);
-            });
-          } else if (targetId === 'tab-sensitivity') {
-            updateReturnModel(stock);
-          } else if (targetId === 'tab-news') {
-            renderNewsFeed(stock, state.newsFilter);
-          } else if (targetId === 'tab-screener') {
-            renderScreenerTable(state.universe, (t) => {
-              loadStockRealtime(t);
-              document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
-            }, state.currentTicker);
-          } else if (targetId === 'tab-horizon-scanner') {
-            renderHorizonScanner('horizonScannerContainer', (t) => {
-              loadStockRealtime(t);
-              document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
-            }, (t) => {
-              loadStockRealtime(t);
-              document.querySelector('.tab-btn[data-tab="tab-technicals"]')?.click();
-            });
-          }
+      const stock = state.universe[state.currentTicker] || { ticker: state.currentTicker, price: 100 };
+      if (stock) {
+        if (targetId === 'tab-technicals' || targetId === 'tab-fundamentals') {
+          updateAllCharts(stock, state.isDarkMode);
+        } else if (targetId === 'tab-orderbook') {
+          requestAnimationFrame(() => {
+            renderOrderBook(stock, state.isDarkMode);
+          });
+        } else if (targetId === 'tab-big-sharks') {
+          renderBigSharksView(stock, state.isDarkMode, (t) => {
+            loadStockRealtime(t);
+          });
+        } else if (targetId === 'tab-sensitivity') {
+          updateReturnModel(stock);
+        } else if (targetId === 'tab-news') {
+          renderNewsFeed(stock, state.newsFilter);
+        } else if (targetId === 'tab-screener') {
+          renderScreenerTable(state.universe, (t) => {
+            loadStockRealtime(t);
+            document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
+          }, state.currentTicker);
         }
       }
 
@@ -426,6 +529,10 @@ function renderStockHero(stock) {
   const exitLabel = document.getElementById('exitSectorDashboardLabel');
   if (exitLabel) {
     exitLabel.textContent = `Back to Stock Terminal (${stock.ticker})`;
+  }
+  const exitHorizonLabel = document.getElementById('exitHorizonScannerLabel');
+  if (exitHorizonLabel) {
+    exitHorizonLabel.textContent = `Back to Stock Terminal (${stock.ticker})`;
   }
 
   const sessionStatus = document.getElementById('heroSessionStatus');
@@ -907,6 +1014,9 @@ function setupOmnibarSearch() {
         if (window.exitSectorDashboard && document.body.classList.contains('view-sector-dashboard')) {
           window.exitSectorDashboard('tab-return-model');
         }
+        if (window.exitHorizonScanner && document.body.classList.contains('view-horizon-scanner')) {
+          window.exitHorizonScanner('tab-return-model');
+        }
         searchInput.value = resolvedSym;
         const loaded = await loadStockRealtime(resolvedSym);
         if (loaded) {
@@ -945,6 +1055,9 @@ function setupOmnibarSearch() {
             if (sym) {
               if (window.exitSectorDashboard && document.body.classList.contains('view-sector-dashboard')) {
                 window.exitSectorDashboard('tab-return-model');
+              }
+              if (window.exitHorizonScanner && document.body.classList.contains('view-horizon-scanner')) {
+                window.exitHorizonScanner('tab-return-model');
               }
               searchInput.value = sym;
               dropdown.classList.remove('active');
@@ -1030,6 +1143,9 @@ function setupOmnibarSearch() {
             if (window.exitSectorDashboard && document.body.classList.contains('view-sector-dashboard')) {
               window.exitSectorDashboard('tab-return-model');
             }
+            if (window.exitHorizonScanner && document.body.classList.contains('view-horizon-scanner')) {
+              window.exitHorizonScanner('tab-return-model');
+            }
             searchInput.value = sym;
             dropdown.classList.remove('active');
             dropdown.innerHTML = '';
@@ -1064,6 +1180,9 @@ function setupOmnibarSearch() {
           if (sym) {
             if (window.exitSectorDashboard && document.body.classList.contains('view-sector-dashboard')) {
               window.exitSectorDashboard('tab-return-model');
+            }
+            if (window.exitHorizonScanner && document.body.classList.contains('view-horizon-scanner')) {
+              window.exitHorizonScanner('tab-return-model');
             }
             searchInput.value = sym;
             dropdown.classList.remove('active');
@@ -1174,6 +1293,9 @@ function setupQuickChips() {
         if (window.exitSectorDashboard && document.body.classList.contains('view-sector-dashboard')) {
           window.exitSectorDashboard('tab-return-model');
         }
+        if (window.exitHorizonScanner && document.body.classList.contains('view-horizon-scanner')) {
+          window.exitHorizonScanner('tab-return-model');
+        }
         const searchInput = document.getElementById('stockSearchInput');
         if (searchInput) searchInput.value = ticker;
         loadStockRealtime(ticker);
@@ -1263,13 +1385,23 @@ function startRealtimePolling() {
         document.querySelector('.tab-btn[data-tab="tab-return-model"]')?.click();
       }, state.currentTicker);
 
-      // 6. Update Sector Dashboard if active
+      // 6. Update Sector Dashboard or Horizon Scanner if active
       const isSectorsActive = document.getElementById('tab-sectors')?.classList.contains('active');
       if (isSectorsActive) {
         renderSectorsDashboard(state.universe, (t) => {
           if (window.exitSectorDashboard) window.exitSectorDashboard('tab-return-model');
           loadStockRealtime(t);
         }, state.isDarkMode);
+      }
+      const isHorizonActive = document.getElementById('tab-horizon-scanner')?.classList.contains('active');
+      if (isHorizonActive) {
+        renderHorizonScanner('horizonScannerContainer', (t) => {
+          if (window.exitHorizonScanner) window.exitHorizonScanner('tab-return-model');
+          loadStockRealtime(t);
+        }, (t) => {
+          if (window.exitHorizonScanner) window.exitHorizonScanner('tab-technicals');
+          loadStockRealtime(t);
+        });
       }
 
       // 7. Update Live Timestamps
@@ -1323,13 +1455,23 @@ function setupRefreshButton() {
           loadStockRealtime(t);
         }, state.currentTicker);
 
-        // Update sectors dashboard if open
+        // Update sectors dashboard or horizon scanner if open
         const isSectorsActive = document.getElementById('tab-sectors')?.classList.contains('active');
         if (isSectorsActive) {
           renderSectorsDashboard(state.universe, (t) => {
             if (window.exitSectorDashboard) window.exitSectorDashboard('tab-return-model');
             loadStockRealtime(t);
           }, state.isDarkMode);
+        }
+        const isHorizonActive = document.getElementById('tab-horizon-scanner')?.classList.contains('active');
+        if (isHorizonActive) {
+          renderHorizonScanner('horizonScannerContainer', (t) => {
+            if (window.exitHorizonScanner) window.exitHorizonScanner('tab-return-model');
+            loadStockRealtime(t);
+          }, (t) => {
+            if (window.exitHorizonScanner) window.exitHorizonScanner('tab-technicals');
+            loadStockRealtime(t);
+          });
         }
 
         const now = new Date();
@@ -1427,6 +1569,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     selector.addEventListener('change', (e) => {
       if (window.exitSectorDashboard && document.body.classList.contains('view-sector-dashboard')) {
         window.exitSectorDashboard('tab-return-model');
+      }
+      if (window.exitHorizonScanner && document.body.classList.contains('view-horizon-scanner')) {
+        window.exitHorizonScanner('tab-return-model');
       }
       loadStockRealtime(e.target.value);
     });
