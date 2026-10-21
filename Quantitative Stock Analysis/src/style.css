@@ -4111,6 +4111,267 @@ body.light-theme .horizon-hero-banner {
   margin-bottom: 0.75rem;
 }
 
+/* ==========================================================================
+   Quant Horizon Scanner: Exit Strategy & Stop Loss Card Styles
+   ========================================================================== */
+.h-exit-card-section {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  border-left: 3px solid #f43f5e;
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
 
+body.light-theme .h-exit-card-section {
+  background: rgba(254, 242, 242, 0.7);
+  border-color: rgba(244, 63, 94, 0.35);
+  border-left: 3px solid #f43f5e;
+}
 
+.h-exit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.76rem;
+}
 
+.h-exit-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #fb7185;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.72rem;
+}
+
+.h-exit-rr-badge {
+  background: rgba(244, 63, 94, 0.15);
+  color: #fda4af;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.68rem;
+}
+
+.h-exit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.h-exit-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 0.45rem 0.55rem;
+}
+
+.h-exit-col.col-target1 {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.04);
+}
+
+.h-exit-col.col-target2 {
+  border-color: rgba(56, 189, 248, 0.3);
+  background: rgba(56, 189, 248, 0.04);
+}
+
+.h-exit-col.col-stoploss {
+  border-color: rgba(244, 63, 94, 0.35);
+  background: rgba(244, 63, 94, 0.05);
+}
+
+.h-exit-lbl {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.h-exit-price {
+  font-size: 0.92rem;
+}
+
+.h-exit-sub {
+  font-size: 0.66rem;
+  line-height: 1.25;
+}
+
+/* Exit Rules Box */
+.h-exit-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  border-top: 1px dashed rgba(244, 63, 94, 0.2);
+  padding-top: 0.5rem;
+  font-size: 0.7rem;
+}
+
+.h-exit-rule-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  line-height: 1.35;
+  color: var(--text-secondary);
+}
+
+.rule-icon-tag {
+  font-weight: 700;
+  font-size: 0.68rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.tag-sl {
+  background: rgba(244, 63, 94, 0.2);
+  color: #f43f5e;
+}
+
+.tag-trail {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+.tag-time {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+}
+
+/* ==========================================================================
+   Quant Horizon Scanner: Quantitative Reasoning Styles
+   ========================================================================== */
+.h-reasoning-section {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(0, 242, 254, 0.2);
+  border-left: 3px solid #00f2fe;
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+body.light-theme .h-reasoning-section {
+  background: rgba(240, 249, 255, 0.7);
+  border-color: rgba(0, 242, 254, 0.35);
+  border-left: 3px solid #0284c7;
+}
+
+.h-reasoning-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #38bdf8;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.h-reasoning-summary {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.h-pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.45rem;
+  margin-top: 0.2rem;
+}
+
+.h-pillar-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 0.45rem 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.h-pillar-top {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.h-pillar-icon {
+  width: 13px;
+  height: 13px;
+  color: #00f2fe;
+  flex-shrink: 0;
+}
+
+.h-pillar-text {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+  margin: 0;
+}
+
+/* Table View Additions */
+.table-targets-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.table-stoploss-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.table-reasoning-cell {
+  max-width: 280px;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+/* Toast Notification */
+.horizon-toast {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid #10b981;
+  color: #e2e8f0;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  z-index: 99999;
+  backdrop-filter: blur(12px);
+  animation: slideUpToast 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUpToast {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

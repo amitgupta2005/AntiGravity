@@ -317,7 +317,7 @@ function renderCardsView(items) {
             <!-- Quantitative Targets & Metrics Grid -->
             <div class="h-metrics-grid">
               <div class="h-metric-cell highlight-target">
-                <span class="h-m-lbl text-emerald font-bold">🎯 Target Price</span>
+                <span class="h-m-lbl text-emerald font-bold">🎯 Ultimate Target</span>
                 <span class="h-m-val font-mono font-bold text-emerald">${curr}${evaluation.targetPrice.toLocaleString()}</span>
                 <span class="h-m-sub text-emerald font-mono">${evaluation.targetGainPct} Upside</span>
               </div>
@@ -359,10 +359,88 @@ function renderCardsView(items) {
               </div>
             </div>
 
-            <!-- Quantitative Thesis & Rationale -->
-            <div class="h-thesis-box">
-              <i data-lucide="info" class="inline-icon text-cyan"></i>
-              <p class="h-thesis-text">${evaluation.thesis}</p>
+            <!-- Dedicated Tactical Exit Strategy & Stop Loss -->
+            <div class="h-exit-card-section">
+              <div class="h-exit-header">
+                <span class="h-exit-title">
+                  <i data-lucide="shield-alert" class="inline-icon"></i> Exit Strategy & Stop Loss
+                </span>
+                <span class="h-exit-rr-badge font-mono font-bold">
+                  ${evaluation.exitStrategy.riskRewardRatio} Risk:Reward
+                </span>
+              </div>
+
+              <div class="h-exit-grid">
+                <!-- Target 1 -->
+                <div class="h-exit-col col-target1">
+                  <span class="h-exit-lbl text-emerald">🎯 Target 1 (Partial)</span>
+                  <span class="h-exit-price font-mono font-bold text-emerald">
+                    ${curr}${evaluation.exitStrategy.target1Price.toLocaleString()}
+                  </span>
+                  <span class="h-exit-sub text-emerald font-mono">
+                    ${evaluation.exitStrategy.target1GainPct}
+                  </span>
+                </div>
+
+                <!-- Target 2 -->
+                <div class="h-exit-col col-target2">
+                  <span class="h-exit-lbl text-cyan">🚀 Target 2 (Runner)</span>
+                  <span class="h-exit-price font-mono font-bold text-cyan">
+                    ${curr}${evaluation.exitStrategy.target2Price.toLocaleString()}
+                  </span>
+                  <span class="h-exit-sub text-cyan font-mono">
+                    ${evaluation.exitStrategy.target2GainPct}
+                  </span>
+                </div>
+
+                <!-- Stop Loss -->
+                <div class="h-exit-col col-stoploss">
+                  <span class="h-exit-lbl text-rose">🛑 Stop Loss</span>
+                  <span class="h-exit-price font-mono font-bold text-rose">
+                    ${curr}${evaluation.exitStrategy.stopLossPrice.toLocaleString()}
+                  </span>
+                  <span class="h-exit-sub text-rose font-mono">
+                    ${evaluation.exitStrategy.stopLossPct}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Rules & Execution -->
+              <div class="h-exit-rules">
+                <div class="h-exit-rule-item">
+                  <span class="rule-icon-tag tag-sl">Exit Trigger</span>
+                  <span>${evaluation.exitStrategy.stopLossRule}</span>
+                </div>
+                <div class="h-exit-rule-item">
+                  <span class="rule-icon-tag tag-trail">Trailing Rule</span>
+                  <span>${evaluation.exitStrategy.trailingStopRule}</span>
+                </div>
+                <div class="h-exit-rule-item">
+                  <span class="rule-icon-tag tag-time">Time Exit</span>
+                  <span>${evaluation.exitStrategy.timeExitRule}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dedicated Quantitative Reasoning & Rationale -->
+            <div class="h-reasoning-section">
+              <div class="h-reasoning-header">
+                <span><i data-lucide="brain" class="inline-icon"></i> Quantitative Reasoning & Catalyst</span>
+                <span class="badge badge-asset-type font-mono" style="font-size: 0.65rem;">Multi-Factor Model</span>
+              </div>
+              <p class="h-reasoning-summary">${evaluation.reasoning.summary}</p>
+
+              <div class="h-pillars-grid">
+                ${evaluation.reasoning.pillars.map(p => `
+                  <div class="h-pillar-card">
+                    <div class="h-pillar-top">
+                      <i data-lucide="${p.icon}" class="h-pillar-icon"></i>
+                      <span>${p.title}</span>
+                    </div>
+                    <p class="h-pillar-text">${p.detail}</p>
+                  </div>
+                `).join('')}
+              </div>
             </div>
 
             <!-- Action Toolbar -->
@@ -373,7 +451,7 @@ function renderCardsView(items) {
               <button class="btn btn-outline btn-sm btn-action-tech" data-ticker="${asset.ticker}">
                 <i data-lucide="candlestick-chart"></i> Technicals
               </button>
-              <button class="btn btn-ghost btn-sm btn-action-copy" data-ticker="${asset.ticker}" title="Copy Strategy Info">
+              <button class="btn btn-ghost btn-sm btn-action-copy" data-ticker="${asset.ticker}" title="Copy Strategy & Exit Plan">
                 <i data-lucide="share-2"></i>
               </button>
             </div>
@@ -399,13 +477,12 @@ function renderTableView(items) {
           <tr>
             <th>Asset</th>
             <th>Type</th>
-            <th>Horizon</th>
-            <th>Strategy</th>
-            <th>Price</th>
-            <th>Target Price</th>
-            <th>Upside %</th>
-            <th>Score & Rating</th>
-            <th>Key Quantitative Metric</th>
+            <th>Horizon & Strategy</th>
+            <th>Current Price</th>
+            <th>Targets (T1 / T2)</th>
+            <th>Stop Loss & Rules</th>
+            <th>Quant Score</th>
+            <th>Quantitative Reasoning</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -416,6 +493,8 @@ function renderTableView(items) {
             const activeH = activeHorizonFilter === 'ALL' ? item.bestFitHorizon : activeHorizonFilter;
             const evaluation = item.evaluations[activeH];
             const hMeta = evaluation.horizonMeta;
+            const exit = evaluation.exitStrategy;
+            const isChgPositive = asset.changePercent >= 0;
 
             return `
               <tr class="h-table-row">
@@ -429,27 +508,49 @@ function renderTableView(items) {
                   </div>
                 </td>
                 <td><span class="badge badge-asset-type font-mono">${asset.assetType}</span></td>
-                <td><span class="badge ${hMeta.badgeClass} font-mono">${hMeta.title}</span></td>
-                <td><span class="font-medium" style="font-size: 0.8rem;">${evaluation.strategyType}</span></td>
-                <td class="font-mono font-bold">${curr}${asset.price.toLocaleString()}</td>
-                <td class="font-mono font-bold text-emerald">${curr}${evaluation.targetPrice.toLocaleString()}</td>
-                <td class="font-mono font-bold text-emerald">${evaluation.targetGainPct}</td>
+                <td>
+                  <div>
+                    <span class="badge ${hMeta.badgeClass} font-mono" style="font-size: 0.68rem;">${hMeta.title}</span>
+                    <div class="font-medium mt-1" style="font-size: 0.75rem;">${evaluation.strategyType}</div>
+                  </div>
+                </td>
+                <td>
+                  <div class="font-mono font-bold">${curr}${asset.price.toLocaleString()}</div>
+                  <div class="font-mono ${isChgPositive ? 'text-emerald' : 'text-rose'}" style="font-size: 0.7rem;">
+                    ${isChgPositive ? '+' : ''}${asset.changePercent}%
+                  </div>
+                </td>
+                <td>
+                  <div class="table-targets-cell font-mono">
+                    <span class="text-emerald font-bold">T1: ${curr}${exit.target1Price.toLocaleString()} (${exit.target1GainPct})</span>
+                    <span class="text-cyan">T2: ${curr}${exit.target2Price.toLocaleString()} (${exit.target2GainPct})</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="table-stoploss-cell font-mono">
+                    <span class="text-rose font-bold">SL: ${curr}${exit.stopLossPrice.toLocaleString()} (${exit.stopLossPct})</span>
+                    <span class="text-dim" style="font-size: 0.68rem;">${exit.riskRewardRatio} R:R</span>
+                  </div>
+                </td>
                 <td>
                   <span class="badge ${evaluation.badgeClass} font-mono" style="font-size: 0.72rem;">
                     ${evaluation.score} • ${evaluation.conviction}
                   </span>
                 </td>
-                <td class="font-mono" style="font-size: 0.75rem;">
-                  ${activeH === 'SHORT_TERM' 
-                    ? `R:R ${evaluation.riskReward} • Win: ${evaluation.winProbability}` 
-                    : activeH === 'MEDIUM_TERM' 
-                      ? `${evaluation.annualizedCAGR} • PEG ${asset.pegRatio || 1.0}` 
-                      : `${evaluation.annualizedCAGR} • ${evaluation.compoundMultiplier}`}
+                <td>
+                  <div class="table-reasoning-cell">
+                    <strong>${evaluation.reasoning.pillars[0].title}:</strong> ${evaluation.reasoning.summary}
+                  </div>
                 </td>
                 <td>
-                  <button class="btn btn-outline btn-xs btn-action-model" data-ticker="${asset.ticker}">
-                    Simulate
-                  </button>
+                  <div style="display: flex; gap: 0.3rem;">
+                    <button class="btn btn-outline btn-xs btn-action-model" data-ticker="${asset.ticker}" title="Simulate in Model">
+                      Simulate
+                    </button>
+                    <button class="btn btn-ghost btn-xs btn-action-copy" data-ticker="${asset.ticker}" title="Copy Strategy & Exit Plan">
+                      <i data-lucide="share-2" style="width: 13px; height: 13px;"></i>
+                    </button>
+                  </div>
                 </td>
               </tr>
             `;
@@ -559,14 +660,45 @@ function attachHorizonEventListeners(containerId, onSelectAssetForModel, onSelec
       const ticker = e.currentTarget.dataset.ticker;
       const rec = getRecommendations().find(r => r.asset.ticker === ticker);
       if (rec) {
-        const text = `Quantitative Recommendation for ${rec.asset.displayTicker} (${rec.asset.name}): Target ${rec.asset.currencySymbol || '$'}${rec.evaluations[rec.bestFitHorizon].targetPrice} (${rec.evaluations[rec.bestFitHorizon].targetGainPct} upside over ${rec.evaluations[rec.bestFitHorizon].timeframe})`;
-        navigator.clipboard?.writeText(text);
-        btn.innerHTML = '<i data-lucide="check" class="text-emerald"></i>';
+        const activeH = activeHorizonFilter === 'ALL' ? rec.bestFitHorizon : activeHorizonFilter;
+        const evaluation = rec.evaluations[activeH];
+        const asset = rec.asset;
+        const curr = asset.currencySymbol || (asset.market === 'IN' ? '₹' : '$');
+        const exit = evaluation.exitStrategy;
+        const reasoning = evaluation.reasoning;
+
+        const copyText = [
+          `🎯 QUANT HORIZON RECOMMENDATION: [${asset.displayTicker}] ${asset.name}`,
+          `Market: ${asset.market === 'US' ? 'US Market (USD)' : 'NSE India (INR)'} | Type: ${asset.assetType}`,
+          `Horizon: ${evaluation.horizonMeta.title} (${evaluation.timeframe})`,
+          `Strategy: ${evaluation.strategyType} | Conviction: ${evaluation.conviction} (${evaluation.score}/100)`,
+          `Current Price: ${curr}${asset.price.toLocaleString()}`,
+          ``,
+          `📊 EXIT STRATEGY & STOP LOSS:`,
+          `• Target 1 (Partial 50% Profit): ${curr}${exit.target1Price.toLocaleString()} (${exit.target1GainPct})`,
+          `  Action: ${exit.target1Action}`,
+          `• Target 2 (Runner / Objective): ${curr}${exit.target2Price.toLocaleString()} (${exit.target2GainPct})`,
+          `  Action: ${exit.target2Action}`,
+          `• Stop Loss: ${curr}${exit.stopLossPrice.toLocaleString()} (${exit.stopLossPct}) [${exit.stopLossType}]`,
+          `• Stop Loss Trigger: ${exit.stopLossRule}`,
+          `• Trailing Stop Rule: ${exit.trailingStopRule}`,
+          `• Time-Based Exit: ${exit.timeExitRule}`,
+          `• Risk:Reward Ratio: ${exit.riskRewardRatio}`,
+          ``,
+          `🧠 QUANTITATIVE REASONING & CATALYST:`,
+          `• Summary: ${reasoning.summary}`,
+          ...reasoning.pillars.map(p => `• ${p.title}: ${p.detail}`)
+        ].join('\n');
+
+        navigator.clipboard?.writeText(copyText);
+        showHorizonToast(`Exit strategy & reasoning for ${asset.displayTicker} copied!`);
+
+        btn.innerHTML = '<i data-lucide="check" class="text-emerald" style="width: 14px; height: 14px;"></i>';
         if (window.lucide && typeof window.lucide.createIcons === 'function') {
           window.lucide.createIcons();
         }
         setTimeout(() => {
-          btn.innerHTML = '<i data-lucide="share-2"></i>';
+          btn.innerHTML = '<i data-lucide="share-2" style="width: 14px; height: 14px;"></i>';
           if (window.lucide && typeof window.lucide.createIcons === 'function') {
             window.lucide.createIcons();
           }
@@ -575,3 +707,25 @@ function attachHorizonEventListeners(containerId, onSelectAssetForModel, onSelec
     });
   });
 }
+
+/**
+ * Toast Notification for Horizon Scanner
+ */
+function showHorizonToast(msg) {
+  const existing = document.querySelector('.horizon-toast');
+  if (existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.className = 'horizon-toast';
+  toast.innerHTML = `<i data-lucide="check-circle" class="text-emerald" style="width: 18px; height: 18px;"></i> <span>${msg}</span>`;
+  document.body.appendChild(toast);
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+  setTimeout(() => {
+    toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(15px)';
+    setTimeout(() => toast.remove(), 320);
+  }, 2600);
+}
+

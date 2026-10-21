@@ -135,20 +135,35 @@ Quantitative Stock Analysis is an institutional-grade, responsive quantitative e
 
 ### 13. 🧭 Quant Horizon Scanner (Stocks, ETFs & Indices for 1D to >2Y Investing)
 - **Multi-Asset Recommendation Universe**: Covers **Equities**, **ETFs** (e.g. `NIFTYBEES.NS`, `BANKBEES.NS`, `GOLDBEES.NS`, `ITBEES.NS`, `MON100.NS`, `SPY`, `QQQ`, `SMH`, `XLE`, `IWM`), and **Benchmark Indices** (e.g. `NIFTY 50`, `BANK NIFTY`, `SENSEX`, `S&P 500`, `NASDAQ 100`, `RUSSELL 2000`) across Indian (NSE) and US markets.
-- **Three Dedicated Time Horizons**:
-  - **⚡ Short-Term (1 Day to 6 Months)**: Algorithms screen for technical momentum breakouts, RSI sweet-spots (55–68), 50-day SMA trend continuation, ATR volatility buffers, precise target prices, disciplined stop loss limits, and asymmetric Risk:Reward ratios (> 1:2.0).
+- **Three Dedicated Time Horizons & Execution Disciplines**:
+  - **⚡ Short-Term (1 Day to 6 Months)**: Algorithms screen for technical momentum breakouts, RSI sweet-spots (54–68), 50-day SMA trend continuation, ATR volatility buffers, precise target prices, disciplined stop loss limits, and asymmetric Risk:Reward ratios (> 1:2.0).
   - **📈 Medium-Term (6 Months to 2 Years)**: Screens for Peter Lynch GARP ($PEG < 1.0$), earnings acceleration (> 15–30% EPS CAGR), business cycle re-ratings, operating margin expansion, and 1.25-year projected target prices with margin of safety.
   - **🏛️ Long-Term (> 2 Years)**: Multi-year wealth compounding engine evaluating Piotroski F-Scores (out of 9), high and durable ROE/ROIC (> 20%), low debt-to-equity (< 0.50), economic moats, and 3-to-5-year compounding multipliers ($P_0 \cdot (1 + \text{CAGR})^3$).
+- **🎯 Tactical Exit Strategy & Disciplined Stop Losses**:
+  - **Target 1 (Partial 50% Profit Booking)**: Specific intermediate profit targets designed to de-risk trades (e.g. +4% to +10% swing in Short-Term, +18% to +35% in Medium-Term, +40% to +80% in Long-Term) accompanied by an immediate rule to advance Stop Loss to entry price (breakeven).
+  - **Target 2 (Runner / Ultimate Objective)**: Full horizon target price and guidelines for trailing profits with moving averages (e.g. 20-day EMA daily low).
+  - **Disciplined Stop Loss Execution**: Exact stop loss price level and percentage risk, supported by specific breach conditions:
+    - *Short-Term*: ATR volatility floor / daily candle close below 50-SMA.
+    - *Medium-Term*: Weekly close below 200-SMA or deceleration in quarterly EPS growth below 8%.
+    - *Long-Term*: Structural balance sheet / Piotroski F-score collapse below 5 or durable ROE degradation.
+  - **Trailing Stop & Time-Based Exits**: Automatic trailing rules and maximum holding duration limits to prevent dead capital.
+- **🧠 Comprehensive Quantitative Reasoning & Multi-Pillar Rationale**:
+  - Explicit breakdown for every recommendation containing:
+    1. **Primary Quant Factor**: Momentum Sweet-Spot, Peter Lynch GARP Discount, or Piotroski Quality Compounding.
+    2. **Technical & Valuation Alignment**: Real-time moving average alignment, RSI positioning, and Lynch margin of safety.
+    3. **Risk-Reward Asymmetry**: Quantified reward-to-risk ratio and estimated statistical win probability.
+    4. **Horizon Catalysts & Moats**: Sector rotation tailwinds, capex expansions, or index passive inflow dynamics.
 - **Interactive Multi-Factor Control Panel**:
   - **Horizon Filter**: `All Horizons`, `⚡ Short-Term (1D–6M)`, `📈 Medium-Term (6M–2Y)`, `🏛️ Long-Term (>2Y)`.
   - **Asset Filter**: `All Assets`, `🏢 Stocks`, `📦 ETFs`, `📊 Indices`.
   - **Market Filter**: `🌐 Global (All)`, `🇮🇳 NSE India`, `🇺🇸 US Market`.
   - **Conviction Filter**: `All Convictions`, `⭐ Strong Buy (Score ≥ 85)`, `✅ Buy (Score ≥ 70)`.
   - **Sort By**: Quant Score, Target Upside %, Expected CAGR, or Ticker (A-Z).
-  - **View Modes**: Interactive **Card View** (glassmorphic cards with quant scores, targets, stops, and institutional theses) and dense **Table View** (tabular matrix with sortable columns).
-- **One-Click Synergy**:
+  - **View Modes**: Interactive **Card View** (glassmorphic cards with exit plans, stop losses, and 4-pillar reasonings) and dense **Table View** (tabular matrix with sortable columns and exit strategy badges).
+- **One-Click Synergy & Sharing**:
   - **"Simulate in Model"**: One click loads the recommended asset directly into the interactive Expected Return & PEG Valuation simulator.
   - **"Technicals"**: Instantly opens technical candlestick and momentum charts for the selected instrument.
+  - **"Copy Strategy & Exit Plan"**: Formats and copies full institutional recommendation details (Targets, Stop Losses, Rules, Reasoning) to clipboard with live toast feedback.
 
 ---
 
