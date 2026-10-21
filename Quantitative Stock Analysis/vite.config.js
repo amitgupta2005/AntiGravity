@@ -1,4 +1,7 @@
 import { defineConfig } from 'vite';
+import YahooFinance from 'yahoo-finance2';
+
+const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
 export default defineConfig({
   server: {
@@ -143,6 +146,65 @@ export default defineConfig({
               return;
             } catch (err) {
               console.error('Error in capex proxy:', err);
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: err.message }));
+              return;
+            }
+          }
+
+          if (req.url.startsWith('/api/yahoo/fundamentals')) {
+            try {
+              const parsedUrl = new URL(req.url, 'http://localhost');
+              let rawSym = parsedUrl.searchParams.get('symbol') || parsedUrl.pathname.replace(/^\/api\/yahoo\/fundamentals\/?/, '');
+              let clean = decodeURIComponent(rawSym).trim().toUpperCase();
+              const isIndex = clean.startsWith('^');
+              clean = clean.replace(/[\[\]\{\}\(\)\<\>\\\/\|\$\*\+\?`~@#!%=:;,"']/g, '').trim();
+              if (isIndex && !clean.startsWith('^')) {
+                clean = '^' + clean;
+              }
+              let symbol = clean;
+              if (symbol === 'TATAMOTORS.NS') symbol = 'TMCV.NS';
+
+              if (!symbol) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ error: 'Symbol is required' }));
+                return;
+              }
+
+              let summary = null;
+              try {
+                summary = await yf.quoteSummary(symbol, {
+                  modules: ['financialData', 'defaultKeyStatistics', 'earnings', 'summaryDetail', 'recommendationTrend']
+                });
+              } catch (e1) {
+                if (symbol === 'TMCV.NS') {
+                  try {
+                    summary = await yf.quoteSummary('TMPV.NS', {
+                      modules: ['financialData', 'defaultKeyStatistics', 'earnings', 'summaryDetail']
+                    });
+                  } catch (_) {}
+                }
+              }
+
+              let quote = null;
+              try {
+                quote = await yf.quote(symbol);
+              } catch (_) {}
+
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.setHeader('Access-Control-Allow-Origin', '*');
+              res.end(JSON.stringify({
+                symbol: clean,
+                resolvedSymbol: symbol,
+                summary,
+                quote
+              }));
+              return;
+            } catch (err) {
+              console.error('Error in fundamentals proxy:', err);
               res.statusCode = 500;
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify({ error: err.message }));

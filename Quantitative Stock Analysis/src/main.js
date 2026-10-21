@@ -831,17 +831,37 @@ function renderStockHero(stock) {
   const fundName = document.getElementById('fundamentalsStockName');
   const fundDate = document.getElementById('fundamentalsCurrentDate');
   const marginsTicker = document.getElementById('marginsStockTicker');
+  const fundTrailingEps = document.getElementById('fundTrailingEps');
+  const fundForwardEps = document.getElementById('fundForwardEps');
 
   if (fundTicker) fundTicker.textContent = stock.ticker;
   if (fundName) fundName.textContent = stock.name;
-  if (fundDate) fundDate.textContent = currentDateStr;
+  if (fundDate) {
+    fundDate.textContent = stock.latestReportedPeriod || `Real-Time as of ${currentDateStr}`;
+  }
   if (marginsTicker) marginsTicker.textContent = stock.ticker;
 
-  document.getElementById('fundRevenue').textContent = stock.ttmRevenue;
-  document.getElementById('fundNetIncome').textContent = stock.netIncome;
-  document.getElementById('fundFCF').textContent = stock.freeCashFlow;
-  document.getElementById('fundEvEbitda').textContent = `${stock.evEbitda.toFixed(1)}x`;
-  document.getElementById('fundPriceSales').textContent = `${stock.priceToSales.toFixed(1)}x`;
+  const elRev = document.getElementById('fundRevenue');
+  const elNetInc = document.getElementById('fundNetIncome');
+  const elFcf = document.getElementById('fundFCF');
+  const elEvEbitda = document.getElementById('fundEvEbitda');
+  const elPriceSales = document.getElementById('fundPriceSales');
+
+  if (elRev) elRev.textContent = stock.ttmRevenue || 'N/A';
+  if (elNetInc) elNetInc.textContent = stock.netIncome || 'N/A';
+  if (elFcf) elFcf.textContent = stock.freeCashFlow || 'N/A';
+  if (fundTrailingEps) {
+    fundTrailingEps.textContent = stock.ttmEPS != null ? `${curr}${stock.ttmEPS.toFixed(2)}` : 'N/A';
+  }
+  if (fundForwardEps) {
+    fundForwardEps.textContent = stock.forwardEPS != null ? `${curr}${stock.forwardEPS.toFixed(2)}` : 'N/A';
+  }
+  if (elEvEbitda) {
+    elEvEbitda.textContent = stock.evEbitda != null ? `${Number(stock.evEbitda).toFixed(1)}x` : 'N/A';
+  }
+  if (elPriceSales) {
+    elPriceSales.textContent = stock.priceToSales != null ? `${Number(stock.priceToSales).toFixed(1)}x` : 'N/A';
+  }
 
   // Sensitivity Tab Synchronized with Selected Stock
   const sensTicker = document.getElementById('sensitivityStockTicker');

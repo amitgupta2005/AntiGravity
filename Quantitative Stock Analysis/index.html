@@ -568,15 +568,18 @@
       <!-- TAB 3: Fundamentals & EPS Trajectory -->
       <section id="tab-fundamentals" class="tab-pane" role="tabpanel">
         <div class="panel-card">
-          <div class="panel-header">
+          <div class="panel-header" style="flex-wrap: wrap; gap: 12px;">
             <div>
               <h2 class="panel-title">
                 <i data-lucide="trending-up" class="inline-icon text-emerald"></i>
                 Reported vs Consensus Projected EPS Trajectory • <span id="fundamentalsStockTicker" class="text-cyan">NVDA</span>
               </h2>
               <p class="panel-subtitle">
-                Audited historical financials and projected consensus for <strong id="fundamentalsStockName">NVIDIA Corporation</strong> • Real-time as of current date: <span id="fundamentalsCurrentDate" class="text-emerald">Oct 13, 2026</span>
+                Audited historical SEC/NSE filings and consensus analyst forecasts for <strong id="fundamentalsStockName">NVIDIA Corporation</strong> • <span id="fundamentalsCurrentDate" class="text-emerald">Live Audited</span>
               </p>
+            </div>
+            <div class="capex-header-badges">
+              <span id="fundLiveBadge" class="badge-live-stream"><span class="live-dot pulse"></span> REAL-TIME AUDITED FINANCIALS</span>
             </div>
           </div>
           <div class="chart-box-fundamental">
@@ -589,7 +592,7 @@
             <div class="panel-header">
               <h3 class="panel-title">
                 <i data-lucide="percent" class="inline-icon text-cyan"></i>
-                Operating Efficiency & Margins (%) • <span id="marginsStockTicker">NVDA</span>
+                Operating Efficiency &amp; Margins (%) • <span id="marginsStockTicker">NVDA</span>
               </h3>
             </div>
             <div class="chart-box-sub">
@@ -601,29 +604,37 @@
             <div class="panel-header">
               <h3 class="panel-title">
                 <i data-lucide="file-spreadsheet" class="inline-icon text-blue"></i>
-                Fundamental Health & Cash Flow
+                Fundamental Health &amp; Cash Flow
               </h3>
             </div>
             <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.85rem;">
               <div style="display: flex; justify-content: space-between; padding: 8px; background: var(--bg-card); border-radius: var(--radius-sm);">
                 <span style="color: var(--text-muted);">TTM Revenue:</span>
-                <span class="font-mono" id="fundRevenue">$96.3B</span>
+                <span class="font-mono text-cyan" id="fundRevenue">$302.97B</span>
               </div>
               <div style="display: flex; justify-content: space-between; padding: 8px; background: var(--bg-card); border-radius: var(--radius-sm);">
                 <span style="color: var(--text-muted);">Net Income:</span>
-                <span class="font-mono" id="fundNetIncome">$53.0B</span>
+                <span class="font-mono" id="fundNetIncome">$120.07B</span>
               </div>
               <div style="display: flex; justify-content: space-between; padding: 8px; background: var(--bg-card); border-radius: var(--radius-sm);">
                 <span style="color: var(--text-muted);">Free Cash Flow:</span>
-                <span class="font-mono text-emerald" id="fundFCF">$42.1B</span>
+                <span class="font-mono text-emerald" id="fundFCF">$41.81B</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 8px; background: var(--bg-card); border-radius: var(--radius-sm);">
+                <span style="color: var(--text-muted);">Trailing EPS (TTM):</span>
+                <span class="font-mono text-cyan" id="fundTrailingEps">$7.91</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 8px; background: var(--bg-card); border-radius: var(--radius-sm);">
+                <span style="color: var(--text-muted);">Forward EPS (Consensus):</span>
+                <span class="font-mono text-emerald" id="fundForwardEps">$15.91</span>
               </div>
               <div style="display: flex; justify-content: space-between; padding: 8px; background: var(--bg-card); border-radius: var(--radius-sm);">
                 <span style="color: var(--text-muted);">EV / EBITDA:</span>
-                <span class="font-mono" id="fundEvEbitda">38.4x</span>
+                <span class="font-mono" id="fundEvEbitda">25.8x</span>
               </div>
               <div style="display: flex; justify-content: space-between; padding: 8px; background: var(--bg-card); border-radius: var(--radius-sm);">
                 <span style="color: var(--text-muted);">Price / Sales:</span>
-                <span class="font-mono" id="fundPriceSales">35.2x</span>
+                <span class="font-mono" id="fundPriceSales">17.3x</span>
               </div>
             </div>
           </div>

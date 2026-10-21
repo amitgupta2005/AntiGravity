@@ -427,7 +427,17 @@ export function renderEPSChart(stock, isDarkMode) {
           borderColor: colors.tooltipBorder,
           borderWidth: 1,
           callbacks: {
-            label: (context) => ` ${context.dataset.label}: ${curr}${context.parsed.y?.toFixed(2)}`
+            label: (context) => {
+              const val = context.parsed.y != null ? `${curr}${context.parsed.y.toFixed(2)}` : 'N/A';
+              const idx = context.dataIndex;
+              if (idx < historical.length && historical[idx]) {
+                const h = historical[idx];
+                if (h.estimate != null && h.surprisePct) {
+                  return ` ${context.dataset.label}: ${val} (Est: ${curr}${h.estimate.toFixed(2)}, Beat: ${h.surprisePct})`;
+                }
+              }
+              return ` ${context.dataset.label}: ${val}`;
+            }
           }
         }
       },
@@ -462,14 +472,19 @@ export function renderMarginsChart(stock, isDarkMode) {
 
   const colors = getThemeColors(isDarkMode);
 
+  const gross = stock.grossMargin != null ? Number(stock.grossMargin) : 0;
+  const oper = stock.operatingMargin != null ? Number(stock.operatingMargin) : 0;
+  const net = stock.netMargin != null ? Number(stock.netMargin) : 0;
+  const roeVal = stock.roe != null ? Number(stock.roe) : 0;
+
   marginsChartInstance = new Chart(canvas, {
     type: 'bar',
     data: {
-      labels: ['Gross Margin', 'Operating Margin', 'Net Profit Margin', 'ROE'],
+      labels: ['Gross Margin', 'Operating Margin', 'Net Margin', 'ROE'],
       datasets: [
         {
           label: `${stock.ticker} (%)`,
-          data: [stock.grossMargin, stock.operatingMargin, stock.netMargin, stock.roe],
+          data: [gross, oper, net, roeVal],
           backgroundColor: [
             isDarkMode ? 'rgba(0, 242, 254, 0.75)' : 'rgba(2, 132, 199, 0.8)',
             isDarkMode ? 'rgba(59, 130, 246, 0.75)' : 'rgba(37, 99, 235, 0.8)',
@@ -492,7 +507,7 @@ export function renderMarginsChart(stock, isDarkMode) {
           borderColor: colors.tooltipBorder,
           borderWidth: 1,
           callbacks: {
-            label: (ctx) => ` Margin: ${ctx.parsed.y}%`
+            label: (ctx) => ` ${ctx.label}: ${ctx.parsed.y}%`
           }
         }
       },
