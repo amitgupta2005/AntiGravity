@@ -66,7 +66,7 @@ import { renderOrderBook, updateOrderBookTheme, resizeOrderBookChart } from './c
 import { renderSectorsDashboard } from './components/sectors.js';
 import { renderBigSharksView, updateSharkChartTheme, getOrGenerateSharkData } from './components/sharks.js';
 import { renderScreenerTable, setupScreenerControls } from './components/screener.js';
-import { renderHorizonScanner } from './components/horizonScanner.js';
+import { renderHorizonScanner, syncHorizonScannerRealtime } from './components/horizonScanner.js';
 import { setupCustomStockModal } from './components/customStockModal.js';
 import { 
   fetchLiveStockData, 
@@ -356,6 +356,13 @@ function setupTabNavigation() {
     }
 
     renderHorizonScanner('horizonScannerContainer', (t) => {
+      handleStockSelectionFromHorizon(t, 'tab-return-model');
+    }, (t) => {
+      handleStockSelectionFromHorizon(t, 'tab-technicals');
+    });
+
+    // Auto-stream real-time quotes, technical candles & dynamic valuation
+    syncHorizonScannerRealtime('horizonScannerContainer', (t) => {
       handleStockSelectionFromHorizon(t, 'tab-return-model');
     }, (t) => {
       handleStockSelectionFromHorizon(t, 'tab-technicals');
@@ -1395,7 +1402,7 @@ function startRealtimePolling() {
       }
       const isHorizonActive = document.getElementById('tab-horizon-scanner')?.classList.contains('active');
       if (isHorizonActive) {
-        renderHorizonScanner('horizonScannerContainer', (t) => {
+        syncHorizonScannerRealtime('horizonScannerContainer', (t) => {
           if (window.exitHorizonScanner) window.exitHorizonScanner('tab-return-model');
           loadStockRealtime(t);
         }, (t) => {
@@ -1465,7 +1472,7 @@ function setupRefreshButton() {
         }
         const isHorizonActive = document.getElementById('tab-horizon-scanner')?.classList.contains('active');
         if (isHorizonActive) {
-          renderHorizonScanner('horizonScannerContainer', (t) => {
+          await syncHorizonScannerRealtime('horizonScannerContainer', (t) => {
             if (window.exitHorizonScanner) window.exitHorizonScanner('tab-return-model');
             loadStockRealtime(t);
           }, (t) => {

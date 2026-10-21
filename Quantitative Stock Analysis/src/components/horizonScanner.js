@@ -9,6 +9,7 @@
 
 import { HORIZON_UNIVERSE, HORIZONS, ASSET_TYPES, HORIZON_LABELS } from '../data/horizonUniverse.js';
 import { generateHorizonRecommendations } from '../quant/horizonEngine.js';
+import { fetchRealtimeHorizonUniverse } from '../services/yahooFinance.js';
 
 let activeHorizonFilter = 'ALL';   // 'ALL' | 'SHORT_TERM' | 'MEDIUM_TERM' | 'LONG_TERM'
 let activeAssetFilter = 'ALL';     // 'ALL' | 'STOCK' | 'ETF' | 'INDEX'
@@ -18,13 +19,56 @@ let activeSortCriteria = 'score';  // 'score' | 'upside' | 'cagr' | 'ticker'
 let currentViewMode = 'cards';     // 'cards' | 'table'
 let searchQuery = '';
 
+let currentUniverse = [...HORIZON_UNIVERSE];
 let cachedRecommendations = null;
+let isRealtimeSyncing = false;
+let lastSyncTimestamp = null;
+let hasAutoSyncedRealtime = false;
 
 export function getRecommendations() {
   if (!cachedRecommendations) {
-    cachedRecommendations = generateHorizonRecommendations(HORIZON_UNIVERSE);
+    cachedRecommendations = generateHorizonRecommendations(currentUniverse);
   }
   return cachedRecommendations;
+}
+
+/**
+ * Fetch live market data (quotes, daily candles, dynamic 50-SMA, 14-RSI, dynamic valuation)
+ * and update all recommendations in real-time.
+ */
+export async function syncHorizonScannerRealtime(containerId = 'horizonScannerContainer', onSelectAssetForModel, onSelectAssetForTechnicals) {
+  if (isRealtimeSyncing) return;
+  isRealtimeSyncing = true;
+
+  // Visual status indicators immediately
+  const syncBtn = document.getElementById('horizonLiveSyncBtn');
+  if (syncBtn) {
+    syncBtn.classList.add('is-loading');
+    syncBtn.innerHTML = `<i data-lucide="refresh-cw" class="inline-icon spinning"></i> <span>Syncing...</span>`;
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons();
+    }
+  }
+  const statusTime = document.getElementById('horizonLiveTimestamp');
+  if (statusTime) {
+    statusTime.textContent = 'Syncing Live Feeds...';
+  }
+
+  try {
+    const updated = await fetchRealtimeHorizonUniverse(currentUniverse);
+    if (updated && Array.isArray(updated) && updated.length > 0) {
+      currentUniverse = updated;
+      cachedRecommendations = generateHorizonRecommendations(currentUniverse);
+      const now = new Date();
+      lastSyncTimestamp = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      hasAutoSyncedRealtime = true;
+    }
+  } catch (err) {
+    console.warn('Horizon scanner live sync error:', err);
+  } finally {
+    isRealtimeSyncing = false;
+    renderHorizonScanner(containerId, onSelectAssetForModel, onSelectAssetForTechnicals);
+  }
 }
 
 /**
@@ -33,6 +77,13 @@ export function getRecommendations() {
 export function renderHorizonScanner(containerId, onSelectAssetForModel, onSelectAssetForTechnicals) {
   const container = document.getElementById(containerId);
   if (!container) return;
+
+  // Auto-sync real-time market data on first mount if not yet synced
+  if (!hasAutoSyncedRealtime && !isRealtimeSyncing) {
+    setTimeout(() => {
+      syncHorizonScannerRealtime(containerId, onSelectAssetForModel, onSelectAssetForTechnicals);
+    }, 60);
+  }
 
   const allRecs = getRecommendations();
 
@@ -119,8 +170,8 @@ export function renderHorizonScanner(containerId, onSelectAssetForModel, onSelec
         </div>
       </div>
 
-      <!-- Quick KPI Horizon Stats & Exit Action -->
-      <div class="horizon-header-actions-wrap" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+      <!-- Quick KPI Horizon Stats & Live Status & Exit Action -->
+      <div class="horizon-header-actions-wrap" style="display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap;">
         <div class="horizon-stats-row">
           <div class="horizon-stat-pill" data-horizon="SHORT_TERM">
             <span class="stat-horizon-icon text-amber">⚡</span>
@@ -144,6 +195,18 @@ export function renderHorizonScanner(containerId, onSelectAssetForModel, onSelec
             </div>
           </div>
         </div>
+
+        <!-- Real-Time Market Feed Indicator -->
+        <div class="horizon-live-status-pill font-mono" id="horizonLiveFeedStatus" title="Real-time live prices & quantitative indicators streamed from Yahoo Finance">
+          <span class="pulse-dot"></span>
+          <span class="live-pill-tag">LIVE YAHOO FEED</span>
+          <span class="live-pill-time text-dim" id="horizonLiveTimestamp">${lastSyncTimestamp ? `Live (${lastSyncTimestamp})` : 'Streaming Quotes'}</span>
+        </div>
+
+        <button id="horizonLiveSyncBtn" class="btn btn-outline btn-sm btn-sync-horizon ${isRealtimeSyncing ? 'is-loading' : ''}" title="Fetch latest real-time prices, 50-SMA, 14-RSI & quantitative targets">
+          <i data-lucide="refresh-cw" class="inline-icon ${isRealtimeSyncing ? 'spinning' : ''}"></i>
+          <span>${isRealtimeSyncing ? 'Syncing...' : 'Live Sync'}</span>
+        </button>
 
         <button id="exitHorizonScannerBtn" class="btn btn-outline btn-sm btn-exit-sector-view" title="Return to Stock Analysis Terminal">
           <i data-lucide="arrow-left" class="inline-icon"></i>
@@ -304,7 +367,10 @@ function renderCardsView(items) {
 
               <!-- Price & Daily Move -->
               <div class="h-price-box">
-                <span class="h-price font-mono font-bold">${curr}${asset.price.toLocaleString()}</span>
+                <div class="h-price-row">
+                  <span class="h-price font-mono font-bold">${curr}${asset.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  ${asset.isRealtime ? '<span class="live-tag-badge" title="Live Yahoo Finance Quote"><span class="pulse-dot-mini"></span> LIVE</span>' : ''}
+                </div>
                 <span class="h-chg font-mono ${chgClass}">${chgSign}${asset.changePercent}%</span>
               </div>
             </div>
@@ -522,7 +588,10 @@ function renderTableView(items) {
                   </div>
                 </td>
                 <td>
-                  <div class="font-mono font-bold">${curr}${asset.price.toLocaleString()}</div>
+                  <div class="table-price-flex">
+                    <span class="font-mono font-bold">${curr}${asset.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    ${asset.isRealtime ? '<span class="live-tag-badge mini" title="Live Yahoo Finance Quote"><span class="pulse-dot-mini"></span> LIVE</span>' : ''}
+                  </div>
                   <div class="font-mono ${isChgPositive ? 'text-emerald' : 'text-rose'}" style="font-size: 0.7rem;">
                     ${isChgPositive ? '+' : ''}${asset.changePercent}%
                   </div>
@@ -582,6 +651,15 @@ function attachHorizonEventListeners(containerId, onSelectAssetForModel, onSelec
       if (typeof window.exitHorizonScanner === 'function') {
         window.exitHorizonScanner();
       }
+    });
+  }
+
+  // Real-Time Live Sync Button
+  const liveSyncBtn = container.querySelector('#horizonLiveSyncBtn');
+  if (liveSyncBtn) {
+    liveSyncBtn.addEventListener('click', () => {
+      syncHorizonScannerRealtime(containerId, onSelectAssetForModel, onSelectAssetForTechnicals);
+      showHorizonToast('Syncing real-time market data across all 28 assets...');
     });
   }
 

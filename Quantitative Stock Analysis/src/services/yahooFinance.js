@@ -884,3 +884,112 @@ export async function fetchAllUniverseQuotes(universe) {
   return updated;
 }
 
+/**
+ * Batch-Fetch Real-Time Market Quotes & Live Technicals for the Multi-Asset Horizon Universe
+ * Streams real-time price, daily change %, 3-month daily candles, RSI-14, 50-day SMA, and forward PEG
+ * across all 28 Stocks, ETFs, and Indices directly from Yahoo Finance.
+ */
+export async function fetchRealtimeHorizonUniverse(universe) {
+  const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:5173';
+  const now = new Date();
+  const timeFormatted = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const dateFormatted = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  const results = await Promise.allSettled(
+    universe.map(async (asset) => {
+      let qTicker = asset.ticker;
+      if (qTicker === 'TATAMOTORS.NS') qTicker = 'TMCV.NS';
+
+      try {
+        const res = await fetch(`${baseUrl}/api/yahoo/chart/${encodeURIComponent(qTicker)}?range=3mo&interval=1d`);
+        if (!res.ok) return { ticker: asset.ticker, ok: false };
+        const data = await res.json();
+        const meta = data?.chart?.result?.[0]?.meta;
+        if (!meta) return { ticker: asset.ticker, ok: false };
+
+        const quotes = data?.chart?.result?.[0]?.indicators?.quote?.[0] || {};
+        const closes = quotes.close?.filter(c => c != null && !isNaN(c)) || [];
+
+        return {
+          ticker: asset.ticker,
+          ok: true,
+          meta,
+          closes
+        };
+      } catch (err) {
+        return { ticker: asset.ticker, ok: false, err };
+      }
+    })
+  );
+
+  return universe.map(asset => {
+    const found = results.find(r => r.status === 'fulfilled' && r.value?.ok && r.value.ticker === asset.ticker);
+    if (!found) {
+      return {
+        ...asset,
+        lastLiveTimestamp: now.getTime(),
+        lastLiveFormatted: timeFormatted
+      };
+    }
+
+    const { meta, closes } = found.value;
+    const livePrice = meta.regularMarketPrice || meta.chartPreviousClose || asset.price;
+    const prevClose = meta.chartPreviousClose || livePrice;
+    const change = Number((meta.fulldayChange ?? (livePrice - prevClose)).toFixed(2));
+    const changePercent = Number((meta.regularMarketChangePercent ?? ((change / prevClose) * 100)).toFixed(2));
+
+    // Dynamic 50-SMA directly from live historical closes
+    let sma50 = asset.sma50;
+    if (closes.length >= 20) {
+      const p = Math.min(50, closes.length);
+      const slice50 = closes.slice(-p);
+      sma50 = Number((slice50.reduce((sum, v) => sum + v, 0) / p).toFixed(2));
+    }
+
+    // Dynamic 14-day RSI directly from live historical closes
+    let rsi14 = asset.rsi14;
+    if (closes.length > 14) {
+      let g = 0, l = 0;
+      for (let i = 1; i <= 14; i++) {
+        const d = closes[i] - closes[i - 1];
+        if (d >= 0) g += d; else l += Math.abs(d);
+      }
+      let ag = g / 14, al = l / 14;
+      for (let i = 15; i < closes.length; i++) {
+        const d = closes[i] - closes[i - 1];
+        ag = (ag * 13 + (d > 0 ? d : 0)) / 14;
+        al = (al * 13 + (d < 0 ? Math.abs(d) : 0)) / 14;
+      }
+      const rs = al === 0 ? 100 : ag / al;
+      rsi14 = Number((100 - (100 / (1 + rs))).toFixed(1));
+    }
+
+    // Dynamic forward P/E and PEG from live price
+    let peForward = asset.peForward;
+    let pegRatio = asset.pegRatio;
+    if (asset.forwardEPS && asset.forwardEPS > 0) {
+      peForward = Number((livePrice / asset.forwardEPS).toFixed(1));
+      pegRatio = calculatePEG(peForward, asset.projectedEPSGrowth || 15);
+    }
+
+    return {
+      ...asset,
+      price: livePrice,
+      change,
+      changePercent,
+      sma50,
+      rsi14,
+      peForward,
+      pegRatio,
+      week52High: meta.fiftyTwoWeekHigh || asset.week52High,
+      week52Low: meta.fiftyTwoWeekLow || asset.week52Low,
+      volume: formatVolume(meta.regularMarketVolume || 10000000),
+      isRealtime: true,
+      liveTimestamp: timeFormatted,
+      lastLiveTimestamp: now.getTime(),
+      lastLiveFormatted: `${dateFormatted} • ${timeFormatted}`
+    };
+  });
+}
+
+
