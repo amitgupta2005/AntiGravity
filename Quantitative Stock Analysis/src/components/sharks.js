@@ -863,10 +863,7 @@ export function renderBigSharksView(stock, isDarkMode, onSelectStock) {
   // 4. Render Selected Stock Big Sharks Roster Table (values synced to stock.price)
   renderSelectedStockSharksTable(data.sharks);
 
-  // 5. Render Macro Consensus Radar (Real-Time Live Streaming Prices)
-  renderMacroSharkRadar(currentOnSelectStockCallback);
-
-  // 6. Setup local filter listeners & Live Sync Button
+  // 5. Setup local stock-level filter listeners & Live Sync Button
   setupSharkViewListeners(stock, isDark, currentOnSelectStockCallback);
 
   if (window.refreshIcons) window.refreshIcons();
@@ -1331,26 +1328,77 @@ function setupSharkViewListeners(stock, isDarkMode, onSelectStock) {
       }
     });
   });
+}
 
-  // Macro Market Filter Buttons (All, NSE, US)
-  document.querySelectorAll('.macro-market-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.macro-market-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentMacroMarket = btn.getAttribute('data-macro-market') || 'ALL';
-      renderMacroSharkRadar(onSelectStock);
+/**
+ * Setup event listeners for Root-Level Sharks Consensus Radar
+ */
+export function setupRootMacroRadarControls(onSelectStock) {
+  // Live Sync Button
+  const syncBtn = document.getElementById('macroRadarLiveSyncBtn');
+  if (syncBtn && !syncBtn.dataset.wired) {
+    syncBtn.dataset.wired = 'true';
+    syncBtn.addEventListener('click', async () => {
+      const icon = document.getElementById('macroRadarSyncIcon');
+      if (icon) icon.classList.add('spinning');
+      try {
+        macroLiveQuotesMap.clear();
+        renderMacroSharkRadar(onSelectStock);
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const timeEl = document.getElementById('sharksRadarLiveTimestamp');
+        if (timeEl) {
+          timeEl.textContent = `Live (${timeStr})`;
+        }
+      } finally {
+        setTimeout(() => {
+          if (icon) icon.classList.remove('spinning');
+        }, 500);
+      }
     });
-  });
+  }
 
   // Macro Category Tabs (Buys, Looking to Add, Sells)
-  document.querySelectorAll('.macro-category-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.macro-category-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentMacroCategory = btn.getAttribute('data-macro-category') || 'BUYS';
-      renderMacroSharkRadar(onSelectStock);
-    });
+  document.querySelectorAll('#rootMacroCategoryTabs .macro-category-btn').forEach(btn => {
+    if (!btn.dataset.wired) {
+      btn.dataset.wired = 'true';
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('#rootMacroCategoryTabs .macro-category-btn').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        currentMacroCategory = e.currentTarget.getAttribute('data-macro-category') || 'BUYS';
+        renderMacroSharkRadar(onSelectStock);
+      });
+    }
   });
+
+  // Macro Market Filter Buttons (All, NSE, US)
+  document.querySelectorAll('#rootMacroMarketFilterGroup .btn-toggle-sm').forEach(btn => {
+    if (!btn.dataset.wired) {
+      btn.dataset.wired = 'true';
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('#rootMacroMarketFilterGroup .btn-toggle-sm').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        currentMacroMarket = e.currentTarget.getAttribute('data-macro-market') || 'ALL';
+        renderMacroSharkRadar(onSelectStock);
+      });
+    }
+  });
+}
+
+/**
+ * Render Root-Level Sharks Consensus Radar
+ */
+export function renderSharksConsensusRadar(onSelectStock) {
+  currentOnSelectStockCallback = onSelectStock;
+  renderMacroSharkRadar(onSelectStock);
+  setupRootMacroRadarControls(onSelectStock);
+
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const timeEl = document.getElementById('sharksRadarLiveTimestamp');
+  if (timeEl) {
+    timeEl.textContent = `Live (${timeStr})`;
+  }
 }
 
 /**

@@ -125,6 +125,12 @@
           <span class="top-nav-horizon-tag font-mono">1D–5Y</span>
         </button>
 
+        <button id="topNavSharksRadarBtn" class="btn btn-outline btn-sharks-radar" title="Launch Sharks Consensus Radar: What Fund Managers are Buying, Looking to Add & Selling">
+          <i data-lucide="radar" class="inline-icon text-cyan"></i>
+          <span>Sharks Consensus Radar</span>
+          <span class="top-nav-sharks-tag font-mono">13F/SEBI</span>
+        </button>
+
         <button id="openCustomStockBtn" class="btn btn-outline" title="Simulate Any Custom Stock or Ticker">
           <i data-lucide="plus-circle" class="inline-icon"></i>
           <span>+ Custom Model</span>
@@ -296,6 +302,11 @@
         <i data-lucide="compass" class="inline-icon text-cyan"></i>
         <span>Quant Horizon Scanner</span>
         <span class="nav-badge-horizon font-mono">1D–5Y</span>
+      </button>
+      <button class="tab-btn highlight-sharks-tab" data-tab="tab-sharks-radar" role="tab" aria-selected="false">
+        <i data-lucide="radar" class="inline-icon text-cyan"></i>
+        <span>Sharks Consensus Radar</span>
+        <span class="nav-badge-sharks font-mono">Whales</span>
       </button>
     </nav>
 
@@ -902,49 +913,6 @@
             </table>
           </div>
         </div>
-
-        <!-- Macro Consensus Radar: What Fund Managers are Buying, Looking to Add, and Selling -->
-        <div class="panel-card" style="margin-top: 24px;">
-          <div class="panel-header" style="flex-wrap: wrap; gap: 12px;">
-            <div>
-              <h2 class="panel-title" style="font-size: 1.15rem;">
-                <i data-lucide="radar" class="inline-icon text-cyan"></i>
-                Macro Whale Radar: What Fund Managers are Buying & Looking to Add / Remove
-              </h2>
-              <p class="panel-subtitle">
-                Market-wide institutional consensus tracking aggressive additions, pre-breakout accumulation radars, and heavy liquidation dumps.
-              </p>
-            </div>
-
-            <!-- Market Filter Pills (All / NSE / US) -->
-            <div class="macro-market-filter-group">
-              <button class="btn btn-xs macro-market-btn active" data-macro-market="ALL">All Markets 🌐</button>
-              <button class="btn btn-xs macro-market-btn" data-macro-market="NSE">NSE India 🇮🇳</button>
-              <button class="btn btn-xs macro-market-btn" data-macro-market="US">US Equities 🇺🇸</button>
-            </div>
-          </div>
-
-          <!-- Radar Subcategory Tabs (Buys, Looking to Add, Sells) -->
-          <div class="macro-category-tabs">
-            <button class="macro-category-btn active" data-macro-category="BUYS">
-              <i data-lucide="trending-up" class="inline-icon text-emerald"></i>
-              <span>🔥 Aggressive Whale Buys</span>
-            </button>
-            <button class="macro-category-btn" data-macro-category="LOOKING_TO_ADD">
-              <i data-lucide="eye" class="inline-icon text-cyan"></i>
-              <span>👁️ "Looking to Add" Accumulation Radar</span>
-            </button>
-            <button class="macro-category-btn" data-macro-category="SELLS">
-              <i data-lucide="trending-down" class="inline-icon text-rose"></i>
-              <span>🔻 Heavy Sells & Institutional Trims</span>
-            </button>
-          </div>
-
-          <!-- Macro Radar Dynamic Content Container -->
-          <div id="macroSharkRadarContent" style="margin-top: 16px;">
-            <!-- Rendered by sharks.js -->
-          </div>
-        </div>
       </section>
 
       <!-- TAB: Sectors Dashboard (All Sectors YTD Performance) -->
@@ -1384,6 +1352,80 @@
       <!-- TAB 9: Quant Horizon Scanner (Stocks, ETFs & Indices) -->
       <section id="tab-horizon-scanner" class="tab-pane active" role="tabpanel">
         <div id="horizonScannerContainer"></div>
+      </section>
+
+      <!-- TAB 10: Sharks Consensus Radar (Macro Institutional Fund Intelligence) -->
+      <section id="tab-sharks-radar" class="tab-pane" role="tabpanel">
+        <!-- Hero Banner & Actions -->
+        <div class="sharks-radar-hero-banner">
+          <div class="sharks-radar-hero-content">
+            <div class="sharks-radar-title-row">
+              <div class="sharks-radar-icon-wrap">
+                <i data-lucide="radar" class="sharks-radar-main-icon"></i>
+              </div>
+              <div>
+                <h2 class="sharks-radar-heading">Sharks Consensus Radar</h2>
+                <p class="sharks-radar-subheading">
+                  Macro Institutional Super-Investor Intelligence: Tracking what prominent fund managers are <strong>Aggressively Buying</strong>, <strong>Looking to Add</strong> (Accumulating), and <strong>Selling</strong> across US &amp; NSE Indian markets (13F Filings &amp; SEBI Disclosures).
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="sharks-radar-header-actions" style="display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap;">
+            <div class="horizon-live-status-pill font-mono" id="sharksRadarLiveFeedStatus" title="Real-time live prices & 13F consensus tracking">
+              <span class="pulse-dot"></span>
+              <span class="live-pill-tag">LIVE 13F FEED</span>
+              <span class="live-pill-time text-dim" id="sharksRadarLiveTimestamp">Streaming Quotes</span>
+            </div>
+
+            <button id="macroRadarLiveSyncBtn" class="btn btn-outline btn-sm btn-sync-horizon" title="Refresh Live Real-Time Market Quotes for Whale Positions">
+              <i data-lucide="refresh-cw" id="macroRadarSyncIcon" class="inline-icon"></i>
+              <span>Live Sync</span>
+            </button>
+
+            <button id="exitSharksRadarBtn" class="btn btn-outline btn-sm btn-exit-sector-view" title="Return to Stock Analysis Terminal">
+              <i data-lucide="arrow-left" class="inline-icon"></i>
+              <span id="exitSharksRadarLabel">Back to Stock Terminal</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Interactive Control Toolbar: Subcategory Tabs & Market Filter -->
+        <div class="sharks-radar-controls-panel">
+          <div class="filter-row-secondary" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <!-- Radar Subcategory Tabs (Buys, Looking to Add, Sells) -->
+            <div class="macro-category-tabs" id="rootMacroCategoryTabs">
+              <button class="macro-category-btn active" data-macro-category="BUYS">
+                <i data-lucide="trending-up" class="inline-icon text-emerald"></i>
+                <span>🔥 Aggressive Whale Buys</span>
+              </button>
+              <button class="macro-category-btn" data-macro-category="LOOKING_TO_ADD">
+                <i data-lucide="eye" class="inline-icon text-cyan"></i>
+                <span>👁️ "Looking to Add" Accumulation</span>
+              </button>
+              <button class="macro-category-btn" data-macro-category="SELLS">
+                <i data-lucide="trending-down" class="inline-icon text-rose"></i>
+                <span>🔻 Heavy Sells &amp; Trims</span>
+              </button>
+            </div>
+
+            <!-- Market Filter Pills (All / NSE / US) -->
+            <div class="filter-subgroup">
+              <span class="filter-sublabel text-dim font-mono">Market:</span>
+              <div class="btn-group-toggle" id="rootMacroMarketFilterGroup">
+                <button class="btn-toggle-sm active" data-macro-market="ALL">🌐 All Markets</button>
+                <button class="btn-toggle-sm" data-macro-market="NSE">🇮🇳 NSE India</button>
+                <button class="btn-toggle-sm" data-macro-market="US">🇺🇸 US Equities</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Macro Radar Table Container -->
+        <div id="macroSharkRadarContent" class="sharks-radar-content-wrap">
+          <!-- Rendered by sharks.js -->
+        </div>
       </section>
     </main>
   </div>

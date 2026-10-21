@@ -2873,7 +2873,11 @@ body.view-sector-dashboard .quick-stock-chips-row,
 body.view-horizon-scanner #stockHeroCard,
 body.view-horizon-scanner .stock-hero-card,
 body.view-horizon-scanner .nav-tabs,
-body.view-horizon-scanner .quick-stock-chips-row {
+body.view-horizon-scanner .quick-stock-chips-row,
+body.view-sharks-radar #stockHeroCard,
+body.view-sharks-radar .stock-hero-card,
+body.view-sharks-radar .nav-tabs,
+body.view-sharks-radar .quick-stock-chips-row {
   display: none !important;
 }
 
@@ -4472,4 +4476,132 @@ body.light-theme .horizon-live-status-pill {
   box-shadow: 0 0 6px var(--emerald-bull);
   animation: pulse-ring 2s infinite ease-in-out;
 }
+
+/* Sharks Consensus Radar Root Styles */
+.sharks-radar-hero-banner {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.65) 100%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+body.light-theme .sharks-radar-hero-banner {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-color: #cbd5e1;
+}
+
+.sharks-radar-title-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sharks-radar-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(16, 185, 129, 0.2));
+  border: 1px solid rgba(0, 242, 254, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cyan-primary);
+  flex-shrink: 0;
+}
+
+.sharks-radar-main-icon {
+  width: 26px;
+  height: 26px;
+}
+
+.sharks-radar-heading {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 0.25rem 0;
+  letter-spacing: -0.01em;
+}
+
+.sharks-radar-subheading {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.sharks-radar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.sharks-radar-controls-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.btn-sharks-radar {
+  border-color: rgba(0, 242, 254, 0.4);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  transition: all 0.2s ease;
+}
+
+.btn-sharks-radar:hover,
+.btn-sharks-radar.active {
+  background: rgba(0, 242, 254, 0.15);
+  border-color: var(--cyan-primary);
+  color: var(--cyan-primary);
+  box-shadow: 0 0 12px rgba(0, 242, 254, 0.25);
+}
+
+.top-nav-sharks-tag {
+  background: rgba(0, 242, 254, 0.2);
+  color: var(--cyan-primary);
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 242, 254, 0.3);
+  margin-left: 2px;
+}
+
+.highlight-sharks-tab {
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.08), rgba(16, 185, 129, 0.08));
+  border-color: rgba(0, 242, 254, 0.3) !important;
+}
+
+.highlight-sharks-tab:hover,
+.highlight-sharks-tab.active {
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(16, 185, 129, 0.2)) !important;
+  border-color: var(--cyan-primary) !important;
+  color: var(--text-bright) !important;
+}
+
+.nav-badge-sharks {
+  background: rgba(0, 242, 254, 0.2);
+  color: var(--cyan-primary);
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 242, 254, 0.3);
+  margin-left: 4px;
+}
+
 

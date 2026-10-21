@@ -64,7 +64,7 @@ import { updateAllCharts } from './components/charts.js';
 import { renderNewsFeed } from './components/news.js';
 import { renderOrderBook, updateOrderBookTheme, resizeOrderBookChart } from './components/orderbook.js';
 import { renderSectorsDashboard } from './components/sectors.js';
-import { renderBigSharksView, updateSharkChartTheme, getOrGenerateSharkData } from './components/sharks.js';
+import { renderBigSharksView, updateSharkChartTheme, getOrGenerateSharkData, renderSharksConsensusRadar } from './components/sharks.js';
 import { renderScreenerTable, setupScreenerControls } from './components/screener.js';
 import { renderHorizonScanner, syncHorizonScannerRealtime } from './components/horizonScanner.js';
 import { setupCustomStockModal } from './components/customStockModal.js';
@@ -204,6 +204,14 @@ function setupThemeEngine() {
         loadStockRealtime(t);
       });
     }
+
+    const isSharksActive = document.getElementById('tab-sharks-radar')?.classList.contains('active');
+    if (isSharksActive) {
+      renderSharksConsensusRadar((t) => {
+        if (window.exitSharksRadar) window.exitSharksRadar('tab-return-model');
+        loadStockRealtime(t);
+      });
+    }
   };
 
   applyTheme(state.isDarkMode);
@@ -223,7 +231,9 @@ function setupTabNavigation() {
   const tabPanes = document.querySelectorAll('.tab-pane');
   const topNavSectorBtn = document.getElementById('topNavSectorDashboardBtn');
   const topNavHorizonBtn = document.getElementById('topNavHorizonScannerBtn');
+  const topNavSharksRadarBtn = document.getElementById('topNavSharksRadarBtn');
   const exitSectorBtn = document.getElementById('exitSectorDashboardBtn');
+  const exitSharksRadarBtn = document.getElementById('exitSharksRadarBtn');
 
   let previousStockTabId = 'tab-return-model';
 
@@ -233,19 +243,25 @@ function setupTabNavigation() {
   };
 
   const openSectorDashboard = () => {
-    // If currently in Horizon Scanner mode, exit it first
+    // If currently in Horizon Scanner or Sharks Radar mode, exit them first
     if (document.body.classList.contains('view-horizon-scanner')) {
       document.body.classList.remove('view-horizon-scanner');
       if (topNavHorizonBtn) topNavHorizonBtn.classList.remove('active');
       const horizonPane = document.getElementById('tab-horizon-scanner');
       if (horizonPane) horizonPane.classList.remove('active');
     }
+    if (document.body.classList.contains('view-sharks-radar')) {
+      document.body.classList.remove('view-sharks-radar');
+      if (topNavSharksRadarBtn) topNavSharksRadarBtn.classList.remove('active');
+      const sharksRadarPane = document.getElementById('tab-sharks-radar');
+      if (sharksRadarPane) sharksRadarPane.classList.remove('active');
+    }
 
     // Save currently active stock tab so user returns to it seamlessly
     const activeStockBtn = document.querySelector('.nav-tabs .tab-btn.active');
     if (activeStockBtn) {
       const activeId = activeStockBtn.getAttribute('data-tab');
-      if (activeId && activeId !== 'tab-sectors' && activeId !== 'tab-horizon-scanner') {
+      if (activeId && activeId !== 'tab-sectors' && activeId !== 'tab-horizon-scanner' && activeId !== 'tab-sharks-radar') {
         previousStockTabId = activeId;
       }
     }
@@ -292,9 +308,9 @@ function setupTabNavigation() {
       sectorsPane.classList.remove('active');
     }
 
-    const tabToActivate = (targetTabId && targetTabId !== 'tab-sectors' && targetTabId !== 'tab-horizon-scanner') 
+    const tabToActivate = (targetTabId && targetTabId !== 'tab-sectors' && targetTabId !== 'tab-horizon-scanner' && targetTabId !== 'tab-sharks-radar') 
       ? targetTabId 
-      : (previousStockTabId && previousStockTabId !== 'tab-sectors' && previousStockTabId !== 'tab-horizon-scanner' 
+      : (previousStockTabId && previousStockTabId !== 'tab-sectors' && previousStockTabId !== 'tab-horizon-scanner' && previousStockTabId !== 'tab-sharks-radar' 
           ? previousStockTabId 
           : 'tab-return-model');
     const targetBtn = document.querySelector(`.tab-btn[data-tab="${tabToActivate}"]`) || document.querySelector('.tab-btn[data-tab="tab-return-model"]');
@@ -315,19 +331,25 @@ function setupTabNavigation() {
   };
 
   const openHorizonScanner = () => {
-    // If currently in Sector Dashboard mode, exit it first
+    // If currently in Sector Dashboard or Sharks Radar mode, exit them first
     if (document.body.classList.contains('view-sector-dashboard')) {
       document.body.classList.remove('view-sector-dashboard');
       if (topNavSectorBtn) topNavSectorBtn.classList.remove('active');
       const sectorsPane = document.getElementById('tab-sectors');
       if (sectorsPane) sectorsPane.classList.remove('active');
     }
+    if (document.body.classList.contains('view-sharks-radar')) {
+      document.body.classList.remove('view-sharks-radar');
+      if (topNavSharksRadarBtn) topNavSharksRadarBtn.classList.remove('active');
+      const sharksRadarPane = document.getElementById('tab-sharks-radar');
+      if (sharksRadarPane) sharksRadarPane.classList.remove('active');
+    }
 
     // Save currently active stock tab so user returns to it seamlessly
     const activeStockBtn = document.querySelector('.nav-tabs .tab-btn.active');
     if (activeStockBtn) {
       const activeId = activeStockBtn.getAttribute('data-tab');
-      if (activeId && activeId !== 'tab-sectors' && activeId !== 'tab-horizon-scanner') {
+      if (activeId && activeId !== 'tab-sectors' && activeId !== 'tab-horizon-scanner' && activeId !== 'tab-sharks-radar') {
         previousStockTabId = activeId;
       }
     }
@@ -390,11 +412,104 @@ function setupTabNavigation() {
       horizonPane.classList.remove('active');
     }
 
-    const tabToActivate = (targetTabId && targetTabId !== 'tab-horizon-scanner' && targetTabId !== 'tab-sectors') 
+    const tabToActivate = (targetTabId && targetTabId !== 'tab-horizon-scanner' && targetTabId !== 'tab-sectors' && targetTabId !== 'tab-sharks-radar') 
       ? targetTabId 
-      : (previousStockTabId && previousStockTabId !== 'tab-horizon-scanner' && previousStockTabId !== 'tab-sectors' 
+      : (previousStockTabId && previousStockTabId !== 'tab-horizon-scanner' && previousStockTabId !== 'tab-sectors' && previousStockTabId !== 'tab-sharks-radar' 
           ? previousStockTabId 
           : 'tab-return-model');
+    const targetBtn = document.querySelector(`.tab-btn[data-tab="${tabToActivate}"]`) || document.querySelector('.tab-btn[data-tab="tab-return-model"]');
+    if (targetBtn) {
+      targetBtn.click();
+    } else {
+      const pane = document.getElementById(tabToActivate);
+      if (pane) pane.classList.add('active');
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    refreshIcons();
+  };
+
+  // Handlers for Sharks Consensus Radar Root Navigation
+  const handleStockSelectionFromSharksRadar = (ticker) => {
+    exitSharksRadar('tab-return-model');
+    loadStockRealtime(ticker);
+  };
+
+  const openSharksRadar = () => {
+    // If currently in Sector Dashboard or Horizon Scanner mode, exit them first
+    if (document.body.classList.contains('view-sector-dashboard')) {
+      document.body.classList.remove('view-sector-dashboard');
+      if (topNavSectorBtn) topNavSectorBtn.classList.remove('active');
+      const sectorsPane = document.getElementById('tab-sectors');
+      if (sectorsPane) sectorsPane.classList.remove('active');
+    }
+    if (document.body.classList.contains('view-horizon-scanner')) {
+      document.body.classList.remove('view-horizon-scanner');
+      if (topNavHorizonBtn) topNavHorizonBtn.classList.remove('active');
+      const horizonPane = document.getElementById('tab-horizon-scanner');
+      if (horizonPane) horizonPane.classList.remove('active');
+    }
+
+    // Save previous stock tab
+    const activeStockBtn = document.querySelector('.nav-tabs .tab-btn.active');
+    if (activeStockBtn) {
+      const activeId = activeStockBtn.getAttribute('data-tab');
+      if (activeId && activeId !== 'tab-sectors' && activeId !== 'tab-horizon-scanner' && activeId !== 'tab-sharks-radar') {
+        previousStockTabId = activeId;
+      }
+    }
+
+    // Enter Sharks Consensus Radar Full-View Mode
+    document.body.classList.add('view-sharks-radar');
+
+    tabBtns.forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-selected', 'false');
+    });
+    tabPanes.forEach(p => p.classList.remove('active'));
+
+    const sharksRadarPane = document.getElementById('tab-sharks-radar');
+    if (sharksRadarPane) {
+      sharksRadarPane.classList.add('active');
+    }
+    const sharksRadarTabBtn = document.querySelector('.tab-btn[data-tab="tab-sharks-radar"]');
+    if (sharksRadarTabBtn) {
+      sharksRadarTabBtn.classList.add('active');
+      sharksRadarTabBtn.setAttribute('aria-selected', 'true');
+    }
+    if (topNavSharksRadarBtn) {
+      topNavSharksRadarBtn.classList.add('active');
+    }
+
+    const exitLabel = document.getElementById('exitSharksRadarLabel');
+    if (exitLabel && state.currentTicker) {
+      exitLabel.textContent = `Back to Stock Terminal (${state.currentTicker})`;
+    }
+
+    renderSharksConsensusRadar(handleStockSelectionFromSharksRadar);
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    refreshIcons();
+  };
+
+  const exitSharksRadar = (targetTabId = null) => {
+    document.body.classList.remove('view-sharks-radar');
+
+    if (topNavSharksRadarBtn) {
+      topNavSharksRadarBtn.classList.remove('active');
+    }
+
+    const sharksRadarPane = document.getElementById('tab-sharks-radar');
+    if (sharksRadarPane) {
+      sharksRadarPane.classList.remove('active');
+    }
+
+    const tabToActivate = (targetTabId && targetTabId !== 'tab-sharks-radar' && targetTabId !== 'tab-horizon-scanner' && targetTabId !== 'tab-sectors') 
+      ? targetTabId 
+      : (previousStockTabId && previousStockTabId !== 'tab-sharks-radar' && previousStockTabId !== 'tab-horizon-scanner' && previousStockTabId !== 'tab-sectors' 
+          ? previousStockTabId 
+          : 'tab-return-model');
+
     const targetBtn = document.querySelector(`.tab-btn[data-tab="${tabToActivate}"]`) || document.querySelector('.tab-btn[data-tab="tab-return-model"]');
     if (targetBtn) {
       targetBtn.click();
@@ -412,6 +527,8 @@ function setupTabNavigation() {
   window.exitSectorDashboard = exitSectorDashboard;
   window.openHorizonScanner = openHorizonScanner;
   window.exitHorizonScanner = exitHorizonScanner;
+  window.openSharksRadar = openSharksRadar;
+  window.exitSharksRadar = exitSharksRadar;
 
   if (topNavSectorBtn) {
     topNavSectorBtn.addEventListener('click', () => {
@@ -433,9 +550,25 @@ function setupTabNavigation() {
     });
   }
 
+  if (topNavSharksRadarBtn) {
+    topNavSharksRadarBtn.addEventListener('click', () => {
+      if (document.body.classList.contains('view-sharks-radar')) {
+        exitSharksRadar();
+      } else {
+        openSharksRadar();
+      }
+    });
+  }
+
   if (exitSectorBtn) {
     exitSectorBtn.addEventListener('click', () => {
       exitSectorDashboard();
+    });
+  }
+
+  if (exitSharksRadarBtn) {
+    exitSharksRadarBtn.addEventListener('click', () => {
+      exitSharksRadar();
     });
   }
 
@@ -450,20 +583,29 @@ function setupTabNavigation() {
       } else if (targetId === 'tab-horizon-scanner') {
         openHorizonScanner();
         return;
+      } else if (targetId === 'tab-sharks-radar') {
+        openSharksRadar();
+        return;
       }
 
-      // Clicking any regular stock tab exits Sector Dashboard & Horizon Scanner modes
+      // Clicking any regular stock tab exits Sector Dashboard, Horizon Scanner & Sharks Radar modes
       if (document.body.classList.contains('view-sector-dashboard')) {
         document.body.classList.remove('view-sector-dashboard');
       }
       if (document.body.classList.contains('view-horizon-scanner')) {
         document.body.classList.remove('view-horizon-scanner');
       }
+      if (document.body.classList.contains('view-sharks-radar')) {
+        document.body.classList.remove('view-sharks-radar');
+      }
       if (topNavSectorBtn) {
         topNavSectorBtn.classList.remove('active');
       }
       if (topNavHorizonBtn) {
         topNavHorizonBtn.classList.remove('active');
+      }
+      if (topNavSharksRadarBtn) {
+        topNavSharksRadarBtn.classList.remove('active');
       }
 
       tabBtns.forEach(b => {
@@ -549,6 +691,10 @@ function renderStockHero(stock) {
   const exitHorizonLabel = document.getElementById('exitHorizonScannerLabel');
   if (exitHorizonLabel) {
     exitHorizonLabel.textContent = `Back to Stock Terminal (${stock.ticker})`;
+  }
+  const exitSharksLabel = document.getElementById('exitSharksRadarLabel');
+  if (exitSharksLabel) {
+    exitSharksLabel.textContent = `Back to Stock Terminal (${stock.ticker})`;
   }
 
   const sessionStatus = document.getElementById('heroSessionStatus');
@@ -1033,6 +1179,9 @@ function setupOmnibarSearch() {
         if (window.exitHorizonScanner && document.body.classList.contains('view-horizon-scanner')) {
           window.exitHorizonScanner('tab-return-model');
         }
+        if (window.exitSharksRadar && document.body.classList.contains('view-sharks-radar')) {
+          window.exitSharksRadar('tab-return-model');
+        }
         searchInput.value = resolvedSym;
         const loaded = await loadStockRealtime(resolvedSym);
         if (loaded) {
@@ -1074,6 +1223,9 @@ function setupOmnibarSearch() {
               }
               if (window.exitHorizonScanner && document.body.classList.contains('view-horizon-scanner')) {
                 window.exitHorizonScanner('tab-return-model');
+              }
+              if (window.exitSharksRadar && document.body.classList.contains('view-sharks-radar')) {
+                window.exitSharksRadar('tab-return-model');
               }
               searchInput.value = sym;
               dropdown.classList.remove('active');
@@ -1162,6 +1314,9 @@ function setupOmnibarSearch() {
             if (window.exitHorizonScanner && document.body.classList.contains('view-horizon-scanner')) {
               window.exitHorizonScanner('tab-return-model');
             }
+            if (window.exitSharksRadar && document.body.classList.contains('view-sharks-radar')) {
+              window.exitSharksRadar('tab-return-model');
+            }
             searchInput.value = sym;
             dropdown.classList.remove('active');
             dropdown.innerHTML = '';
@@ -1199,6 +1354,9 @@ function setupOmnibarSearch() {
             }
             if (window.exitHorizonScanner && document.body.classList.contains('view-horizon-scanner')) {
               window.exitHorizonScanner('tab-return-model');
+            }
+            if (window.exitSharksRadar && document.body.classList.contains('view-sharks-radar')) {
+              window.exitSharksRadar('tab-return-model');
             }
             searchInput.value = sym;
             dropdown.classList.remove('active');
@@ -1312,6 +1470,9 @@ function setupQuickChips() {
         if (window.exitHorizonScanner && document.body.classList.contains('view-horizon-scanner')) {
           window.exitHorizonScanner('tab-return-model');
         }
+        if (window.exitSharksRadar && document.body.classList.contains('view-sharks-radar')) {
+          window.exitSharksRadar('tab-return-model');
+        }
         const searchInput = document.getElementById('stockSearchInput');
         if (searchInput) searchInput.value = ticker;
         loadStockRealtime(ticker);
@@ -1419,6 +1580,10 @@ function startRealtimePolling() {
           loadStockRealtime(t);
         });
       }
+      const isSharksRadarActive = document.getElementById('tab-sharks-radar')?.classList.contains('active');
+      if (isSharksRadarActive) {
+        renderSharksConsensusRadar(handleStockSelectionFromSharksRadar);
+      }
 
       // 7. Update Live Timestamps
       const now = new Date();
@@ -1489,6 +1654,10 @@ function setupRefreshButton() {
             loadStockRealtime(t);
           });
         }
+        const isSharksRadarActive = document.getElementById('tab-sharks-radar')?.classList.contains('active');
+        if (isSharksRadarActive) {
+          renderSharksConsensusRadar(handleStockSelectionFromSharksRadar);
+        }
 
         const now = new Date();
         const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -1534,6 +1703,9 @@ function handleAddCustomStock(newStock) {
   }
   if (window.exitHorizonScanner && document.body.classList.contains('view-horizon-scanner')) {
     window.exitHorizonScanner('tab-return-model');
+  }
+  if (window.exitSharksRadar && document.body.classList.contains('view-sharks-radar')) {
+    window.exitSharksRadar('tab-return-model');
   }
   state.universe[newStock.ticker] = newStock;
 
@@ -1594,6 +1766,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       if (window.exitHorizonScanner && document.body.classList.contains('view-horizon-scanner')) {
         window.exitHorizonScanner('tab-return-model');
+      }
+      if (window.exitSharksRadar && document.body.classList.contains('view-sharks-radar')) {
+        window.exitSharksRadar('tab-return-model');
       }
       loadStockRealtime(e.target.value);
     });
