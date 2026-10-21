@@ -64,13 +64,29 @@
           <i data-lucide="chevron-down" class="dropdown-arrow"></i>
         </button>
         <div id="exportMenu" class="dropdown-menu">
+          <div class="dropdown-section-title">Spreadsheets Only</div>
           <a href="#" id="exportExcelBtn" class="dropdown-item">
             <i data-lucide="file-spreadsheet" class="text-emerald"></i>
             <span>Export to Excel (.xlsx)</span>
           </a>
+          <a href="#" id="exportXlsBtn" class="dropdown-item">
+            <i data-lucide="sheet" class="text-emerald"></i>
+            <span>Export to Excel 97-2004 (.xls)</span>
+          </a>
           <a href="#" id="exportCsvBtn" class="dropdown-item">
             <i data-lucide="file-text" class="text-cyan"></i>
             <span>Export to CSV (.csv)</span>
+          </a>
+          
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-section-title">Bundles with Chart Screenshots</div>
+          <a href="#" id="exportOversoldZipBtn" class="dropdown-item dropdown-item-highlight">
+            <i data-lucide="package-check" class="text-cyan"></i>
+            <span>Export Oversold (&lt;20) + Charts (.zip)</span>
+          </a>
+          <a href="#" id="exportAllZipBtn" class="dropdown-item">
+            <i data-lucide="archive" class="text-amber"></i>
+            <span>Export All Screened + Charts (.zip)</span>
           </a>
         </div>
       </div>
@@ -116,6 +132,12 @@
         </p>
       </div>
       <div class="banner-right">
+        <div class="banner-right-actions">
+          <button id="bannerFilterOversoldBtn" class="btn btn-primary btn-sm" title="Filter universe specifically for stocks below oversold threshold 20">
+            <i data-lucide="target"></i>
+            <span>Screen Oversold (&lt;20)</span>
+          </button>
+        </div>
         <div class="param-pills">
           <span class="param-pill"><strong>%K Period:</strong> <span id="currentKPeriod">4</span></span>
           <span class="param-pill"><strong>%K Smooth:</strong> <span id="currentKSmooth">3</span></span>
@@ -209,7 +231,13 @@
             </div>
           </div>
         </div>
-        <button id="closeChartModalBtn" class="btn-close-modal">&times;</button>
+        <div class="modal-header-actions">
+          <button id="downloadChartScreenshotBtn" class="btn btn-secondary btn-sm" title="Save publication-ready chart screenshot PNG">
+            <i data-lucide="camera"></i>
+            <span>Save Screenshot (.png)</span>
+          </button>
+          <button id="closeChartModalBtn" class="btn-close-modal">&times;</button>
+        </div>
       </div>
 
       <div class="modal-body">
@@ -329,6 +357,31 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" id="resetParamsBtn">Reset to 4, 3, 3</button>
         <button type="button" class="btn btn-primary" id="saveParamsBtn">Apply &amp; Re-screen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export Progress Modal (Packaging high-res chart screenshots into ZIP) -->
+  <div id="exportProgressModal" class="modal-overlay">
+    <div class="modal-dialog export-progress-dialog" style="max-width: 440px;">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-title-icon text-cyan"><i data-lucide="package"></i></div>
+          <div>
+            <h3 class="modal-title" id="exportProgressTitle">Exporting Archive Package</h3>
+            <p class="modal-subtitle" id="exportProgressSubtitle">Generating high-res chart screenshots...</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-body text-center" style="padding: 1.75rem 1.5rem;">
+        <div class="spinner" style="margin: 0 auto 1.25rem;"></div>
+        <p id="exportProgressText" class="font-mono text-cyan" style="font-weight: 700; margin-bottom: 0.85rem;">Processing stock 0 of 0...</p>
+        <div class="batch-progress-track">
+          <div id="exportProgressBar" class="batch-progress-fill" style="width: 0%;"></div>
+        </div>
+        <p class="text-muted" style="font-size: 0.78rem; margin-top: 0.85rem;">
+          Rendering dual sub-charts (Price + Stochastic 4,3,3) &amp; bundling into .zip archive (.xlsx, .xls, .csv + .png charts).
+        </p>
       </div>
     </div>
   </div>

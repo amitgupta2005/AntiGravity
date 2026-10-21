@@ -1,7 +1,8 @@
 /**
  * Main Application Controller
  * Orchestrates Quantitative Stochastic Screener (4, 3, 3), document upload pipeline,
- * batch queue, interactive tables, charts, and export actions.
+ * batch queue, oversold screening (<20), multi-format exports (.xlsx, .xls, .csv),
+ * and high-res chart screenshots packaging.
  */
 
 import * as lucide from 'lucide';
@@ -9,7 +10,12 @@ import { renderKpiBar } from './components/kpiBar.js';
 import { ScreenerTable } from './components/screenerTable.js';
 import { setupUploadModal } from './components/uploadModal.js';
 import { setupChartModal } from './components/chartModal.js';
-import { exportToExcel, exportToCSV } from './services/exporter.js';
+import { 
+  exportToExcel, 
+  exportToXLS, 
+  exportToCSV, 
+  exportPackageWithCharts 
+} from './services/exporter.js';
 import { runBatchScreening } from './services/marketData.js';
 import { DEFAULT_STOCHASTIC_PARAMS } from './quant/stochastic.js';
 import { PRESET_UNIVERSES, getUniverseList } from './data/presets.js';
@@ -35,16 +41,21 @@ document.addEventListener('DOMContentLoaded', () => {
     window.lucide.createIcons();
   }
 
-  // Initialize Screener Table
-  state.screenerTable = new ScreenerTable('table-container');
+  // Initialize Screener Table with export oversold handler
+  state.screenerTable = new ScreenerTable('table-container', {
+    onExportOversold: (oversoldList) => {
+      exportOversoldWithCharts(oversoldList);
+    }
+  });
 
-  // Setup Modals
+  // Setup Modals & Handlers
   setupUploadModal(handleUploadedStocks);
   setupChartModal();
   setupSettingsModal();
   setupExportDropdown();
   setupThemeToggle();
   setupUniverseSelector();
+  setupOversoldQuickFilter();
 
   // Run initial screening on Nifty 50
   const initialUniverse = getUniverseList('nifty50');
@@ -101,6 +112,9 @@ async function startScreening(stocks, universeLabel = '') {
     // Render Table & KPI Bar
     state.screenerTable.setResults(results);
     renderKpiBar(results);
+
+    // Attach KPI Card click filters
+    setupKpiCardClickFilters();
 
     if (banner) banner.classList.add('hidden');
   } catch (err) {
@@ -178,13 +192,122 @@ function setupUniverseSelector() {
 }
 
 /**
- * Setup Export Dropdown (Excel & CSV)
+ * Setup Quick Filter Trigger for Oversold Stocks (<20)
+ */
+function setupOversoldQuickFilter() {
+  const bannerBtn = document.getElementById('bannerFilterOversoldBtn');
+  if (bannerBtn) {
+    bannerBtn.addEventListener('click', () => {
+      if (state.screenerTable) {
+        state.screenerTable.setFilter('oversold');
+        const tableCard = document.querySelector('.screener-table-card');
+        if (tableCard) {
+          tableCard.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    });
+  }
+}
+
+/**
+ * Setup interactive click filters on KPI cards
+ */
+function setupKpiCardClickFilters() {
+  const kpiCards = document.querySelectorAll('.kpi-card[data-filter]');
+  kpiCards.forEach(card => {
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', () => {
+      const filter = card.getAttribute('data-filter');
+      if (state.screenerTable && filter) {
+        state.screenerTable.setFilter(filter);
+        const tableCard = document.querySelector('.screener-table-card');
+        if (tableCard) {
+          tableCard.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    });
+  });
+}
+
+/**
+ * Export Oversold Stocks below threshold 20 along with chart screenshots in ZIP
+ */
+async function exportOversoldWithCharts(explicitOversoldList = null) {
+  const list = explicitOversoldList || state.screenedResults.filter(s => (s.slowK ?? 50) < 20);
+
+  if (!list || list.length === 0) {
+    alert('No stocks currently identified below oversold threshold 20 in this universe.\n\nTip: You can upload your own watchlist or switch universes (e.g. Nifty Next 50, US Tech) to screen for oversold stocks.');
+    return;
+  }
+
+  await runArchiveExport(list, 'Oversold_Stocks_Below_20');
+}
+
+/**
+ * Export All Screened Stocks along with chart screenshots in ZIP
+ */
+async function exportAllWithCharts() {
+  if (state.screenedResults.length === 0) {
+    alert('No screened stocks available to export.');
+    return;
+  }
+  await runArchiveExport(state.screenedResults, 'All_Screened_Stocks');
+}
+
+/**
+ * Run Archive Export with live progress modal
+ */
+async function runArchiveExport(stocks, packageTitle) {
+  const modal = document.getElementById('exportProgressModal');
+  const heading = document.getElementById('exportProgressHeading') || document.getElementById('exportProgressTitle');
+  const sub = document.getElementById('exportProgressSubtitle');
+  const text = document.getElementById('exportProgressText');
+  const progressBar = document.getElementById('exportProgressBar');
+
+  if (modal) modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  if (heading) heading.textContent = `Packaging ${stocks.length} Stocks + Charts`;
+  if (sub) sub.textContent = 'Generating high-resolution chart screenshots...';
+  if (progressBar) progressBar.style.width = '0%';
+
+  try {
+    await exportPackageWithCharts(
+      stocks,
+      state.stochasticParams,
+      (current, total, label) => {
+        const pct = Math.round((current / total) * 100);
+        if (progressBar) progressBar.style.width = `${pct}%`;
+        if (text) {
+          text.textContent = `[${current}/${total}] Rendering chart for ${label} (${pct}%)...`;
+        }
+      },
+      packageTitle
+    );
+
+    setTimeout(() => {
+      if (modal) modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }, 600);
+  } catch (err) {
+    console.error('Archive export failed:', err);
+    alert(`Export Error: ${err.message}`);
+    if (modal) modal.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+}
+
+/**
+ * Setup Export Dropdown (Excel XLSX, Excel XLS, CSV, and Chart Screenshots ZIP)
  */
 function setupExportDropdown() {
   const wrapper = document.querySelector('.dropdown-wrapper');
   const toggleBtn = document.getElementById('exportDropdownBtn');
   const exportExcelBtn = document.getElementById('exportExcelBtn');
+  const exportXlsBtn = document.getElementById('exportXlsBtn');
   const exportCsvBtn = document.getElementById('exportCsvBtn');
+  const exportOversoldZipBtn = document.getElementById('exportOversoldZipBtn');
+  const exportAllZipBtn = document.getElementById('exportAllZipBtn');
 
   if (toggleBtn && wrapper) {
     toggleBtn.addEventListener('click', (e) => {
@@ -199,6 +322,7 @@ function setupExportDropdown() {
     });
   }
 
+  // Modern Excel (.xlsx)
   if (exportExcelBtn) {
     exportExcelBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -207,10 +331,24 @@ function setupExportDropdown() {
         alert('No screened results to export.');
         return;
       }
-      exportToExcel(state.screenedResults, `Stochastic_4_3_3_Screen_${Date.now()}.xlsx`);
+      exportToExcel(state.screenedResults, state.stochasticParams);
     });
   }
 
+  // Excel 97-2004 Binary (.xls)
+  if (exportXlsBtn) {
+    exportXlsBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      wrapper.classList.remove('open');
+      if (state.screenedResults.length === 0) {
+        alert('No screened results to export.');
+        return;
+      }
+      exportToXLS(state.screenedResults, state.stochasticParams);
+    });
+  }
+
+  // CSV (.csv)
   if (exportCsvBtn) {
     exportCsvBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -219,7 +357,25 @@ function setupExportDropdown() {
         alert('No screened results to export.');
         return;
       }
-      exportToCSV(state.screenedResults, `Stochastic_4_3_3_Screen_${Date.now()}.csv`);
+      exportToCSV(state.screenedResults, state.stochasticParams);
+    });
+  }
+
+  // Oversold (<20) + Chart Screenshots (.zip)
+  if (exportOversoldZipBtn) {
+    exportOversoldZipBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      wrapper.classList.remove('open');
+      exportOversoldWithCharts();
+    });
+  }
+
+  // All Screened + Chart Screenshots (.zip)
+  if (exportAllZipBtn) {
+    exportAllZipBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      wrapper.classList.remove('open');
+      exportAllWithCharts();
     });
   }
 }

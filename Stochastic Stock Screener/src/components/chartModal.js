@@ -32,12 +32,16 @@ Chart.register(
   Filler
 );
 
+import { downloadStockChartScreenshot } from '../services/chartRenderer.js';
+
 let priceChartInstance = null;
 let stochChartInstance = null;
+let activeModalStock = null;
 
 export function setupChartModal() {
   const modal = document.getElementById('chartModal');
   const closeBtn = document.getElementById('closeChartModalBtn');
+  const downloadBtn = document.getElementById('downloadChartScreenshotBtn');
 
   if (!modal) return;
 
@@ -52,12 +56,21 @@ export function setupChartModal() {
       stochChartInstance.destroy();
       stochChartInstance = null;
     }
+    activeModalStock = null;
   };
 
   if (closeBtn) closeBtn.addEventListener('click', closeModal);
   modal.addEventListener('click', (e) => {
     if (e.target === modal) closeModal();
   });
+
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', () => {
+      if (activeModalStock) {
+        downloadStockChartScreenshot(activeModalStock);
+      }
+    });
+  }
 }
 
 /**
@@ -67,6 +80,7 @@ export function openStockChartModal(stock, isDarkMode = true) {
   const modal = document.getElementById('chartModal');
   if (!modal || !stock) return;
 
+  activeModalStock = stock;
   modal.classList.add('active');
   document.body.style.overflow = 'hidden';
 

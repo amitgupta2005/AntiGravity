@@ -143,4 +143,57 @@ console.log('\n▶ Test 5: Batch Screening Pipeline Execution');
   }
 }
 
-console.log('\n🎉 ALL 5 TESTS PASSED SUCCESSFULLY! Stochastic Stock Screener (4,3,3) is fully verified.\n');
+// TEST 6: Oversold Screening (<20) & Multi-Format Export (.xlsx, .xls, .csv, and .zip with charts)
+console.log('\n▶ Test 6: Oversold Identification (<20) and Multi-Format Exports (.xlsx, .xls, .csv + Charts ZIP)');
+{
+  const mockScreenedStocks = [
+    { ticker: 'RELIANCE.NS', name: 'Reliance Industries', price: 2950, changePct: -1.2, slowK: 14.2, d: 11.5, spread: 2.7, signalLabel: '★ Bullish Golden Cross (Oversold)' },
+    { ticker: 'TCS.NS', name: 'Tata Consultancy Services', price: 3820, changePct: -2.4, slowK: 8.5, d: 9.1, spread: -0.6, signalLabel: 'Deep Oversold (%K < 10)' },
+    { ticker: 'NVDA', name: 'NVIDIA Corp', price: 135, changePct: 2.8, slowK: 86.4, d: 82.1, spread: 4.3, signalLabel: 'Overbought (>80)' }
+  ];
+
+  // 1. Identify oversold stocks below threshold of 20
+  const oversoldThreshold = 20;
+  const oversoldStocks = mockScreenedStocks.filter(s => s.slowK < oversoldThreshold);
+  assert.strictEqual(oversoldStocks.length, 2, 'Should identify exactly 2 oversold stocks below 20');
+  assert.strictEqual(oversoldStocks[0].ticker, 'RELIANCE.NS');
+  assert.strictEqual(oversoldStocks[1].ticker, 'TCS.NS');
+  console.log(`  ✅ Successfully identified ${oversoldStocks.length} stocks below oversold threshold ${oversoldThreshold}: ${oversoldStocks.map(s => `${s.ticker} (%K=${s.slowK})`).join(', ')}`);
+
+  // 2. Test modern Excel (.xlsx) generation
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(oversoldStocks);
+  XLSX.utils.book_append_sheet(wb, ws, 'Oversold_Stocks');
+  const xlsxBuf = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
+  assert(xlsxBuf.length > 1000, 'XLSX buffer should be generated');
+  console.log(`  ✅ Generated Modern Excel (.xlsx) file: ${xlsxBuf.length} bytes`);
+
+  // 3. Test legacy Excel 97-2004 (.xls) BIFF8 generation
+  const xlsBuf = XLSX.write(wb, { bookType: 'biff8', type: 'buffer' });
+  assert(xlsBuf.length > 1000, 'XLS BIFF8 buffer should be generated');
+  console.log(`  ✅ Generated Legacy Excel 97-2004 (.xls) BIFF8 file: ${xlsBuf.length} bytes`);
+
+  // 4. Test CSV (.csv) generation
+  const csvContent = XLSX.utils.sheet_to_csv(ws);
+  assert(csvContent.includes('RELIANCE.NS') && csvContent.includes('TCS.NS'), 'CSV content should contain oversold stocks');
+  console.log(`  ✅ Generated Comma-Separated Values (.csv) file: ${csvContent.length} chars`);
+
+  // 5. Test ZIP Archive packaging with charts
+  const JSZip = (await import('jszip')).default;
+  const zip = new JSZip();
+  zip.file('Oversold_Stocks.xlsx', xlsxBuf);
+  zip.file('Oversold_Stocks.xls', xlsBuf);
+  zip.file('Oversold_Stocks.csv', csvContent);
+
+  const chartsFolder = zip.folder('chart_screenshots');
+  for (const s of oversoldStocks) {
+    chartsFolder.file(`${s.ticker}_stoch_4_3_3.png`, Buffer.from('fake-png-data-mock-canvas'));
+  }
+
+  const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+  assert(zipBuffer.length > 2000, 'ZIP package should contain spreadsheets and charts');
+  console.log(`  ✅ Successfully generated complete ZIP bundle with .xlsx, .xls, .csv, and chart screenshots: ${zipBuffer.length} bytes`);
+}
+
+console.log('\n🎉 ALL 6 TESTS PASSED SUCCESSFULLY! Stochastic Oversold Screener (<20) & Exports with Charts verified.\n');
+

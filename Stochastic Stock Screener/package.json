@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "chart.js": "^4.5.1",
+    "jszip": "^3.10.2",
     "lucide": "^1.59.0",
     "xlsx": "^0.18.5",
     "yahoo-finance2": "^4.0.3"

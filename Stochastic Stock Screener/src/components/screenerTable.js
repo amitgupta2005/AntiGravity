@@ -1,23 +1,35 @@
 /**
  * Screener Table Component
  * High-performance, responsive table with real-time filtering, sorting,
- * stochastic visual meters, and deep-dive modal trigger.
+ * stochastic visual meters, direct chart screenshot export, and deep-dive modal trigger.
  */
 
 import { openStockChartModal } from './chartModal.js';
+import { downloadStockChartScreenshot } from '../services/chartRenderer.js';
 
 export class ScreenerTable {
-  constructor(containerId = 'table-container') {
+  constructor(containerId = 'table-container', options = {}) {
     this.container = document.getElementById(containerId);
     this.allResults = [];
     this.currentFilter = 'all';
     this.searchQuery = '';
     this.sortCol = 'spread';
     this.sortDir = 'desc'; // 'asc' or 'desc'
+    this.onExportOversold = options.onExportOversold || null;
   }
 
   setResults(results) {
     this.allResults = results || [];
+    this.render();
+  }
+
+  setFilter(filterName) {
+    this.currentFilter = filterName;
+    if (filterName === 'oversold') {
+      // When explicitly filtering for oversold, sort by lowest %K first (deepest discount)
+      this.sortCol = 'slowK';
+      this.sortDir = 'asc';
+    }
     this.render();
   }
 
@@ -35,11 +47,11 @@ export class ScreenerTable {
             <button class="filter-tab ${this.currentFilter === 'all' ? 'active' : ''}" data-filter="all">
               All Stocks <span class="tab-badge">${counts.all}</span>
             </button>
+            <button class="filter-tab ${this.currentFilter === 'oversold' ? 'active' : ''} oversold-tab-highlight" data-filter="oversold" title="Filter for stocks below oversold threshold 20">
+              <span class="dot-indicator bg-cyan"></span> Oversold (<20) <span class="tab-badge tab-cyan">${counts.oversold}</span>
+            </button>
             <button class="filter-tab ${this.currentFilter === 'bullishCross' ? 'active' : ''}" data-filter="bullishCross">
               <span class="dot-indicator bg-emerald"></span> Bullish Cross <span class="tab-badge tab-emerald">${counts.bullishCross}</span>
-            </button>
-            <button class="filter-tab ${this.currentFilter === 'oversold' ? 'active' : ''}" data-filter="oversold">
-              <span class="dot-indicator bg-cyan"></span> Oversold (<20) <span class="tab-badge tab-cyan">${counts.oversold}</span>
             </button>
             <button class="filter-tab ${this.currentFilter === 'bearishCross' ? 'active' : ''}" data-filter="bearishCross">
               <span class="dot-indicator bg-rose"></span> Bearish Cross <span class="tab-badge tab-rose">${counts.bearishCross}</span>
@@ -53,6 +65,13 @@ export class ScreenerTable {
           </div>
 
           <div class="toolbar-actions">
+            <!-- Dedicated Oversold + Charts Export Quick Action -->
+            <button class="btn btn-sm btn-export-oversold" id="tableExportOversoldBtn" title="Export all identified stocks below oversold threshold 20 in XLSX, XLS, CSV with chart screenshots">
+              <i data-lucide="package-check"></i>
+              <span>Export Oversold (<20) + Charts</span>
+              <span class="badge-mini bg-cyan text-dark">${counts.oversold}</span>
+            </button>
+
             <div class="search-box">
               <i data-lucide="search" class="search-icon"></i>
               <input 
@@ -79,7 +98,7 @@ export class ScreenerTable {
                 <th class="sortable ${this.getSortClass('spread')}" data-col="spread">Spread (%K-%D)</th>
                 <th>Oscillator Gauge (0-100)</th>
                 <th class="sortable ${this.getSortClass('signal')}" data-col="signal">Stochastic Signal</th>
-                <th class="text-center">Action</th>
+                <th class="text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -90,7 +109,10 @@ export class ScreenerTable {
 
         <!-- Table Footer Info -->
         <div class="table-footer">
-          <span>Showing <strong>${filtered.length}</strong> of <strong>${this.allResults.length}</strong> evaluated stocks</span>
+          <span>
+            Showing <strong>${filtered.length}</strong> of <strong>${this.allResults.length}</strong> stocks 
+            ${this.currentFilter === 'oversold' ? '<span class="text-cyan font-bold">(Filtered: Below Oversold Threshold 20)</span>' : ''}
+          </span>
           <span class="formula-note">Stochastic Basis: <code>LowestClose(4)</code> &amp; <code>HighestClose(4)</code> smoothed by 3-period SMA</span>
         </div>
       </div>
@@ -119,10 +141,12 @@ export class ScreenerTable {
     const k = r.slowK ?? r.stoch?.k ?? 50;
     const d = r.d ?? r.stoch?.d ?? 50;
     const spread = r.spread ?? (k - d);
+    const isOversold = k < 20;
 
     // %K color
     let kColorClass = 'text-neutral';
-    if (k < 20) kColorClass = 'text-cyan font-bold';
+    if (k < 10) kColorClass = 'text-cyan font-bold pulse-cyan';
+    else if (k < 20) kColorClass = 'text-cyan font-bold';
     else if (k > 80) kColorClass = 'text-amber font-bold';
 
     // Signal badge
@@ -133,11 +157,12 @@ export class ScreenerTable {
     const spreadSign = spread > 0 ? '+' : '';
 
     return `
-      <tr class="stock-row" data-ticker="${sym}">
+      <tr class="stock-row ${isOversold ? 'row-oversold-highlight' : ''}" data-ticker="${sym}">
         <td>
           <div class="stock-primary">
             <span class="stock-sym">${sym}</span>
             <span class="stock-sector">${sector}</span>
+            ${isOversold ? '<span class="oversold-pill-mini">OVERSOLD</span>' : ''}
           </div>
           <div class="stock-name" title="${this.escapeHtml(name)}">${this.escapeHtml(name)}</div>
         </td>
@@ -150,7 +175,7 @@ export class ScreenerTable {
         <td class="font-mono ${kColorClass}">
           <div class="metric-val-with-sub">
             <span>${k.toFixed(1)}</span>
-            ${k < 20 ? '<span class="sub-tag tag-cyan">Oversold</span>' : k > 80 ? '<span class="sub-tag tag-amber">Overbought</span>' : ''}
+            ${k < 10 ? '<span class="sub-tag tag-cyan">Extreme &lt;10</span>' : k < 20 ? '<span class="sub-tag tag-cyan">&lt;20 Oversold</span>' : k > 80 ? '<span class="sub-tag tag-amber">&gt;80 Overbought</span>' : ''}
           </div>
         </td>
         <td class="font-mono font-medium">${d.toFixed(1)}</td>
@@ -181,9 +206,14 @@ export class ScreenerTable {
           ${signalBadge}
         </td>
         <td class="text-center">
-          <button class="btn-inspect" data-action="inspect" data-ticker="${sym}" title="Open Full Stochastic 4,3,3 Dual Chart & Breakdown">
-            <i data-lucide="line-chart"></i> Chart
-          </button>
+          <div class="row-actions-group">
+            <button class="btn-inspect" data-action="inspect" data-ticker="${sym}" title="Open Full Stochastic 4,3,3 Dual Chart & Breakdown">
+              <i data-lucide="line-chart"></i> Chart
+            </button>
+            <button class="btn-screenshot-action" data-action="screenshot" data-ticker="${sym}" title="Download High-Res Chart Screenshot PNG for ${sym}">
+              <i data-lucide="camera"></i>
+            </button>
+          </div>
         </td>
       </tr>
     `;
@@ -256,9 +286,13 @@ export class ScreenerTable {
         <td colspan="9" class="empty-table-cell">
           <div class="empty-state-content">
             <div class="empty-icon"><i data-lucide="filter-x"></i></div>
-            <div class="empty-title">No matching stocks found</div>
+            <div class="empty-title">
+              ${this.currentFilter === 'oversold' ? 'No stocks currently below oversold threshold 20' : 'No matching stocks found'}
+            </div>
             <div class="empty-desc">
-              Try selecting a different filter tab or clearing your search term "${this.escapeHtml(this.searchQuery)}".
+              ${this.currentFilter === 'oversold' 
+                ? 'All evaluated stocks in this universe are currently trading above %K 20. Select another universe or upload custom watchlists.' 
+                : `Try selecting a different filter tab or clearing your search term "${this.escapeHtml(this.searchQuery)}".`}
             </div>
             ${this.searchQuery || this.currentFilter !== 'all' ? `
               <button class="btn-reset-filters" id="reset-filters-btn">
@@ -286,12 +320,13 @@ export class ScreenerTable {
     }
 
     // Category filter
-    if (this.currentFilter === 'bullishCross') {
+    if (this.currentFilter === 'oversold') {
+      // Below oversoldThreshold of 20
+      list = list.filter(r => (r.slowK ?? 50) < 20);
+    } else if (this.currentFilter === 'bullishCross') {
       list = list.filter(r => r.isBullishCross || (r.signalType && r.signalType.includes('BULLISH_CROSSOVER')));
     } else if (this.currentFilter === 'bearishCross') {
       list = list.filter(r => r.isBearishCross || (r.signalType && r.signalType.includes('BEARISH_CROSSOVER')));
-    } else if (this.currentFilter === 'oversold') {
-      list = list.filter(r => (r.slowK ?? 50) < 20);
     } else if (this.currentFilter === 'overbought') {
       list = list.filter(r => (r.slowK ?? 50) > 80);
     } else if (this.currentFilter === 'divergence') {
@@ -334,9 +369,9 @@ export class ScreenerTable {
     const list = this.allResults;
     return {
       all: list.length,
+      oversold: list.filter(r => (r.slowK ?? 50) < 20).length,
       bullishCross: list.filter(r => r.isBullishCross || (r.signalType && r.signalType.includes('BULLISH_CROSSOVER'))).length,
       bearishCross: list.filter(r => r.isBearishCross || (r.signalType && r.signalType.includes('BEARISH_CROSSOVER'))).length,
-      oversold: list.filter(r => (r.slowK ?? 50) < 20).length,
       overbought: list.filter(r => (r.slowK ?? 50) > 80).length,
       divergence: list.filter(r => r.divergence != null).length
     };
@@ -348,9 +383,25 @@ export class ScreenerTable {
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         this.currentFilter = tab.getAttribute('data-filter');
+        if (this.currentFilter === 'oversold') {
+          this.sortCol = 'slowK';
+          this.sortDir = 'asc';
+        }
         this.render();
       });
     });
+
+    // Table Export Oversold Button
+    const expOversoldBtn = this.container.querySelector('#tableExportOversoldBtn');
+    if (expOversoldBtn) {
+      expOversoldBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.onExportOversold) {
+          const oversoldList = this.allResults.filter(r => (r.slowK ?? 50) < 20);
+          this.onExportOversold(oversoldList);
+        }
+      });
+    }
 
     // Search input
     const searchInput = this.container.querySelector('#stock-search-input');
@@ -395,7 +446,7 @@ export class ScreenerTable {
           this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
         } else {
           this.sortCol = col;
-          this.sortDir = (col === 'ticker') ? 'asc' : 'desc';
+          this.sortDir = (col === 'ticker' || col === 'slowK') ? 'asc' : 'desc';
         }
         this.render();
       });
@@ -411,6 +462,19 @@ export class ScreenerTable {
         if (item) {
           const isDark = document.body.classList.contains('dark-theme') || !document.body.classList.contains('light-theme');
           openStockChartModal(item, isDark);
+        }
+      });
+    });
+
+    // Individual stock screenshot download buttons
+    const screenshotBtns = this.container.querySelectorAll('button[data-action="screenshot"]');
+    screenshotBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const sym = btn.getAttribute('data-ticker');
+        const item = this.allResults.find(x => (x.ticker || x.symbol) === sym);
+        if (item) {
+          downloadStockChartScreenshot(item);
         }
       });
     });
