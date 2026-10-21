@@ -278,6 +278,11 @@
         <i data-lucide="bar-chart-3" class="inline-icon"></i>
         <span>EPS Growth & Fundamentals</span>
       </button>
+      <button class="tab-btn" data-tab="tab-capex" role="tab" aria-selected="false">
+        <i data-lucide="activity" class="inline-icon text-cyan"></i>
+        <span>CapEx & Capital Allocation</span>
+        <span class="nav-badge-capex font-mono">LIVE</span>
+      </button>
       <button class="tab-btn" data-tab="tab-orderbook" role="tab" aria-selected="false">
         <i data-lucide="layers" class="inline-icon"></i>
         <span>Order Book & History</span>
@@ -623,6 +628,136 @@
             </div>
           </div>
         </div>
+      </section>
+
+      <!-- TAB: CapEx & Capital Allocation Intelligence -->
+      <section id="tab-capex" class="tab-pane" role="tabpanel">
+        <!-- Header Banner Card -->
+        <div class="panel-card capex-header-card">
+          <div class="panel-header" style="flex-wrap: wrap; gap: 12px;">
+            <div>
+              <h2 class="panel-title">
+                <i data-lucide="activity" class="inline-icon text-cyan"></i>
+                Real-Time CapEx &amp; Capital Allocation Intelligence • <span id="capexStockTicker" class="text-cyan">NVDA</span>
+              </h2>
+              <p class="panel-subtitle">
+                Live audited Capital Expenditures (CapEx), Operating Cash Flow, Free Cash Flow, and Reinvestment Rate for <strong id="capexStockName">NVIDIA Corporation</strong>
+              </p>
+            </div>
+            <div class="capex-header-badges">
+              <span id="capexAssetBadge" class="badge-asset-class badge-stock">EQUITY STOCK</span>
+              <span id="capexLiveBadge" class="badge-live-stream"><span class="live-dot pulse"></span> REAL-TIME AUDITED CASH FLOW</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top 6 CapEx KPI Metrics Grid -->
+        <div class="capex-kpi-grid">
+          <div class="capex-kpi-card highlight-capex-primary">
+            <span class="capex-kpi-label"><i data-lucide="trending-up" class="inline-icon text-cyan"></i> TTM Capital Expenditures (CapEx)</span>
+            <span class="capex-kpi-val text-cyan" id="capexTtmVal">$2.68B</span>
+            <span class="capex-kpi-sub" id="capexGrowthVal">+18.5% YoY Expansion • Reinvestment Cycle</span>
+          </div>
+          <div class="capex-kpi-card highlight-capex-green">
+            <span class="capex-kpi-label"><i data-lucide="percent" class="inline-icon text-emerald"></i> CapEx-to-Revenue Intensity</span>
+            <span class="capex-kpi-val text-emerald" id="capexIntensityVal">12.4%</span>
+            <span class="capex-kpi-sub text-emerald" id="capexIntensitySub">High Reinvestment (>10% Sales)</span>
+          </div>
+          <div class="capex-kpi-card">
+            <span class="capex-kpi-label"><i data-lucide="rotate-ccw" class="inline-icon text-blue"></i> Reinvestment Rate (% of OCF)</span>
+            <span class="capex-kpi-val text-blue" id="capexReinvestVal">48.2%</span>
+            <span class="capex-kpi-sub" id="capexReinvestSub">CapEx consumes 48.2% of Operating Cash Flow</span>
+          </div>
+          <div class="capex-kpi-card">
+            <span class="capex-kpi-label"><i data-lucide="activity" class="inline-icon text-blue"></i> Operating Cash Flow (OCF)</span>
+            <span class="capex-kpi-val text-blue" id="capexOcfVal">$58.4B</span>
+            <span class="capex-kpi-sub">Cash Generated from Core Operations</span>
+          </div>
+          <div class="capex-kpi-card highlight-capex-fcf">
+            <span class="capex-kpi-label"><i data-lucide="sparkles" class="inline-icon text-emerald"></i> Free Cash Flow (FCF)</span>
+            <span class="capex-kpi-val text-emerald" id="capexFcfVal">$42.1B</span>
+            <span class="capex-kpi-sub text-emerald">Surplus Cash (OCF minus CapEx)</span>
+          </div>
+          <div class="capex-kpi-card">
+            <span class="capex-kpi-label"><i data-lucide="award" class="inline-icon text-amber"></i> Return on Capital (ROIC)</span>
+            <span class="capex-kpi-val text-amber" id="capexRoicVal">24.5%</span>
+            <span class="capex-kpi-sub">Spread: ROIC &gt; Cost of Capital</span>
+          </div>
+        </div>
+
+        <!-- Main Content Grid: Chart + Allocation Breakdown -->
+        <div class="capex-main-grid">
+          <!-- Left: Dual-Axis Chart -->
+          <div class="panel-card capex-chart-card">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">
+                  <i data-lucide="bar-chart-2" class="inline-icon text-cyan"></i>
+                  Quarterly CapEx vs Operating Cash Flow vs Free Cash Flow
+                </h3>
+                <p class="panel-subtitle">
+                  Audited capital reinvestment timeline and cash generation trajectory
+                </p>
+              </div>
+            </div>
+            <div class="chart-box-capex">
+              <canvas id="capexTrendChartCanvas"></canvas>
+            </div>
+          </div>
+
+          <!-- Right: Growth vs Maintenance Allocation Card -->
+          <div class="panel-card capex-allocation-card">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">
+                  <i data-lucide="pie-chart" class="inline-icon text-emerald"></i>
+                  Capital Allocation Split
+                </h3>
+                <p class="panel-subtitle">
+                  Growth CapEx (Expansion) vs Maintenance CapEx (Upkeep)
+                </p>
+              </div>
+            </div>
+
+            <!-- Visual Allocation Bar -->
+            <div class="capex-alloc-bar-container">
+              <div class="capex-alloc-bar">
+                <div id="capexGrowthBar" class="capex-bar-segment segment-growth" style="width: 72%;"></div>
+                <div id="capexMaintBar" class="capex-bar-segment segment-maint" style="width: 28%;"></div>
+              </div>
+              <div class="capex-alloc-labels">
+                <div class="alloc-item growth">
+                  <span class="alloc-dot dot-growth"></span>
+                  <div class="alloc-info">
+                    <span class="alloc-title">Growth CapEx (Expansion &amp; Moat): <strong id="capexGrowthPctLabel" class="text-cyan">72%</strong></span>
+                    <span class="alloc-val font-mono" id="capexGrowthValLabel">$1.93B</span>
+                  </div>
+                </div>
+                <div class="alloc-item maint">
+                  <span class="alloc-dot dot-maint"></span>
+                  <div class="alloc-info">
+                    <span class="alloc-title">Maintenance CapEx (Sustaining): <strong id="capexMaintPctLabel" class="text-amber">28%</strong></span>
+                    <span class="alloc-val font-mono" id="capexMaintValLabel">$750M</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Strategic Theme Card -->
+            <div class="capex-strategic-box">
+              <div class="strategic-box-header">
+                <i data-lucide="compass" class="inline-icon text-cyan"></i>
+                <span class="font-bold">Strategic Deployment Focus</span>
+              </div>
+              <p class="strategic-box-text" id="capexStrategicFocus">
+                Next-gen Blackwell Ultra &amp; Rubin GPU tape-outs, CoWoS silicon packaging reservations, and enterprise AI superpod clusters.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Container: Constituents (Indices/ETFs) or Peer Discipline (Stocks) -->
+        <div id="capexConstituentsContainer"></div>
       </section>
 
       <!-- TAB: Order Book & Backlog History (Last 5 Years & Next 5 Years) -->

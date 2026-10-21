@@ -65,6 +65,7 @@ import { renderNewsFeed } from './components/news.js';
 import { renderOrderBook, updateOrderBookTheme, resizeOrderBookChart } from './components/orderbook.js';
 import { renderSectorsDashboard } from './components/sectors.js';
 import { renderBigSharksView, updateSharkChartTheme, getOrGenerateSharkData, renderSharksConsensusRadar } from './components/sharks.js';
+import { renderCapExView, updateCapExChartTheme } from './components/capex.js';
 import { renderScreenerTable, setupScreenerControls } from './components/screener.js';
 import { renderHorizonScanner, syncHorizonScannerRealtime } from './components/horizonScanner.js';
 import { setupCustomStockModal } from './components/customStockModal.js';
@@ -184,6 +185,7 @@ function setupThemeEngine() {
       updateAllCharts(currentStock, isDark);
       updateOrderBookTheme(isDark);
       updateSharkChartTheme(isDark);
+      updateCapExChartTheme(isDark);
     }
 
     const isSectorsActive = document.getElementById('tab-sectors')?.classList.contains('active');
@@ -650,6 +652,10 @@ function setupTabNavigation() {
       if (stock) {
         if (targetId === 'tab-technicals' || targetId === 'tab-fundamentals') {
           updateAllCharts(stock, state.isDarkMode);
+        } else if (targetId === 'tab-capex') {
+          renderCapExView(stock, state.isDarkMode, (t) => {
+            loadStockRealtime(t);
+          });
         } else if (targetId === 'tab-orderbook') {
           requestAnimationFrame(() => {
             renderOrderBook(stock, state.isDarkMode);
@@ -1132,7 +1138,12 @@ export async function loadStockRealtime(ticker, notify = true) {
     // 6. Render Order Book & Backlog History
     renderOrderBook(liveData, state.isDarkMode);
 
-    // 7. Render Big Sharks & Institutional Fund Managers Intelligence
+    // 7. Render CapEx & Capital Allocation Intelligence
+    renderCapExView(liveData, state.isDarkMode, (t) => {
+      loadStockRealtime(t);
+    });
+
+    // 8. Render Big Sharks & Institutional Fund Managers Intelligence
     renderBigSharksView(liveData, state.isDarkMode, (t) => {
       loadStockRealtime(t);
     });

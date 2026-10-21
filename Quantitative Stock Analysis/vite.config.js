@@ -107,6 +107,49 @@ export default defineConfig({
             }
           }
 
+          if (req.url.startsWith('/api/yahoo/capex')) {
+            try {
+              const parsedUrl = new URL(req.url, 'http://localhost');
+              let rawSym = parsedUrl.searchParams.get('symbol') || parsedUrl.pathname.replace(/^\/api\/yahoo\/capex\/?/, '');
+              let clean = decodeURIComponent(rawSym).trim().toUpperCase();
+              const isIndex = clean.startsWith('^');
+              clean = clean.replace(/[\[\]\{\}\(\)\<\>\\\/\|\$\*\+\?`~@#!%=:;,"']/g, '').trim();
+              if (isIndex && !clean.startsWith('^')) {
+                clean = '^' + clean;
+              }
+              const symbol = clean;
+              if (!symbol) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ error: 'Symbol is required' }));
+                return;
+              }
+
+              const targetUrl = `https://query2.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/${encodeURIComponent(symbol)}?merge=false&padTimeSeries=true&period1=1672531200&period2=1893456000&type=quarterlyCapitalExpenditure,quarterlyOperatingCashFlow,quarterlyFreeCashFlow,quarterlyTotalRevenue,annualCapitalExpenditure,annualOperatingCashFlow,annualFreeCashFlow,annualTotalRevenue`;
+
+              let response = await fetch(targetUrl, { headers: YAHOO_HEADERS });
+              if (!response.ok) {
+                const fallbackUrl = `https://query1.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/${encodeURIComponent(symbol)}?merge=false&padTimeSeries=true&period1=1672531200&period2=1893456000&type=quarterlyCapitalExpenditure,quarterlyOperatingCashFlow,quarterlyFreeCashFlow,quarterlyTotalRevenue,annualCapitalExpenditure,annualOperatingCashFlow,annualFreeCashFlow,annualTotalRevenue`;
+                try {
+                  const fb = await fetch(fallbackUrl, { headers: YAHOO_HEADERS });
+                  if (fb.ok) response = fb;
+                } catch (_) {}
+              }
+              const data = await response.json();
+              res.statusCode = response.status;
+              res.setHeader('Content-Type', 'application/json');
+              res.setHeader('Access-Control-Allow-Origin', '*');
+              res.end(JSON.stringify(data));
+              return;
+            } catch (err) {
+              console.error('Error in capex proxy:', err);
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: err.message }));
+              return;
+            }
+          }
+
           next();
         });
       }
