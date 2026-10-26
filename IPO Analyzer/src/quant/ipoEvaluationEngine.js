@@ -554,11 +554,17 @@ export class IpoEvaluationEngine {
 
     // 4. Market Sentiment
     const isIndia = ipo.market === 'IN';
+    const gmpHistoryTrend = (sentiment.gmpHistory && Array.isArray(sentiment.gmpHistory))
+      ? sentiment.gmpHistory.map(h => (typeof h.gmpPct === 'number' ? `${h.gmpPct >= 0 ? '+' : ''}${h.gmpPct.toFixed(1)}%` : `${h.gmpPct}`))
+      : (Array.isArray(sentiment.gmpTrend) ? sentiment.gmpTrend : [typeof sentiment.gmpTrend === 'string' ? sentiment.gmpTrend : 'STABLE']);
+
     const sentimentData = {
       isIndia,
       gmpPrice: (sentiment.gmp != null || sentiment.gmpPrice != null) ? `${issue.currencySymbol || ''}${sentiment.gmp ?? sentiment.gmpPrice}` : 'N/A',
       gmpPct: sentiment.gmpPct != null ? `${sentiment.gmpPct >= 0 ? '+' : ''}${sentiment.gmpPct.toFixed(1)}%` : 'N/A',
-      gmpTrend: sentiment.gmpTrend || (sentiment.gmpHistory ? sentiment.gmpHistory.map(h => h.gmpPct) : []),
+      gmpTrend: gmpHistoryTrend,
+      gmpTrendLabel: typeof sentiment.gmpTrend === 'string' ? sentiment.gmpTrend : 'STABLE',
+      gmpHistory: sentiment.gmpHistory || [],
       subscription: sentiment.subscription || {
         qib: sentiment.qibSubscription != null ? sentiment.qibSubscription : 'N/A',
         nii: sentiment.niiSubscription != null ? sentiment.niiSubscription : 'N/A',

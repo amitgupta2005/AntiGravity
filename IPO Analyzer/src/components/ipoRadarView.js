@@ -121,10 +121,10 @@ export class IpoRadarView {
             <span class="kpi-title">Macro Volatility (VIX)</span>
             <div class="kpi-vix-row">
               <div class="vix-badge">
-                <span>IN VIX:</span> <strong>${this.marketFeed.cachedVix.indiaVix.value}</strong>
+                <span>IN VIX:</span> <strong>${this.marketFeed?.cachedVix?.indiaVix?.value ?? 14.35}</strong>
               </div>
               <div class="vix-badge">
-                <span>US VIX:</span> <strong>${this.marketFeed.cachedVix.usVix.value}</strong>
+                <span>US VIX:</span> <strong>${this.marketFeed?.cachedVix?.usVix?.value ?? 13.92}</strong>
               </div>
             </div>
           </div>
@@ -660,26 +660,25 @@ export class IpoRadarView {
       });
     }
 
-    // Dossier buttons
-    const dossierButtons = this.container.querySelectorAll('.btn-open-dossier');
-    dossierButtons.forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    // Delegated click handler on container for View Dossier buttons and row clicks
+    this.container.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-open-dossier');
+      if (btn) {
         e.stopPropagation();
+        e.preventDefault();
         const ticker = btn.getAttribute('data-ticker');
-        const ipo = this.universe.find(u => u.ticker === ticker);
+        const ipo = this.universe.find(u => u.ticker === ticker || u.id === ticker);
         if (ipo) openIpoDetailModal(ipo);
-      });
-    });
+        return;
+      }
 
-    // Row clicks in table
-    const rows = this.container.querySelectorAll('.radar-table-row');
-    rows.forEach(row => {
-      row.addEventListener('click', (e) => {
-        if (e.target.closest('button')) return;
+      const row = e.target.closest('.radar-table-row');
+      if (row && !e.target.closest('button') && !e.target.closest('a')) {
         const ticker = row.getAttribute('data-ticker');
-        const ipo = this.universe.find(u => u.ticker === ticker);
+        const ipo = this.universe.find(u => u.ticker === ticker || u.id === ticker);
         if (ipo) openIpoDetailModal(ipo);
-      });
+        return;
+      }
     });
   }
 }

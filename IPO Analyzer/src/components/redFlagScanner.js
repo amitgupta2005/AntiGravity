@@ -145,13 +145,15 @@ export class RedFlagScanner {
   }
 
   attachEventListeners() {
-    const buttons = this.container.querySelectorAll('.btn-open-rf-dossier');
-    buttons.forEach(btn => {
-      btn.addEventListener('click', () => {
+    this.container.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-open-rf-dossier');
+      if (btn) {
+        e.stopPropagation();
+        e.preventDefault();
         const ticker = btn.getAttribute('data-ticker');
-        const ipo = this.universe.find(u => u.ticker === ticker);
+        const ipo = this.universe.find(u => u.ticker === ticker || u.id === ticker);
         if (ipo) openIpoDetailModal(ipo);
-      });
+      }
     });
   }
 }

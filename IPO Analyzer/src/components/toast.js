@@ -23,11 +23,11 @@ export function showToast(message, type = 'info', duration = 3000) {
   container.appendChild(toast);
 
   // Trigger animation
-  setTimeout(() => toast.classList.add('toast-visible'), 10);
+  setTimeout(() => toast?.classList?.add('toast-visible'), 10);
 
   setTimeout(() => {
-    toast.classList.remove('toast-visible');
-    setTimeout(() => toast.remove(), 300);
+    toast?.classList?.remove('toast-visible');
+    setTimeout(() => toast?.remove?.(), 300);
   }, duration);
 }
 

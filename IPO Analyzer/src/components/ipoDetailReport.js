@@ -7,42 +7,58 @@ import { IpoEvaluationEngine } from '../quant/ipoEvaluationEngine.js';
 import { showToast } from './toast.js';
 
 export function openIpoDetailModal(ipo) {
-  const evaluation = IpoEvaluationEngine.evaluate(ipo);
-  const { dossier, pillarScores, score, verdictLabel, verdictColor } = evaluation;
+  try {
+    if (!ipo) {
+      showToast('No IPO data available', 'warning');
+      return;
+    }
 
-  // Remove existing modal if any
-  const existing = document.getElementById('ipo-dossier-modal');
-  if (existing) existing.remove();
+    const evaluation = IpoEvaluationEngine.evaluate(ipo);
+    const { dossier, pillarScores, score, verdictLabel, verdictColor } = evaluation;
 
-  const modal = document.createElement('div');
-  modal.id = 'ipo-dossier-modal';
-  modal.className = 'modal-backdrop';
+    // Remove existing modal if any
+    const existing = document.getElementById('ipo-dossier-modal');
+    if (existing) existing.remove();
 
-  const issue = ipo.issueDetails || {};
-  const isIndia = ipo.market === 'IN';
+    const modal = document.createElement('div');
+    modal.id = 'ipo-dossier-modal';
+    modal.className = 'modal-backdrop';
 
-  const df = dossier.drhpFinancials || {};
-  const repCurrency = df.reportingCurrency || (isIndia ? 'INR Cr' : 'USD M');
-  const currSym = repCurrency.includes('USD') ? '$' : '₹';
-  const years = (df.revenue3Y && df.revenue3Y.length >= 3)
-    ? df.revenue3Y.map(r => r.year)
-    : ['FY24', 'FY25', 'FY26'];
-  const rev = df.revenue3Y?.map(r => r.value) || [];
-  const ebitda = df.ebitda3Y?.map(e => e.value) || [];
-  const pat = df.pat3Y?.map(p => p.value) || [];
-  const hasSpike = Boolean(df.hasPreIpoMarginSpike);
+    const issue = ipo.issueDetails || {};
+    const isIndia = ipo.market === 'IN';
 
-  const fmtFinancial = (val) => {
-    if (val == null) return 'N/A';
-    return (val < 0 ? '-' : '') + currSym + Math.abs(val).toLocaleString();
-  };
+    const df = dossier.drhpFinancials || {};
+    const repCurrency = df.reportingCurrency || (isIndia ? 'INR Cr' : 'USD M');
+    const currSym = repCurrency.includes('USD') ? '$' : '₹';
+    const years = (df.revenue3Y && df.revenue3Y.length >= 3)
+      ? df.revenue3Y.map(r => r.year)
+      : ['FY24', 'FY25', 'FY26'];
+    const rev = df.revenue3Y?.map(r => r.value) || [];
+    const ebitda = df.ebitda3Y?.map(e => e.value) || [];
+    const pat = df.pat3Y?.map(p => p.value) || [];
+    const hasSpike = Boolean(df.hasPreIpoMarginSpike);
 
-  const calcMargin = (num, denom) => {
-    if (num == null || denom == null || denom === 0) return 'N/A';
-    return ((num / denom) * 100).toFixed(1) + '%';
-  };
+    const fmtFinancial = (val) => {
+      if (val == null) return 'N/A';
+      return (val < 0 ? '-' : '') + currSym + Math.abs(val).toLocaleString();
+    };
 
-  modal.innerHTML = `
+    const calcMargin = (num, denom) => {
+      if (num == null || denom == null || denom === 0) return 'N/A';
+      return ((num / denom) * 100).toFixed(1) + '%';
+    };
+
+    // Safe computation of 3-Day GMP progression trend
+    let gmpTrendDisplay = 'STABLE';
+    if (Array.isArray(dossier.part4_marketSentiment?.gmpTrend) && dossier.part4_marketSentiment.gmpTrend.length > 0) {
+      gmpTrendDisplay = dossier.part4_marketSentiment.gmpTrend.map(v => (typeof v === 'number' ? (v >= 0 ? '+' : '') + v + '%' : String(v))).join(' ➔ ');
+    } else if (Array.isArray(ipo.sentiment?.gmpHistory) && ipo.sentiment.gmpHistory.length > 0) {
+      gmpTrendDisplay = ipo.sentiment.gmpHistory.map(h => (h.gmpPct != null ? (h.gmpPct >= 0 ? '+' : '') + h.gmpPct + '%' : 'N/A')).join(' ➔ ');
+    } else if (typeof dossier.part4_marketSentiment?.gmpTrend === 'string') {
+      gmpTrendDisplay = dossier.part4_marketSentiment.gmpTrend;
+    }
+
+    modal.innerHTML = `
     <div class="modal-dialog institutional-dossier-dialog" role="dialog" aria-modal="true">
       <div class="modal-header">
         <div class="header-asset-info">
@@ -322,7 +338,7 @@ export function openIpoDetailModal(ipo) {
                 </div>
                 <div class="gmp-progression-trend">
                   <span class="trend-label">3-Day Trend:</span>
-                  <span class="trend-values">${dossier.part4_marketSentiment.gmpTrend.map(v => v + '%').join(' ➔ ')}</span>
+                  <span class="trend-values">${escapeHtml(gmpTrendDisplay)}</span>
                 </div>
               </div>
 
@@ -351,10 +367,10 @@ export function openIpoDetailModal(ipo) {
               <div class="sentiment-card">
                 <span class="card-caption">Underwriter Syndicate</span>
                 <div class="underwriter-info">
-                  <span class="tier-pill tier-${dossier.part4_marketSentiment.underwriterTier.toLowerCase()}">
-                    ${escapeHtml(dossier.part4_marketSentiment.underwriterTier)}
+                  <span class="tier-pill tier-${(dossier.part4_marketSentiment.underwriterTier || 'tier_1').toLowerCase()}">
+                    ${escapeHtml(dossier.part4_marketSentiment.underwriterTier || 'Tier 1')}
                   </span>
-                  <p class="lead-managers-list">${(issue.leadManagers || []).join(', ')}</p>
+                  <p class="lead-managers-list">${(issue.leadManagers || issue.underwriters || []).join(', ')}</p>
                 </div>
               </div>
             `}
@@ -409,6 +425,10 @@ export function openIpoDetailModal(ipo) {
       showToast('Clipboard access denied. Please copy manually.', 'error');
     });
   });
+  } catch (err) {
+    console.error('Error opening IPO dossier modal for', ipo?.ticker, err);
+    showToast('Failed to open dossier: ' + err.message, 'error');
+  }
 }
 
 function escapeHtml(str) {

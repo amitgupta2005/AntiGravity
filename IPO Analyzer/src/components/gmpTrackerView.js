@@ -126,13 +126,21 @@ export class GmpTrackerView {
                 const sym = issue.currencySymbol || '₹';
                 const basePrice = issue.issuePrice || 0;
                 const estListingPrice = basePrice ? (basePrice + gmpPrice).toFixed(1) : 'N/A';
-                const trend = sent.gmpTrend || [gmpPct, gmpPct, gmpPct];
+                const trendArray = (sent.gmpHistory && Array.isArray(sent.gmpHistory))
+                  ? sent.gmpHistory.map(h => h.gmpPct)
+                  : (Array.isArray(sent.gmpTrend) ? sent.gmpTrend : [gmpPct, gmpPct, gmpPct]);
+
                 const isOngoing = ipo.status === 'ONGOING';
                 const isUpcoming = ipo.status === 'UPCOMING';
                 const isClosed = ipo.status === 'CLOSED';
 
-                const isRising = trend[trend.length - 1] > trend[trend.length - 2];
-                const isFalling = trend[trend.length - 1] < trend[trend.length - 2];
+                const isRising = trendArray.length >= 2 
+                  ? trendArray[trendArray.length - 1] > trendArray[trendArray.length - 2] 
+                  : (typeof sent.gmpTrend === 'string' && (sent.gmpTrend === 'RISING' || sent.gmpTrend === 'EXPANDING'));
+                const isFalling = trendArray.length >= 2 
+                  ? trendArray[trendArray.length - 1] < trendArray[trendArray.length - 2] 
+                  : (typeof sent.gmpTrend === 'string' && sent.gmpTrend === 'FALLING');
+                const trendText = trendArray.map(v => (typeof v === 'number' ? (v >= 0 ? '+' : '') + v + '%' : v)).join(' ➔ ');
 
                 return `
                   <tr class="gmp-table-row ${isOngoing ? 'row-ongoing' : isUpcoming ? 'row-upcoming' : isClosed ? 'row-closed' : ''}">
@@ -166,7 +174,7 @@ export class GmpTrackerView {
                     <td class="cell-trend">
                       <div class="trend-badge-flex">
                         <span class="trend-direction-icon">${isRising ? '📈 ↗' : isFalling ? '📉 ↘' : '➔'}</span>
-                        <span class="trend-history-text">${trend.map(v => v + '%').join(' ➔ ')}</span>
+                        <span class="trend-history-text">${trendText}</span>
                       </div>
                     </td>
                     <td><strong>${sent.subscription?.qib ? sent.subscription.qib + 'x' : 'N/A'}</strong></td>
@@ -194,13 +202,15 @@ export class GmpTrackerView {
   }
 
   attachEventListeners() {
-    const buttons = this.container.querySelectorAll('.btn-open-gmp-dossier');
-    buttons.forEach(btn => {
-      btn.addEventListener('click', () => {
+    this.container.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-open-gmp-dossier');
+      if (btn) {
+        e.stopPropagation();
+        e.preventDefault();
         const ticker = btn.getAttribute('data-ticker');
-        const ipo = this.universe.find(u => u.ticker === ticker);
+        const ipo = this.universe.find(u => u.ticker === ticker || u.id === ticker);
         if (ipo) openIpoDetailModal(ipo);
-      });
+      }
     });
 
     const refreshBtn = this.container.querySelector('#btn-gmp-refresh-now');
