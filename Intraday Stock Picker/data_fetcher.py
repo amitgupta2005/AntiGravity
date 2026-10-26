@@ -129,9 +129,13 @@ def get_stock_raw_intraday(ticker: str, interval: str = "1m") -> pd.DataFrame:
             if not df_5d.empty:
                 # Find the most recent date in the index
                 latest_date = df_5d.index.date[-1]
-                df = df_5d[df_5d.index.date == latest_date].copy()
-                if df.empty or len(df) < 5:
-                    df = df_5d.iloc[-100:].copy()
+                df_latest = df_5d[df_5d.index.date == latest_date].copy()
+                if len(df_latest) >= 15:
+                    df = df_latest
+                else:
+                    # Session just started (e.g. first 15 mins of market):
+                    # Keep recent bars (up to 120) so EMAs & MTF have enough data to calculate
+                    df = df_5d.iloc[-120:].copy()
         
         if df.empty:
             return pd.DataFrame()

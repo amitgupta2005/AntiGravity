@@ -22,7 +22,7 @@ def calculate_intraday_indicators(df: pd.DataFrame) -> pd.DataFrame:
     """
     Computes all intraday technical indicators on a 1-minute OHLCV DataFrame.
     """
-    if df.empty or len(df) < 5:
+    if df.empty:
         return df
 
     df = df.copy()
@@ -70,8 +70,8 @@ def calculate_intraday_indicators(df: pd.DataFrame) -> pd.DataFrame:
     loss = -delta.clip(upper=0)
     
     # Wilder's exponential smoothing
-    avg_gain = gain.ewm(alpha=1/14, min_periods=14, adjust=False).mean()
-    avg_loss = loss.ewm(alpha=1/14, min_periods=14, adjust=False).mean()
+    avg_gain = gain.ewm(alpha=1/14, min_periods=1, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1/14, min_periods=1, adjust=False).mean()
     rs = avg_gain / (avg_loss.replace(0, np.nan))
     df['RSI'] = 100 - (100 / (1 + rs))
     df['RSI'] = df['RSI'].fillna(50.0)
@@ -112,7 +112,7 @@ def analyze_stock_setup(ticker: str, df: pd.DataFrame, company_name: str = "") -
     Evaluates intraday technical setup, generates trade rationale,
     calculates Stop Loss, Target 1, Target 2, Target 3, and scoring.
     """
-    if df.empty or len(df) < 10:
+    if df.empty or len(df) < 3:
         return {
             "ticker": ticker,
             "status": "INSUFFICIENT_DATA",
@@ -125,27 +125,30 @@ def analyze_stock_setup(ticker: str, df: pd.DataFrame, company_name: str = "") -
     prev = df.iloc[last_idx - 1] if len(df) > 1 else curr
     
     close = float(curr['Close'])
-    open_price = float(df.iloc[0]['Open'])
-    day_high = float(df['High'].max())
-    day_low = float(df['Low'].min())
+    curr_date = curr.name.date() if hasattr(curr.name, 'date') else df.index.date[-1]
+    today_bars = df[df.index.date == curr_date]
+    open_price = float(today_bars.iloc[0]['Open']) if not today_bars.empty else float(df.iloc[0]['Open'])
+    day_high = float(today_bars['High'].max()) if not today_bars.empty else float(df['High'].max())
+    day_low = float(today_bars['Low'].min()) if not today_bars.empty else float(df['Low'].min())
     day_change_pct = ((close - open_price) / open_price) * 100.0 if open_price > 0 else 0.0
 
-    vwap = float(curr['VWAP'])
-    vwap_upper = float(curr['VWAP_Upper'])
-    vwap_lower = float(curr['VWAP_Lower'])
-    ema9 = float(curr['EMA9'])
-    ema21 = float(curr['EMA21'])
-    ema50 = float(curr['EMA50'])
-    rsi = float(curr['RSI'])
-    atr = float(curr['ATR14'])
-    rvol = float(curr['RVOL'])
-    volume = float(curr['Volume'])
-    vol_ma20 = float(curr['Vol_MA20'])
-    orb_high = float(curr['ORB_High']) if not pd.isna(curr['ORB_High']) else day_high
-    orb_low = float(curr['ORB_Low']) if not pd.isna(curr['ORB_Low']) else day_low
+    vwap = float(curr.get('VWAP', close))
+    vwap_upper = float(curr.get('VWAP_Upper', vwap * 1.005))
+    vwap_lower = float(curr.get('VWAP_Lower', vwap * 0.995))
+    ema9 = float(curr.get('EMA9', close))
+    ema21 = float(curr.get('EMA21', close))
+    ema50 = float(curr.get('EMA50', close))
+    rsi = float(curr.get('RSI', 50.0))
+    atr = float(curr.get('ATR14', close * 0.005))
+    rvol = float(curr.get('RVOL', 1.0))
+    volume = float(curr.get('Volume', 0))
+    vol_ma20 = float(curr.get('Vol_MA20', volume))
+    orb_high = float(curr['ORB_High']) if ('ORB_High' in curr and not pd.isna(curr['ORB_High'])) else day_high
+    orb_low = float(curr['ORB_Low']) if ('ORB_Low' in curr and not pd.isna(curr['ORB_Low'])) else day_low
 
     # 10-bar recent swing low and swing high
-    recent_10 = df.iloc[-10:]
+    recent_len = min(10, len(df))
+    recent_10 = df.iloc[-recent_len:]
     recent_swing_low = float(recent_10['Low'].min())
     recent_swing_high = float(recent_10['High'].max())
 
@@ -718,10 +721,10 @@ def compute_mtf_alignment(df_1m: pd.DataFrame) -> Dict[str, Any]:
 
     last_1m = df_1m.iloc[-1]
     close_1m = float(last_1m['Close'])
-    vwap_1m = float(last_1m['VWAP'])
-    rsi_1m = float(last_1m['RSI'])
-    ema9_1m = float(last_1m['EMA9'])
-    ema21_1m = float(last_1m['EMA21'])
+    vwap_1m = float(last_1m.get('VWAP', close_1m))
+    rsi_1m = float(last_1m.get('RSI', 50.0))
+    ema9_1m = float(last_1m.get('EMA9', close_1m))
+    ema21_1m = float(last_1m.get('EMA21', close_1m))
 
     bias_1m = "BULLISH" if (close_1m > vwap_1m and ema9_1m > ema21_1m) else ("BEARISH" if (close_1m < vwap_1m and ema9_1m < ema21_1m) else "NEUTRAL")
 
@@ -730,13 +733,13 @@ def compute_mtf_alignment(df_1m: pd.DataFrame) -> Dict[str, Any]:
     df_5m = df_1m.resample('5min').agg(agg_rules).dropna()
     df_5m = calculate_intraday_indicators(df_5m)
     
-    if not df_5m.empty:
+    if not df_5m.empty and 'VWAP' in df_5m.columns:
         last_5m = df_5m.iloc[-1]
         close_5m = float(last_5m['Close'])
-        vwap_5m = float(last_5m['VWAP'])
-        rsi_5m = float(last_5m['RSI'])
-        ema9_5m = float(last_5m['EMA9'])
-        ema21_5m = float(last_5m['EMA21'])
+        vwap_5m = float(last_5m.get('VWAP', close_5m))
+        rsi_5m = float(last_5m.get('RSI', 50.0))
+        ema9_5m = float(last_5m.get('EMA9', close_5m))
+        ema21_5m = float(last_5m.get('EMA21', close_5m))
         bias_5m = "BULLISH" if (close_5m > vwap_5m and ema9_5m > ema21_5m) else ("BEARISH" if (close_5m < vwap_5m and ema9_5m < ema21_5m) else "NEUTRAL")
     else:
         close_5m, vwap_5m, rsi_5m, bias_5m = close_1m, vwap_1m, rsi_1m, bias_1m
@@ -745,13 +748,13 @@ def compute_mtf_alignment(df_1m: pd.DataFrame) -> Dict[str, Any]:
     df_15m = df_1m.resample('15min').agg(agg_rules).dropna()
     df_15m = calculate_intraday_indicators(df_15m)
     
-    if not df_15m.empty:
+    if not df_15m.empty and 'VWAP' in df_15m.columns:
         last_15m = df_15m.iloc[-1]
         close_15m = float(last_15m['Close'])
-        vwap_15m = float(last_15m['VWAP'])
-        rsi_15m = float(last_15m['RSI'])
-        ema9_15m = float(last_15m['EMA9'])
-        ema21_15m = float(last_15m['EMA21'])
+        vwap_15m = float(last_15m.get('VWAP', close_15m))
+        rsi_15m = float(last_15m.get('RSI', 50.0))
+        ema9_15m = float(last_15m.get('EMA9', close_15m))
+        ema21_15m = float(last_15m.get('EMA21', close_15m))
         bias_15m = "BULLISH" if (close_15m > vwap_15m and ema9_15m > ema21_15m) else ("BEARISH" if (close_15m < vwap_15m and ema9_15m < ema21_15m) else "NEUTRAL")
     else:
         close_15m, vwap_15m, rsi_15m, bias_15m = close_5m, vwap_5m, rsi_5m, bias_5m
