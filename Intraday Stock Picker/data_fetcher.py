@@ -350,7 +350,16 @@ def scan_watchlist(watchlist_key: str = "NSE_MOMENTUM", custom_tickers: Optional
         if out and out.get("status") == "OK":
             results.append(out)
 
-    # Sort descending by Intraday Normalized Score (highest bullish momentum first)
-    results.sort(key=lambda x: (abs(x.get("score", 0)), x.get("score", 0)), reverse=True)
+    def _rank_key(x):
+        # 1 for actionable recommendations (STRONG BUY, BUY, STRONG SELL, SELL)
+        sig = str(x.get("signal", "")).upper()
+        is_rec = 1 if any(w in sig for w in ["BUY", "SELL"]) and "NEUTRAL" not in sig else 0
+        roi = float(x.get("roi_pct") or x.get("trade_plan", {}).get("roi_pct", 0.0))
+        score = abs(x.get("score", 0))
+        rvol = float(x.get("rvol", 0.0))
+        return (is_rec, roi, score, rvol)
+
+    # Sort descending: recommended stocks with highest ROI first, followed by score & volume
+    results.sort(key=_rank_key, reverse=True)
 
     return results

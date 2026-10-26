@@ -513,6 +513,8 @@ def analyze_stock_setup(ticker: str, df: pd.DataFrame, company_name: str = "") -
         f"**6. Target Projections**: Target 1 at **{currency_symbol}{t1_price:,.2f}** ({t1_pct:+.2f}%, 1:1.5 R:R); Target 2 at **{currency_symbol}{t2_price:,.2f}** ({t2_pct:+.2f}%, 1:2.5 R:R); Target 3 runner at **{currency_symbol}{t3_price:,.2f}** ({t3_pct:+.2f}%)."
     ]
 
+    roi_pct = round(abs(t2_pct), 2)
+
     trade_plan = {
         "action": action,
         "entry_range": f"{currency_symbol}{entry_price * 0.999:,.2f} - {currency_symbol}{entry_price * 1.001:,.2f}",
@@ -525,6 +527,10 @@ def analyze_stock_setup(ticker: str, df: pd.DataFrame, company_name: str = "") -
         "target_2_pct": t2_pct,
         "target_3": t3_price,
         "target_3_pct": t3_pct,
+        "roi_pct": roi_pct,
+        "t1_roi_pct": round(abs(t1_pct), 2),
+        "t2_roi_pct": round(abs(t2_pct), 2),
+        "t3_roi_pct": round(abs(t3_pct), 2),
         "risk_reward_ratio": rrr,
         "risk_per_share": risk_amount,
         "execution_strategy": f"Book 50% position at Target 1 ({currency_symbol}{t1_price:,.2f}), trail Stop Loss to Cost/Entry ({currency_symbol}{entry_price:,.2f}), and ride remaining 50% towards Target 2 ({currency_symbol}{t2_price:,.2f})."
@@ -559,6 +565,7 @@ def analyze_stock_setup(ticker: str, df: pd.DataFrame, company_name: str = "") -
         "score": score,
         "display_score": display_score,
         "signal": signal,
+        "roi_pct": roi_pct,
         "color": color,
         "setup_name": setup_name,
         "setup_desc": setup_desc,

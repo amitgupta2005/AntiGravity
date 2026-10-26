@@ -129,6 +129,16 @@
           <span class="pane-title">Opportunity Radar</span>
           <span class="scan-counter" id="scan-count-badge">0 Stocks</span>
         </div>
+        <!-- Sort Control Row (Highest ROI for Recommended Stocks by Default) -->
+        <div class="screener-sort-row">
+          <span class="sort-prefix">Sort:</span>
+          <select id="radar-sort-select" class="sort-select" title="Sort scanner opportunities (Highest ROI recommended first by default)">
+            <option value="roi" selected>🎯 Highest ROI (Recommended)</option>
+            <option value="score">⚡ Conviction Score</option>
+            <option value="rvol">🔥 RVOL (Volume Surge)</option>
+            <option value="change">📊 Day % Change</option>
+          </select>
+        </div>
         <!-- Filter Pills with Strategy Playbooks -->
         <div class="filter-pills">
           <button class="filter-pill active" data-filter="all">All</button>
@@ -195,8 +205,23 @@
           <div class="zoom-controls">
             <button class="btn-secondary" id="btn-zoom-in" title="Zoom In (Wider Candles)" style="padding: 3px 6px; font-size: 0.75rem; font-weight: bold;">+</button>
             <button class="btn-secondary" id="btn-zoom-out" title="Zoom Out (More Candles)" style="padding: 3px 6px; font-size: 0.75rem; font-weight: bold;">−</button>
-            <button class="btn-secondary active" id="btn-fit-recent" title="Show Recent 60m Action (Optimal Candle Width)" style="padding: 3px 6px; font-size: 0.68rem;">60m</button>
+            <button class="btn-secondary" id="btn-fit-frame" title="Fit All Candles to Full Frame Width" style="padding: 3px 6px; font-size: 0.68rem; font-weight: 700; color: var(--accent-blue);">⛶ Fit Frame</button>
+            <button class="btn-secondary" id="btn-fit-recent" title="Show Recent 60m Action (Optimal Candle Width)" style="padding: 3px 6px; font-size: 0.68rem;">60m</button>
             <button class="btn-secondary" id="btn-chart-reset" title="Fit Entire Trading Session" style="padding: 3px 6px; font-size: 0.68rem;">Day</button>
+          </div>
+
+          <!-- Frame Size & Device Resolution Controller -->
+          <div class="frame-controls">
+            <select id="chart-frame-size-select" class="btn-secondary" title="Dynamic Chart Frame Size as per Device Resolution">
+              <option value="auto" selected>📐 Frame: Auto (Device Res)</option>
+              <option value="standard">📐 Frame: Standard (450px)</option>
+              <option value="large">📐 Frame: Large (650px)</option>
+              <option value="ultra">📐 Frame: Ultra (100% Full View)</option>
+            </select>
+            <button class="btn-secondary" id="btn-maximize-frame" title="Toggle Maximize Frame (Collapse Sidebars for Full Width)" style="padding: 3px 6px; font-size: 0.68rem;">
+              <span id="maximize-icon">⛶</span>
+              <span id="maximize-label">Max</span>
+            </button>
           </div>
 
           <!-- Session Replay Controls -->
@@ -240,6 +265,7 @@
           <div class="legend-item"><span>Vol:</span> <span class="legend-val" id="leg-vol">--</span></div>
           <div class="legend-item"><span style="color:#eab308;">VWAP:</span> <span class="legend-val" id="leg-vwap">--</span></div>
           <div class="legend-item"><span style="color:#a78bfa;">RSI:</span> <span class="legend-val" id="leg-rsi">--</span></div>
+          <div class="legend-item" id="device-res-pill" style="margin-left: auto; color: var(--accent-blue); font-size: 0.65rem;" title="Calculated Device Screen Resolution & Pixel Ratio"></div>
         </div>
 
         <div id="main-candlestick-chart"></div>

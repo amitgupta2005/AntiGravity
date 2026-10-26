@@ -10,6 +10,9 @@ let currentMarket = "NSE_MOMENTUM";
 let currentTicker = null;
 let currentTimeframe = "1m";
 let currentFilter = "all";
+let currentSort = "roi"; // 'roi' (Highest ROI for recommended stocks), 'score', 'rvol', 'change'
+let currentFrameSizePreset = localStorage.getItem("apex_frame_preset") || "auto"; // 'auto', 'standard', 'large', 'ultra'
+let isMaximized = false;
 let autoRefreshTimer = null;
 let currentStocks = [];
 let activeStockAnalysis = null;
@@ -81,8 +84,15 @@ const toggleMarkersBtn = document.getElementById("toggle-markers");
 
 const btnZoomIn = document.getElementById("btn-zoom-in");
 const btnZoomOut = document.getElementById("btn-zoom-out");
+const btnFitFrame = document.getElementById("btn-fit-frame");
 const btnFitRecent = document.getElementById("btn-fit-recent");
 const btnChartReset = document.getElementById("btn-chart-reset");
+const chartFrameSizeSelect = document.getElementById("chart-frame-size-select");
+const btnMaximizeFrame = document.getElementById("btn-maximize-frame");
+const maximizeIcon = document.getElementById("maximize-icon");
+const maximizeLabel = document.getElementById("maximize-label");
+const radarSortSelect = document.getElementById("radar-sort-select");
+const deviceResPill = document.getElementById("device-res-pill");
 const btnToggleLeft = document.getElementById("btn-toggle-left");
 const btnToggleRight = document.getElementById("btn-toggle-right");
 
@@ -140,6 +150,7 @@ const checklistContainer = document.getElementById("checklist-container");
 window.addEventListener("DOMContentLoaded", () => {
   applyTheme(currentTheme);
   initLightweightCharts();
+  calculateAndApplyDeviceFrame();
   setupResizeObserver();
   setupEventListeners();
   updateMarketStatus();
@@ -413,6 +424,80 @@ function setupResizeObserver() {
     }
   });
   ro.observe(chartViewportContainer);
+
+  window.addEventListener("resize", () => {
+    calculateAndApplyDeviceFrame();
+  });
+  window.addEventListener("orientationchange", () => {
+    setTimeout(calculateAndApplyDeviceFrame, 200);
+  });
+}
+
+function calculateAndApplyDeviceFrame() {
+  const dpr = window.devicePixelRatio || 1;
+  const winW = window.innerWidth;
+  const winH = window.innerHeight;
+  const screenW = window.screen.width;
+  const screenH = window.screen.height;
+
+  // Update device resolution indicator in legend
+  const resPill = document.getElementById("device-res-pill");
+  if (resPill) {
+    resPill.textContent = `🖥 ${winW}×${winH} (${Math.round(screenW * dpr)}×${Math.round(screenH * dpr)} @ ${dpr.toFixed(1)}x DPR)`;
+  }
+
+  // Calculate dynamic chart container height based on device resolution & viewport
+  const header = document.querySelector(".header-bar");
+  const toolbar = document.querySelector(".chart-toolbar");
+  const mobileNav = document.querySelector(".mobile-nav-bar");
+  const replay = document.getElementById("replay-bar");
+
+  const hHeader = header ? header.offsetHeight : 52;
+  const hToolbar = toolbar ? toolbar.offsetHeight : 42;
+  const hMobileNav = (winW <= 1024 && mobileNav) ? mobileNav.offsetHeight : 0;
+  const hReplay = (isReplayActive && replay && replay.style.display !== "none") ? replay.offsetHeight : 0;
+
+  const totalDeductions = hHeader + hToolbar + hMobileNav + hReplay + 14;
+  const fullAvailableHeight = Math.max(380, winH - totalDeductions);
+
+  let targetHeight;
+  if (currentFrameSizePreset === "ultra" || isMaximized) {
+    targetHeight = fullAvailableHeight;
+  } else if (currentFrameSizePreset === "large") {
+    targetHeight = Math.max(560, Math.min(950, Math.floor(fullAvailableHeight * 0.90)));
+  } else if (currentFrameSizePreset === "standard") {
+    targetHeight = Math.max(420, Math.min(620, Math.floor(fullAvailableHeight * 0.72)));
+  } else {
+    // "auto": Smart calculation as per device resolution & screen DPI
+    if (winH >= 1150) {
+      // 1440p / 4K / Ultra-High Res Display
+      targetHeight = Math.max(680, fullAvailableHeight);
+    } else if (winH >= 900) {
+      // 1080p Full HD Display
+      targetHeight = Math.max(560, fullAvailableHeight);
+    } else if (winW <= 1024) {
+      // Tablet / Mobile View
+      targetHeight = Math.max(400, fullAvailableHeight);
+    } else {
+      // Laptop (768p / 800p)
+      targetHeight = Math.max(460, fullAvailableHeight);
+    }
+  }
+
+  if (chartViewportContainer) {
+    chartViewportContainer.style.height = `${targetHeight}px`;
+    chartViewportContainer.style.minHeight = `${targetHeight}px`;
+  }
+
+  const containerWidth = chartViewportContainer ? chartViewportContainer.clientWidth : (winW - 650);
+  if (containerWidth > 50 && targetHeight > 100) {
+    resizeCharts(Math.floor(containerWidth), Math.floor(targetHeight));
+    // Refit candles cleanly into new frame dimensions
+    setTimeout(() => {
+      if (mainChart) mainChart.timeScale().fitContent();
+      if (rsiChart) rsiChart.timeScale().fitContent();
+    }, 60);
+  }
 }
 
 function resizeCharts(width, totalHeight) {
@@ -423,6 +508,19 @@ function resizeCharts(width, totalHeight) {
 
   mainChart.applyOptions({ width, height: mainHeight });
   rsiChart.applyOptions({ width, height: rsiHeight });
+}
+
+function toggleMaximizeChart() {
+  isMaximized = !isMaximized;
+  terminalLayout.classList.toggle("fullscreen-chart", isMaximized);
+
+  const maxLabel = document.getElementById("maximize-label");
+  const maxBtn = document.getElementById("btn-maximize-frame");
+
+  if (maxLabel) maxLabel.textContent = isMaximized ? "Restore" : "Max";
+  if (maxBtn) maxBtn.classList.toggle("active", isMaximized);
+
+  calculateAndApplyDeviceFrame();
 }
 
 function updateLegend(param) {
@@ -514,6 +612,26 @@ function renderStockCards() {
     return true; // 'all'
   });
 
+  // Sort stocks according to active sort preference (Default: Highest ROI for recommended stocks)
+  filtered.sort((a, b) => {
+    if (currentSort === "roi") {
+      const isRecA = (a.signal || "").includes("BUY") || (a.signal || "").includes("SELL") ? 1 : 0;
+      const isRecB = (b.signal || "").includes("BUY") || (b.signal || "").includes("SELL") ? 1 : 0;
+      if (isRecA !== isRecB) return isRecB - isRecA; // Recommended first
+      const roiA = Number(a.roi_pct != null ? a.roi_pct : Math.abs(a.trade_plan?.target_2_pct || 0));
+      const roiB = Number(b.roi_pct != null ? b.roi_pct : Math.abs(b.trade_plan?.target_2_pct || 0));
+      if (roiB !== roiA) return roiB - roiA; // Highest ROI first
+      return Math.abs(b.score || 0) - Math.abs(a.score || 0);
+    } else if (currentSort === "score") {
+      return Math.abs(b.score || 0) - Math.abs(a.score || 0);
+    } else if (currentSort === "rvol") {
+      return (b.rvol || 0) - (a.rvol || 0);
+    } else if (currentSort === "change") {
+      return (b.change_pct || 0) - (a.change_pct || 0);
+    }
+    return 0;
+  });
+
   if (filtered.length === 0) {
     stockCardsContainer.innerHTML = `
       <div class="state-container">
@@ -536,6 +654,7 @@ function renderStockCards() {
     const scoreColor = stock.score >= 35 ? "#10b981" : stock.score <= -35 ? "#ef4444" : "#94a3b8";
     const scoreFillWidth = `${stock.display_score}%`;
     const sigClass = stock.signal.toLowerCase().replace(" ", "-");
+    const stockRoi = Number(stock.roi_pct != null ? stock.roi_pct : Math.abs(stock.trade_plan?.target_2_pct || 0));
 
     card.innerHTML = `
       <div class="card-top">
@@ -551,6 +670,7 @@ function renderStockCards() {
 
       <div class="card-middle">
         <span class="badge-signal ${sigClass}">${stock.signal}</span>
+        <span class="badge-roi" title="Projected Target 2 ROI">🎯 ROI: +${stockRoi.toFixed(1)}%</span>
         <span class="badge-rvol">${stock.rvol.toFixed(1)}x Vol</span>
         <span class="badge-setup">${stock.setup_name}</span>
       </div>
@@ -561,7 +681,8 @@ function renderStockCards() {
 
       <div class="card-targets-row">
         <span>SL: <strong style="color:#ef4444;">${stock.currency_symbol}${stock.trade_plan.stop_loss}</strong></span>
-        <span>T1: <strong style="color:#10b981;">${stock.currency_symbol}${stock.trade_plan.target_1}</strong></span>
+        <span>T2: <strong style="color:#10b981;">${stock.currency_symbol}${stock.trade_plan.target_2}</strong></span>
+        <span>ROI: <strong style="color:#38bdf8;">+${stockRoi.toFixed(2)}%</strong></span>
         <span>R:R ${stock.trade_plan.risk_reward_ratio}</span>
       </div>
     `;
@@ -713,25 +834,37 @@ function updateChartSeries(chartData) {
     clearPriceLevels();
   }
 
-  // CRITICAL READABILITY FIX:
-  // Instead of fitContent() which squishes all 390 candles into hairline needles,
-  // zoom in to show the most recent 65 candles (last 1 hour of trading).
-  // This makes every candle 9-12px wide, clear, with bold body, wick, and volume alignment!
-  fitRecentCandles(65);
+  // FIT CHART TO FRAME:
+  // Automatically fit the entire candlestick dataset into the full width of the frame without leaving empty space
+  fitChartToFrame("fit-frame");
 }
 
-function fitRecentCandles(barsToShow = 65) {
+function fitChartToFrame(mode = "fit-frame") {
   if (!mainChart || !rawChartData || !rawChartData.candles) return;
   const total = rawChartData.candles.length;
   if (total === 0) return;
 
-  const count = Math.min(barsToShow, total);
-  mainChart.timeScale().setVisibleLogicalRange({
-    from: total - count,
-    to: total + 3
-  });
-  // Ensure barSpacing is comfortable
-  mainChart.timeScale().applyOptions({ barSpacing: 11 });
+  if (mode === "fit-frame" || mode === "day") {
+    // Fits all session candles seamlessly across the entire width of the frame
+    mainChart.timeScale().fitContent();
+    if (rsiChart) rsiChart.timeScale().fitContent();
+  } else if (mode === "60m") {
+    const barsToShow = Math.min(65, total);
+    mainChart.timeScale().setVisibleLogicalRange({
+      from: total - barsToShow,
+      to: total + 2
+    });
+    if (rsiChart) {
+      rsiChart.timeScale().setVisibleLogicalRange({
+        from: total - barsToShow,
+        to: total + 2
+      });
+    }
+  }
+}
+
+function fitRecentCandles(barsToShow = 65) {
+  fitChartToFrame("60m");
 }
 
 function zoomCandles(delta) {
@@ -1152,14 +1285,38 @@ function setupEventListeners() {
     }
   });
 
-  // Zoom Controls
+  // Zoom & Frame Controls
   btnZoomIn.addEventListener("click", () => zoomCandles(-15));
   btnZoomOut.addEventListener("click", () => zoomCandles(20));
-  btnFitRecent.addEventListener("click", () => fitRecentCandles(65));
-  btnChartReset.addEventListener("click", () => {
-    if (mainChart) mainChart.timeScale().fitContent();
-    if (rsiChart) rsiChart.timeScale().fitContent();
-  });
+  if (btnFitFrame) {
+    btnFitFrame.addEventListener("click", () => fitChartToFrame("fit-frame"));
+  }
+  btnFitRecent.addEventListener("click", () => fitChartToFrame("60m"));
+  btnChartReset.addEventListener("click", () => fitChartToFrame("day"));
+
+  // Frame Size Preset Selector
+  if (chartFrameSizeSelect) {
+    chartFrameSizeSelect.value = currentFrameSizePreset;
+    chartFrameSizeSelect.addEventListener("change", (e) => {
+      currentFrameSizePreset = e.target.value;
+      localStorage.setItem("apex_frame_preset", currentFrameSizePreset);
+      calculateAndApplyDeviceFrame();
+    });
+  }
+
+  // Maximize / Restore Toggle
+  if (btnMaximizeFrame) {
+    btnMaximizeFrame.addEventListener("click", toggleMaximizeChart);
+  }
+
+  // Radar Sort Selector
+  if (radarSortSelect) {
+    radarSortSelect.value = currentSort;
+    radarSortSelect.addEventListener("change", (e) => {
+      currentSort = e.target.value;
+      renderStockCards();
+    });
+  }
 
   // Manual Scan Button
   btnManualScan.addEventListener("click", () => {
