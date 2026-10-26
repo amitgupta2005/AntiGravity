@@ -10,8 +10,11 @@ let currentMarket = "NSE_MOMENTUM";
 let currentTicker = null;
 let currentTimeframe = "1m";
 let currentFilter = "all";
-let currentSort = "roi"; // 'roi' (Highest ROI for recommended stocks), 'score', 'rvol', 'change'
-let currentFrameSizePreset = localStorage.getItem("apex_frame_preset") || "auto"; // 'auto', 'standard', 'large', 'ultra'
+let currentSort = localStorage.getItem("apex_sort") || "roi-desc";
+if (currentSort === "roi") currentSort = "roi-desc";
+if (currentSort === "score") currentSort = "score-desc";
+if (currentSort === "change") currentSort = "change-desc";
+if (currentSort === "rvol") currentSort = "rvol-desc";
 let isMaximized = false;
 let autoRefreshTimer = null;
 let currentStocks = [];
@@ -93,6 +96,8 @@ const btnMaximizeFrame = document.getElementById("btn-maximize-frame");
 const maximizeIcon = document.getElementById("maximize-icon");
 const maximizeLabel = document.getElementById("maximize-label");
 const radarSortSelect = document.getElementById("radar-sort-select");
+const btnSortDir = document.getElementById("btn-sort-dir");
+const sortDirIcon = document.getElementById("sort-dir-icon");
 const deviceResPill = document.getElementById("device-res-pill");
 const btnToggleLeft = document.getElementById("btn-toggle-left");
 const btnToggleRight = document.getElementById("btn-toggle-right");
@@ -295,48 +300,7 @@ function initLightweightCharts() {
     }
   });
 
-  // Candlestick Series with crisp borders
-  candleSeries = mainChart.addCandlestickSeries({
-    upColor: c.candleUp,
-    downColor: c.candleDown,
-    borderVisible: true,
-    borderUpColor: c.candleUp,
-    borderDownColor: c.candleDown,
-    wickUpColor: c.candleUp,
-    wickDownColor: c.candleDown
-  });
-
-  // VWAP Series (Yellow line)
-  vwapSeries = mainChart.addLineSeries({
-    color: "#eab308",
-    lineWidth: 2,
-    priceLineVisible: false,
-    title: "VWAP"
-  });
-
-  // EMA Ribbon
-  ema9Series = mainChart.addLineSeries({
-    color: "#a855f7",
-    lineWidth: 1,
-    priceLineVisible: false,
-    title: "9 EMA"
-  });
-
-  ema21Series = mainChart.addLineSeries({
-    color: "#f59e0b",
-    lineWidth: 1,
-    priceLineVisible: false,
-    title: "21 EMA"
-  });
-
-  ema50Series = mainChart.addLineSeries({
-    color: "#3b82f6",
-    lineWidth: 1,
-    priceLineVisible: false,
-    title: "50 EMA"
-  });
-
-  // Volume Series on bottom of main chart
+  // Volume Series on bottom of main chart (Background layer 0)
   volumeSeries = mainChart.addHistogramSeries({
     color: "#3b82f6",
     priceFormat: { type: "volume" },
@@ -352,10 +316,57 @@ function initLightweightCharts() {
     lineWidth: 1,
     priceScaleId: "",
     priceLineVisible: false,
+    lastValueVisible: false,
     scaleMargins: {
       top: 0.78,
       bottom: 0.0
     }
+  });
+
+  // EMA Ribbon (Background layer 1: rendered beneath candlesticks)
+  ema50Series = mainChart.addLineSeries({
+    color: "#3b82f6",
+    lineWidth: 1,
+    priceLineVisible: false,
+    lastValueVisible: false,
+    title: "50 EMA"
+  });
+
+  ema21Series = mainChart.addLineSeries({
+    color: "#f59e0b",
+    lineWidth: 1,
+    priceLineVisible: false,
+    lastValueVisible: false,
+    title: "21 EMA"
+  });
+
+  ema9Series = mainChart.addLineSeries({
+    color: "#a855f7",
+    lineWidth: 1,
+    priceLineVisible: false,
+    lastValueVisible: false,
+    title: "9 EMA"
+  });
+
+  // VWAP Series (Background layer 2: golden yellow line rendered under candlesticks)
+  vwapSeries = mainChart.addLineSeries({
+    color: "#eab308",
+    lineWidth: 2,
+    priceLineVisible: false,
+    lastValueVisible: false,
+    crosshairMarkerVisible: true,
+    title: "VWAP"
+  });
+
+  // Candlestick Series (Foreground layer 3: rendered ON TOP of VWAP & EMAs for crisp, unobstructed price action)
+  candleSeries = mainChart.addCandlestickSeries({
+    upColor: c.candleUp,
+    downColor: c.candleDown,
+    borderVisible: true,
+    borderUpColor: c.candleUp,
+    borderDownColor: c.candleDown,
+    wickUpColor: c.candleUp,
+    wickDownColor: c.candleDown
   });
 
   // 2. RSI Sub-Chart
@@ -570,10 +581,10 @@ async function fetchScreener(marketKey = currentMarket, isAuto = false) {
         playAlertSound();
       }
 
-      // If no active ticker or current ticker not in list, auto-select top conviction pick
-      if (!currentTicker || !currentStocks.some(s => s.ticker === currentTicker)) {
-        if (currentStocks.length > 0) {
-          selectStock(currentStocks[0].ticker);
+      // If no active ticker or current ticker not in list, auto-select top conviction pick from displayedStocks
+      if (!currentTicker || !displayedStocks.some(s => s.ticker === currentTicker)) {
+        if (displayedStocks.length > 0) {
+          selectStock(displayedStocks[0].ticker);
         }
       } else {
         loadChartData(currentTicker, currentTimeframe, true);
@@ -601,8 +612,18 @@ function renderStockCards() {
     return;
   }
 
-  // Filter stocks based on active strategy filter
+  const searchQuery = (tickerSearchInput?.value || "").trim().toUpperCase();
+
+  // Filter stocks based on active strategy filter & optional search query
   const filtered = currentStocks.filter(stock => {
+    if (searchQuery) {
+      const sym = (stock.ticker || "").toUpperCase();
+      const comp = (stock.company_name || "").toUpperCase();
+      if (!sym.includes(searchQuery) && !comp.includes(searchQuery)) {
+        return false;
+      }
+    }
+
     const setup = (stock.setup_name || "").toLowerCase();
     if (currentFilter === "buy") return stock.score >= 35;
     if (currentFilter === "sell") return stock.score <= -35;
@@ -613,22 +634,46 @@ function renderStockCards() {
     return true; // 'all'
   });
 
-  // Sort stocks according to active sort preference (Default: Highest ROI for recommended stocks)
+  // Sort stocks according to active sort preference
   filtered.sort((a, b) => {
-    if (currentSort === "roi") {
+    const roiA = Number(a.roi_pct != null ? a.roi_pct : (a.trade_plan?.roi_pct != null ? a.trade_plan.roi_pct : Math.abs(a.trade_plan?.target_2_pct || 0)));
+    const roiB = Number(b.roi_pct != null ? b.roi_pct : (b.trade_plan?.roi_pct != null ? b.trade_plan.roi_pct : Math.abs(b.trade_plan?.target_2_pct || 0)));
+    const scoreA = Number(a.display_score != null ? a.display_score : a.score);
+    const scoreB = Number(b.display_score != null ? b.display_score : b.score);
+    const chgA = Number(a.change_pct || 0);
+    const chgB = Number(b.change_pct || 0);
+    const rvolA = Number(a.rvol || 0);
+    const rvolB = Number(b.rvol || 0);
+
+    if (currentSort === "roi" || currentSort === "roi-desc") {
+      if (roiB !== roiA) return roiB - roiA;
+      return scoreB - scoreA;
+    } else if (currentSort === "roi-asc") {
+      if (roiA !== roiB) return roiA - roiB;
+      return scoreA - scoreB;
+    } else if (currentSort === "roi-rec") {
       const isRecA = (a.signal || "").includes("BUY") || (a.signal || "").includes("SELL") ? 1 : 0;
       const isRecB = (b.signal || "").includes("BUY") || (b.signal || "").includes("SELL") ? 1 : 0;
-      if (isRecA !== isRecB) return isRecB - isRecA; // Recommended first
-      const roiA = Number(a.roi_pct != null ? a.roi_pct : Math.abs(a.trade_plan?.target_2_pct || 0));
-      const roiB = Number(b.roi_pct != null ? b.roi_pct : Math.abs(b.trade_plan?.target_2_pct || 0));
-      if (roiB !== roiA) return roiB - roiA; // Highest ROI first
-      return Math.abs(b.score || 0) - Math.abs(a.score || 0);
-    } else if (currentSort === "score") {
-      return Math.abs(b.score || 0) - Math.abs(a.score || 0);
-    } else if (currentSort === "rvol") {
-      return (b.rvol || 0) - (a.rvol || 0);
-    } else if (currentSort === "change") {
-      return (b.change_pct || 0) - (a.change_pct || 0);
+      if (isRecA !== isRecB) return isRecB - isRecA;
+      if (roiB !== roiA) return roiB - roiA;
+      return scoreB - scoreA;
+    } else if (currentSort === "score" || currentSort === "score-desc") {
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return roiB - roiA;
+    } else if (currentSort === "score-asc") {
+      if (scoreA !== scoreB) return scoreA - scoreB;
+      return roiA - roiB;
+    } else if (currentSort === "change" || currentSort === "change-desc") {
+      if (chgB !== chgA) return chgB - chgA;
+      return roiB - roiA;
+    } else if (currentSort === "change-asc") {
+      if (chgA !== chgB) return chgA - chgB;
+      return roiA - roiB;
+    } else if (currentSort === "rvol" || currentSort === "rvol-desc") {
+      if (rvolB !== rvolA) return rvolB - rvolA;
+      return scoreB - scoreA;
+    } else if (currentSort === "ticker" || currentSort === "ticker-asc") {
+      return (a.ticker || "").localeCompare(b.ticker || "");
     }
     return 0;
   });
@@ -637,7 +682,7 @@ function renderStockCards() {
     displayedStocks = [];
     stockCardsContainer.innerHTML = `
       <div class="state-container">
-        <p>No stocks currently match the "${currentFilter.toUpperCase()}" filter.</p>
+        <p>No stocks currently match the filter.</p>
       </div>`;
     return;
   }
@@ -645,13 +690,15 @@ function renderStockCards() {
   displayedStocks = filtered;
   stockCardsContainer.innerHTML = "";
 
-  filtered.forEach(stock => {
+  filtered.forEach((stock, idx) => {
     const card = document.createElement("div");
     card.className = `stock-card ${stock.ticker === currentTicker ? "active" : ""}`;
-    card.id = `card-${stock.ticker.replace(".", "_")}`;
+    card.id = `card-${stock.ticker.replace(/\./g, "_")}`;
     card.tabIndex = 0;
     card.setAttribute("role", "button");
     card.setAttribute("aria-label", `Select stock ${stock.ticker}`);
+    card.setAttribute("data-ticker", stock.ticker);
+    card.setAttribute("data-index", idx);
 
     const isUp = stock.change_pct >= 0;
     const changeClass = isUp ? "up" : "down";
@@ -694,7 +741,7 @@ function renderStockCards() {
     `;
 
     card.addEventListener("click", () => {
-      selectStock(stock.ticker);
+      selectStock(stock.ticker, true);
       // If mobile view, automatically switch to chart view on selection
       if (window.innerWidth <= 1024) {
         setMobileView("chart");
@@ -702,9 +749,17 @@ function renderStockCards() {
     });
 
     card.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
+      if (e.key === "ArrowDown") {
         e.preventDefault();
-        selectStock(stock.ticker);
+        e.stopPropagation();
+        navigateStockList(1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        e.stopPropagation();
+        navigateStockList(-1);
+      } else if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        selectStock(stock.ticker, true);
         if (window.innerWidth <= 1024) {
           setMobileView("chart");
         }
@@ -715,15 +770,18 @@ function renderStockCards() {
   });
 }
 
-function selectStock(ticker) {
+function selectStock(ticker, shouldFocus = false) {
   if (isReplayActive) exitReplayMode();
 
   currentTicker = ticker;
   document.querySelectorAll(".stock-card").forEach(c => c.classList.remove("active"));
-  const activeCard = document.getElementById(`card-${ticker.replace(".", "_")}`);
+  const activeCard = document.getElementById(`card-${ticker.replace(/\./g, "_")}`);
   if (activeCard) {
     activeCard.classList.add("active");
     activeCard.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    if (shouldFocus) {
+      activeCard.focus({ preventScroll: true });
+    }
   }
 
   loadChartData(ticker, currentTimeframe);
@@ -1331,10 +1389,32 @@ function setupEventListeners() {
   // Radar Sort Selector
   if (radarSortSelect) {
     radarSortSelect.value = currentSort;
+    updateSortDirIcon();
     radarSortSelect.addEventListener("change", (e) => {
       currentSort = e.target.value;
+      localStorage.setItem("apex_sort", currentSort);
+      updateSortDirIcon();
       renderStockCards();
+      radarSortSelect.blur();
+      const activeCard = document.getElementById(`card-${(currentTicker || "").replace(/\./g, "_")}`);
+      if (activeCard) {
+        activeCard.focus({ preventScroll: true });
+      }
     });
+
+    radarSortSelect.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === "Escape") {
+        radarSortSelect.blur();
+        const activeCard = document.getElementById(`card-${(currentTicker || "").replace(/\./g, "_")}`);
+        if (activeCard) {
+          activeCard.focus({ preventScroll: true });
+        }
+      }
+    });
+  }
+
+  if (btnSortDir) {
+    btnSortDir.addEventListener("click", toggleSortDirection);
   }
 
   // Manual Scan Button
@@ -1342,10 +1422,22 @@ function setupEventListeners() {
     fetchScreener(currentMarket);
   });
 
-  // Ticker Search
+  // Ticker Search & Instant Filter
   btnSearchGo.addEventListener("click", handleSearchTicker);
+  tickerSearchInput.addEventListener("input", () => {
+    renderStockCards();
+  });
   tickerSearchInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") handleSearchTicker();
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      tickerSearchInput.blur();
+      if (displayedStocks && displayedStocks.length > 0) {
+        const next = displayedStocks.find(s => s.ticker === currentTicker) || displayedStocks[0];
+        selectStock(next.ticker, true);
+      }
+    } else if (e.key === "Enter") {
+      handleSearchTicker();
+    }
   });
 
   // Sound Alert Toggle
@@ -1390,6 +1482,44 @@ function setupEventListeners() {
   window.addEventListener("keydown", handleGlobalKeyDown);
 }
 
+function toggleSortDirection() {
+  const flipMap = {
+    "roi-desc": "roi-asc",
+    "roi-asc": "roi-desc",
+    "roi": "roi-asc",
+    "roi-rec": "roi-asc",
+    "score-desc": "score-asc",
+    "score-asc": "score-desc",
+    "score": "score-asc",
+    "change-desc": "change-asc",
+    "change-asc": "change-desc",
+    "change": "change-asc",
+    "rvol-desc": "roi-desc",
+    "ticker-asc": "roi-desc"
+  };
+
+  currentSort = flipMap[currentSort] || "roi-desc";
+  localStorage.setItem("apex_sort", currentSort);
+  if (radarSortSelect) {
+    radarSortSelect.value = currentSort;
+  }
+  updateSortDirIcon();
+  renderStockCards();
+  const activeCard = document.getElementById(`card-${(currentTicker || "").replace(/\./g, "_")}`);
+  if (activeCard) {
+    activeCard.focus({ preventScroll: true });
+  }
+}
+
+function updateSortDirIcon() {
+  if (!sortDirIcon) return;
+  const isAsc = currentSort.endsWith("-asc");
+  sortDirIcon.textContent = isAsc ? "↑" : "↓";
+  if (btnSortDir) {
+    btnSortDir.title = isAsc ? "Sort Direction: Ascending (Click for Descending)" : "Sort Direction: Descending (Click for Ascending)";
+  }
+}
+
 function navigateStockList(delta) {
   if (!displayedStocks || displayedStocks.length === 0) return;
 
@@ -1406,7 +1536,7 @@ function navigateStockList(delta) {
 
   const targetStock = displayedStocks[nextIndex];
   if (targetStock) {
-    selectStock(targetStock.ticker);
+    selectStock(targetStock.ticker, true);
   }
 }
 
@@ -1415,7 +1545,7 @@ function jumpToStockBoundary(toEnd = false) {
   const targetIndex = toEnd ? displayedStocks.length - 1 : 0;
   const targetStock = displayedStocks[targetIndex];
   if (targetStock) {
-    selectStock(targetStock.ticker);
+    selectStock(targetStock.ticker, true);
   }
 }
 
@@ -1438,21 +1568,48 @@ function scrollChartByBars(barOffset) {
 }
 
 function handleGlobalKeyDown(e) {
-  // If user is focused on an editable input/textarea/select, let native typing & editing occur
   const activeEl = document.activeElement;
-  const isInput = activeEl && (
-    activeEl.tagName === "INPUT" ||
+
+  // If user is focused on a number input (capital/risk) or textarea, preserve native editing
+  const isNumberOrTextarea = activeEl && (
+    (activeEl.tagName === "INPUT" && activeEl.type === "number") ||
     activeEl.tagName === "TEXTAREA" ||
-    activeEl.tagName === "SELECT" ||
     activeEl.isContentEditable
   );
 
-  if (isInput) {
+  if (isNumberOrTextarea) {
     if (e.key === "Escape") {
       activeEl.blur();
       e.preventDefault();
     }
     return;
+  }
+
+  // If focused on search input, allow ArrowDown to jump into stock scan list
+  if (activeEl === tickerSearchInput) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      tickerSearchInput.blur();
+      navigateStockList(0);
+      return;
+    }
+    if (e.key === "Escape") {
+      tickerSearchInput.blur();
+      e.preventDefault();
+      return;
+    }
+    return;
+  }
+
+  // If focused on radarSortSelect, allow Escape / Enter to blur
+  if (activeEl === radarSortSelect) {
+    if (e.key === "Escape" || e.key === "Enter") {
+      radarSortSelect.blur();
+      e.preventDefault();
+      const activeCard = document.getElementById(`card-${(currentTicker || "").replace(/\./g, "_")}`);
+      if (activeCard) activeCard.focus({ preventScroll: true });
+      return;
+    }
   }
 
   // Session Replay Simulator shortcuts

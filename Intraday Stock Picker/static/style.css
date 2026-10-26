@@ -518,6 +518,40 @@ body {
   border-color: var(--accent-blue);
 }
 
+.sort-select option {
+  background: var(--bg-surface-elevated);
+  color: var(--text-main);
+  padding: 4px 6px;
+}
+
+.btn-sort-dir {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  color: var(--accent-blue);
+  width: 26px;
+  height: 24px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.btn-sort-dir:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent-blue);
+  transform: translateY(-1px);
+}
+
+.btn-sort-dir:active {
+  transform: translateY(0);
+}
+
 .kbd-shortcuts-hint {
   display: flex;
   align-items: center;
@@ -619,11 +653,12 @@ body {
   box-shadow: 0 0 0 1px var(--accent-blue);
 }
 
+.stock-card:focus,
 .stock-card:focus-visible {
   outline: 2px solid var(--accent-blue);
   outline-offset: -1px;
   border-color: var(--accent-blue);
-  box-shadow: 0 0 0 1px var(--accent-blue), 0 0 12px rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 0 1px var(--accent-blue), 0 0 14px rgba(56, 189, 248, 0.45);
 }
 
 .card-top {

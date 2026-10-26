@@ -138,16 +138,24 @@
         <!-- Sort Control Row (Highest ROI for Recommended Stocks by Default) -->
         <div class="screener-sort-row">
           <span class="sort-prefix">Sort:</span>
-          <select id="radar-sort-select" class="sort-select" title="Sort scanner opportunities (Highest ROI recommended first by default)">
-            <option value="roi" selected>🎯 Highest ROI (Recommended)</option>
-            <option value="score">⚡ Conviction Score</option>
-            <option value="rvol">🔥 RVOL (Volume Surge)</option>
-            <option value="change">📊 Day % Change</option>
+          <select id="radar-sort-select" class="sort-select" title="Sort scanner opportunities">
+            <option value="roi-desc" selected>🎯 Highest ROI (High → Low)</option>
+            <option value="roi-asc">🎯 Lowest ROI (Low → High)</option>
+            <option value="roi-rec">⭐ Recommended First (ROI)</option>
+            <option value="score-desc">⚡ Conviction Score (Bullish First)</option>
+            <option value="score-asc">🐻 Conviction Score (Bearish First)</option>
+            <option value="change-desc">📈 Day % Gainers (+ to −)</option>
+            <option value="change-asc">📉 Day % Losers (− to +)</option>
+            <option value="rvol-desc">🔥 RVOL (Volume Surge)</option>
+            <option value="ticker-asc">🔤 Ticker (A → Z)</option>
           </select>
+          <button id="btn-sort-dir" class="btn-sort-dir" title="Toggle Sort Direction (Ascending / Descending)" aria-label="Toggle Sort Direction">
+            <span id="sort-dir-icon">↓</span>
+          </button>
         </div>
         <!-- Keyboard Shortcuts Hint -->
-        <div class="kbd-shortcuts-hint" title="Keyboard Navigation: ↑/↓ Browse stocks • ←/→ Scroll chart • +/- Zoom">
-          <span class="kbd-tag"><kbd>↑</kbd><kbd>↓</kbd> Browse</span>
+        <div class="kbd-shortcuts-hint" title="Keyboard Navigation: ↑/↓ Select scan results • Enter open • ←/→ Scroll chart • +/- Zoom">
+          <span class="kbd-tag"><kbd>↑</kbd><kbd>↓</kbd> Select</span>
           <span class="kbd-tag"><kbd>←</kbd><kbd>→</kbd> Scroll</span>
           <span class="kbd-tag"><kbd>+</kbd><kbd>−</kbd> Zoom</span>
         </div>
