@@ -102,6 +102,10 @@ export function renderStockChartCanvas(stock, options = {}) {
   const spread = stock.spread != null ? stock.spread : (kVal - dVal);
   const isOversold = kVal < 20;
 
+  const kP = stock.kPeriod || 14;
+  const kS = stock.kSmoothing || 3;
+  const dP = stock.dPeriod || 3;
+
   const metricBoxX = width * 0.44;
   ctx.fillStyle = isDark ? 'rgba(0, 0, 0, 0.35)' : 'rgba(255, 255, 255, 0.7)';
   roundRect(ctx, metricBoxX, 22, width * 0.28, 68, 8);
@@ -109,7 +113,7 @@ export function renderStockChartCanvas(stock, options = {}) {
 
   ctx.font = '600 10px "Inter", sans-serif';
   ctx.fillStyle = textMuted;
-  ctx.fillText('STOCHASTIC (4, 3, 3) CLOSE-BASIS', metricBoxX + 12, 38);
+  ctx.fillText(`STOCHASTIC (${kP}, ${kS}, ${dP}) CLOSE-BASIS`, metricBoxX + 12, 38);
 
   ctx.font = 'bold 14px "JetBrains Mono", monospace';
   ctx.fillStyle = isOversold ? cyan : textMain;
@@ -154,14 +158,14 @@ export function renderStockChartCanvas(stock, options = {}) {
     h: 240
   };
 
-  drawPanelFrame(ctx, sArea, isDark, 'STOCHASTIC (4, 3, 3) OSCILLATOR SUB-CHART (0-100)', textMuted, bgCard);
+  drawPanelFrame(ctx, sArea, isDark, `STOCHASTIC (${kP}, ${kS}, ${dP}) OSCILLATOR SUB-CHART (0-100)`, textMuted, bgCard);
   drawStochasticSubChart(ctx, sArea, history, cyan, amber, isDark, gridColor, textMuted);
 
   // 6. Draw Footer Info & Watermark
   ctx.fillStyle = isDark ? '#475569' : '#94a3b8';
   ctx.font = '500 11px "Inter", sans-serif';
   const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-  ctx.fillText(`AntiGravity Stochastic Screener • Closing Basis (4,3,3) • Generated ${dateStr}`, 28, height - 20);
+  ctx.fillText(`AntiGravity Stochastic Screener • Closing Basis (${kP},${kS},${dP}) • Generated ${dateStr}`, 28, height - 20);
 
   ctx.textAlign = 'right';
   ctx.fillStyle = isOversold ? cyan : textMuted;

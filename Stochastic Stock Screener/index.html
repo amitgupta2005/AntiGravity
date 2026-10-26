@@ -24,7 +24,7 @@
         </div>
         <div class="brand-text">
           <div class="brand-title">Stochastic Screener</div>
-          <div class="brand-tag">Closing-Basis (4, 3, 3)</div>
+          <div class="brand-tag">Closing-Basis (14, 3, 3)</div>
         </div>
       </div>
     </div>
@@ -155,7 +155,7 @@
           </button>
         </div>
         <div class="param-pills">
-          <span class="param-pill"><strong>%K Period:</strong> <span id="currentKPeriod">4</span></span>
+          <span class="param-pill"><strong>%K Period:</strong> <span id="currentKPeriod">14</span></span>
           <span class="param-pill"><strong>%K Smooth:</strong> <span id="currentKSmooth">3</span></span>
           <span class="param-pill"><strong>%D Period:</strong> <span id="currentDPeriod">3</span></span>
           <span class="param-pill pill-highlight"><strong>Basis:</strong> Close Only</span>
@@ -264,7 +264,7 @@
           <div class="modal-title-icon text-amber"><i data-lucide="sliders"></i></div>
           <div>
             <h2 class="modal-title">Stochastic Model Parameters</h2>
-            <p class="modal-subtitle">Configure formula inputs (Default: 4, 3, 3 on Closing Basis)</p>
+            <p class="modal-subtitle">Configure formula inputs (Default: 14, 3, 3 on Closing Basis)</p>
           </div>
         </div>
         <button id="closeSettingsModalBtn" class="btn-close-modal">&times;</button>
@@ -275,7 +275,7 @@
           <div class="form-row">
             <div class="form-group">
               <label for="paramKPeriod">Fast %K Period (%K)</label>
-              <input type="number" id="paramKPeriod" value="4" min="2" max="50" class="form-input" />
+              <input type="number" id="paramKPeriod" value="14" min="2" max="50" class="form-input" />
               <span class="form-help">Number of closing bars to calculate Lowest &amp; Highest Close.</span>
             </div>
             <div class="form-group">
@@ -340,7 +340,7 @@
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" id="resetParamsBtn">Reset to 4, 3, 3</button>
+        <button type="button" class="btn btn-secondary" id="resetParamsBtn">Reset to 14, 3, 3</button>
         <button type="button" class="btn btn-primary" id="saveParamsBtn">Apply &amp; Re-screen</button>
       </div>
     </div>

@@ -139,8 +139,15 @@ Quantitative Stock Analysis is an institutional-grade, responsive quantitative e
   - **⚡ Short-Term (1 Day to 6 Months)**: Algorithms screen for technical momentum breakouts, RSI sweet-spots (54–68), 50-day SMA trend continuation, ATR volatility buffers, precise target prices, disciplined stop loss limits, and asymmetric Risk:Reward ratios (> 1:2.0).
   - **📈 Medium-Term (6 Months to 2 Years)**: Screens for Peter Lynch GARP ($PEG < 1.0$), earnings acceleration (> 15–30% EPS CAGR), business cycle re-ratings, operating margin expansion, and 1.25-year projected target prices with margin of safety.
   - **🏛️ Long-Term (> 2 Years)**: Multi-year wealth compounding engine evaluating Piotroski F-Scores (out of 9), high and durable ROE/ROIC (> 20%), low debt-to-equity (< 0.50), economic moats, and 3-to-5-year compounding multipliers ($P_0 \cdot (1 + \text{CAGR})^3$).
-- **🎯 Tactical Exit Strategy & Disciplined Stop Losses**:
-  - **Target 1 (Partial 50% Profit Booking)**: Specific intermediate profit targets designed to de-risk trades (e.g. +4% to +10% swing in Short-Term, +18% to +35% in Medium-Term, +40% to +80% in Long-Term) accompanied by an immediate rule to advance Stop Loss to entry price (breakeven).
+- **📥 Institutional Entry Strategy & Tranche Sizing**:
+  - **Optimal Entry Zone**: Dynamic calculation tailored to each asset's volatility and structural support (e.g. ATR pullback bounds in Short-Term, 50-SMA accumulation zones in Medium-Term, and multi-year structural support in Long-Term).
+  - **Order Type & Sizing Plan**: Specific execution orders (Limit on Pullback, Stop-Limit on Breakout, or Systematic Monthly SIP) with disciplined tranche staging (e.g., Short-Term: 50%/50% Staged; Medium-Term: 40%/30%/30% GARP Staged; Long-Term: 35%/35%/30% Generational SIP).
+  - **Actionable Entry Triggers & Invalidation Rules**: Exact technical or fundamental catalysts required to execute subsequent tranches, alongside strict pre-entry invalidation thresholds.
+- **🎯 Tactical Exit Strategy & Clear % to Book Target 1**:
+  - **Target 1 Partial Profit Booking**: Explicit, horizon-calibrated booking percentage and price milestone to de-risk capital:
+    - *⚡ Short-Term*: **Book 50%** at initial resistance (+4% to +10%) and immediately advance Stop Loss to breakeven entry price, allowing the 50% runner to trade completely risk-free.
+    - *📈 Medium-Term*: **Book 40%** upon fundamental re-rating milestone (+15% to +35%) and advance Stop Loss to breakeven, letting remaining 60% compound to Target 2.
+    - *🏛️ Long-Term*: **Book 33%** at Target 1 (+40% to +80%) to fully recoup initial principal, leaving 67% to compound uninterrupted toward multi-year capital multiplier objectives.
   - **Target 2 (Runner / Ultimate Objective)**: Full horizon target price and guidelines for trailing profits with moving averages (e.g. 20-day EMA daily low).
   - **Disciplined Stop Loss Execution**: Exact stop loss price level and percentage risk, supported by specific breach conditions:
     - *Short-Term*: ATR volatility floor / daily candle close below 50-SMA.

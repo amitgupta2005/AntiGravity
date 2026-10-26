@@ -544,7 +544,7 @@ function setupSettingsModal() {
 
   if (saveBtn) {
     saveBtn.addEventListener('click', () => {
-      state.stochasticParams.kPeriod = parseInt(kInp.value, 10) || 4;
+      state.stochasticParams.kPeriod = parseInt(kInp.value, 10) || DEFAULT_STOCHASTIC_PARAMS.kPeriod;
       state.stochasticParams.kSmoothing = parseInt(sInp.value, 10) || 3;
       state.stochasticParams.dPeriod = parseInt(dInp.value, 10) || 3;
       state.stochasticParams.overboughtThreshold = parseInt(obInp.value, 10) || 80;
@@ -581,12 +581,12 @@ function setupSettingsModal() {
 
   if (resetBtn) {
     resetBtn.addEventListener('click', () => {
-      kInp.value = 4;
-      sInp.value = 3;
-      dInp.value = 3;
-      obInp.value = 80;
-      osInp.value = 20;
-      closeOnlyInp.checked = true;
+      kInp.value = DEFAULT_STOCHASTIC_PARAMS.kPeriod;
+      sInp.value = DEFAULT_STOCHASTIC_PARAMS.kSmoothing;
+      dInp.value = DEFAULT_STOCHASTIC_PARAMS.dPeriod;
+      obInp.value = DEFAULT_STOCHASTIC_PARAMS.overboughtThreshold;
+      osInp.value = DEFAULT_STOCHASTIC_PARAMS.oversoldThreshold;
+      closeOnlyInp.checked = DEFAULT_STOCHASTIC_PARAMS.useClosingOnly;
       if (autoRefreshToggleInp) autoRefreshToggleInp.checked = true;
       if (autoRefreshIntervalInp) autoRefreshIntervalInp.value = "30";
     });

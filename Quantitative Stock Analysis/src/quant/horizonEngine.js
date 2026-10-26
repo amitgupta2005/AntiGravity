@@ -8,7 +8,7 @@
 
 import { HORIZONS, HORIZON_LABELS } from '../data/horizonUniverse.js';
 export { HORIZONS, HORIZON_LABELS };
-import { calculatePEG, calculatePeterLynchFairValue, calculateProjectedReturn } from './engine.js';
+import { calculatePEG, calculatePeterLynchFairValue, calculateProjectedReturn, isDebtExemptSector } from './engine.js';
 
 /**
  * Score and evaluate an asset for the SHORT-TERM (1 Day to 6 Months)
@@ -46,9 +46,12 @@ export function evaluateShortTerm(asset) {
   const score = Math.min(98, Math.max(50, Math.round(momentumPts + trendPts + catalystPts)));
 
   // Target & Stop Loss Calculation
-  // Short-term upside target: 6.5% (Index), 8.5% (ETF), 14.5% (Stock)
-  const targetPct = asset.assetType === 'INDEX' ? 0.065 : asset.assetType === 'ETF' ? 0.085 : 0.145;
-  const stopPct = asset.assetType === 'INDEX' ? 0.025 : asset.assetType === 'ETF' ? 0.035 : 0.055;
+  // Dynamic Volatility Targets: Scaled dynamically to asset's actual volatility using ATR multiples
+  const atrPct = (asset.atrPct !== undefined && asset.atrPct !== null && !isNaN(asset.atrPct))
+    ? Number(asset.atrPct)
+    : 0.03;
+  const stopPct = atrPct * 1.5;
+  const targetPct = atrPct * 3.5;
   const target1Pct = targetPct * 0.60;
 
   const targetPrice = Number((S * (1 + targetPct)).toFixed(2));
@@ -69,13 +72,39 @@ export function evaluateShortTerm(asset) {
 
   const curr = asset.currencySymbol || (asset.market === 'IN' ? '₹' : '$');
 
+  const entryLow = Number((S * (1 - atrPct * 0.4)).toFixed(2));
+  const entryHigh = Number((S * (1 + atrPct * 0.2)).toFixed(2));
+  const entryZone = `${curr}${entryLow.toLocaleString()} – ${curr}${entryHigh.toLocaleString()}`;
+
+  let entryType = 'Technical Breakout Entry';
+  if (rsi > 68) entryType = 'Momentum Surge Scale-In';
+  else if (rsi < 45) entryType = 'Support Dip-Buy Accumulation';
+  else if (S >= sma50) entryType = '50-EMA Trend Continuation Buy';
+
+  const entryStrategy = {
+    idealEntryPrice: S,
+    entryZone,
+    entryType,
+    orderType: 'Limit on Pullback / Stop-Limit on Breakout',
+    stagingStyle: '2-Tranche Momentum Execution',
+    trancheSummary: '50% / 50% Staged',
+    entryTrigger: `Initiate Tranche 1 in the ${entryZone} zone near dynamic 9/21-EMA support; add Tranche 2 on hourly breakout close above ${curr}${entryHigh.toLocaleString()} with volume > 1.25x 20-SMA.`,
+    tranchePlan: `Tranche 1 (50% position): Limit order placed in the optimal entry zone (${entryZone}). Tranche 2 (50% position): Stop-limit order upon confirmed hourly candle close above ${curr}${entryHigh.toLocaleString()}.`,
+    invalidationRule: `Setup immediately invalidated if price prints an hourly close below ${curr}${stopLossPrice.toLocaleString()} before entry trigger confirmation.`
+  };
+
   const exitStrategy = {
     target1Price,
     target1GainPct: `+${(target1Pct * 100).toFixed(1)}%`,
-    target1Action: 'Book 50% profit at initial resistance and immediately trail Stop Loss to entry price (breakeven).',
+    target1BookPct: 50,
+    target1BookLabel: 'Book 50%',
+    target1Action: `Book 50% of position at ${curr}${target1Price.toLocaleString()} (+${(target1Pct * 100).toFixed(1)}%) to lock in gains; immediately advance Stop Loss to breakeven (${curr}${S.toLocaleString()}) to make the remaining 50% runner trade completely risk-free.`,
     target2Price: targetPrice,
     target2GainPct: `+${(targetPct * 100).toFixed(1)}%`,
-    target2Action: 'Book remaining 50% profits or trail runner with 20-day EMA daily low.',
+    target2BookPct: 50,
+    target2BookLabel: 'Book 50% (Runner)',
+    target2Action: `Book remaining 50% profits at ${curr}${targetPrice.toLocaleString()} (+${(targetPct * 100).toFixed(1)}%) or trail runner with 20-day EMA daily low.`,
+    partialBookingRule: `Lock 50% profit at Target 1 (${curr}${target1Price.toLocaleString()}), move Stop Loss to breakeven (${curr}${S.toLocaleString()}), and run 50% runner to Target 2.`,
     stopLossPrice,
     stopLossPct: `-${(stopPct * 100).toFixed(1)}%`,
     stopLossType: 'ATR Volatility / 50-SMA Dynamic Support',
@@ -129,6 +158,7 @@ export function evaluateShortTerm(asset) {
     stopLossPct: `-${(stopPct * 100).toFixed(1)}%`,
     riskReward: `1 : ${riskReward}`,
     winProbability: `${winProbability}%`,
+    entryStrategy,
     exitStrategy,
     reasoning,
     keyIndicators: [
@@ -207,13 +237,40 @@ export function evaluateMediumTerm(asset) {
 
   const curr = asset.currencySymbol || (asset.market === 'IN' ? '₹' : '$');
 
+  const entryLow = Number((S * 0.96).toFixed(2));
+  const entryHigh = Number((S * 1.01).toFixed(2));
+  const entryZone = `${curr}${entryLow.toLocaleString()} – ${curr}${entryHigh.toLocaleString()}`;
+
+  let entryType = 'GARP Value Accumulation';
+  if (peg < 0.60) entryType = 'Deep Value GARP Accumulation';
+  else if (growth >= 25) entryType = 'High-Growth Staged Scale-In';
+  else if (asset.assetType === 'ETF') entryType = 'Business Cycle Sector Accumulation';
+  else if (asset.assetType === 'INDEX') entryType = 'Index Macro Re-Rating Scale-In';
+
+  const entryStrategy = {
+    idealEntryPrice: S,
+    entryZone,
+    entryType,
+    orderType: 'Staged Limit Orders / 3-Tranche DCA',
+    stagingStyle: '3-Tranche Systematic Staging',
+    trancheSummary: '40% / 30% / 30% Staged',
+    entryTrigger: `Deploy Tranche 1 (40%) at current valuation (PEG ${peg.toFixed(2)}); deploy Tranche 2 (30%) on pullback toward 50-day moving average (${curr}${entryLow.toLocaleString()}); deploy Tranche 3 (30%) on quarterly earnings acceleration confirmation.`,
+    tranchePlan: `Tranche 1 (40% allocation): Immediate baseline entry. Tranche 2 (30% allocation): Staged limit order at ${curr}${entryLow.toLocaleString()}. Tranche 3 (30% allocation): Add on breakout re-rating or quarterly earnings beat.`,
+    invalidationRule: `Halt accumulation and re-evaluate thesis if forward PEG expands above 1.8x without corresponding earnings acceleration, or if quarterly revenue growth contracts > 10% YoY.`
+  };
+
   const exitStrategy = {
     target1Price,
     target1GainPct: `+${target1Pct}%`,
-    target1Action: 'Book 40% profits upon fundamental re-rating milestone and protect initial capital.',
+    target1BookPct: 40,
+    target1BookLabel: 'Book 40%',
+    target1Action: `Book 40% of position at ${curr}${target1Price.toLocaleString()} (+${target1Pct}%) upon fundamental re-rating milestone; advance Stop Loss to breakeven (${curr}${S.toLocaleString()}) to eliminate downside risk and let remaining 60% compound to Target 2.`,
     target2Price: targetPrice,
     target2GainPct: `+${targetGainPct}%`,
-    target2Action: 'Re-assess PEG multiple; trim to core holding or rebalance into newly emerged undervalued candidates.',
+    target2BookPct: 60,
+    target2BookLabel: 'Book 60% (Remainder)',
+    target2Action: `Book remaining 60% position at ${curr}${targetPrice.toLocaleString()} (+${targetGainPct}%) or re-assess PEG multiple and rebalance into newly emerged undervalued candidates.`,
+    partialBookingRule: `Lock 40% profit at Target 1 (${curr}${target1Price.toLocaleString()}), advance Stop Loss to breakeven (${curr}${S.toLocaleString()}), and compound remaining 60% to Target 2.`,
     stopLossPrice,
     stopLossPct: `-${stopLossPct.toFixed(1)}%`,
     stopLossType: 'Fundamental Breakdown / 200-SMA Weekly Support',
@@ -268,6 +325,7 @@ export function evaluateMediumTerm(asset) {
     annualizedCAGR: `+${annualizedCAGR}% CAGR`,
     riskReward: `1 : ${medRiskReward}`,
     marginOfSafety: lynch.upsidePercent > 0 ? `+${lynch.upsidePercent}% to Lynch Fair Value` : 'Fairly Valued',
+    entryStrategy,
     exitStrategy,
     reasoning,
     keyIndicators: [
@@ -299,9 +357,18 @@ export function evaluateLongTerm(asset) {
   else if (fScore >= 7) qualityPts += 20;
   else qualityPts += 12;
 
-  if (debtToEquity <= 0.30) qualityPts += 15;
-  else if (debtToEquity <= 0.65) qualityPts += 10;
-  else qualityPts += 5;
+  // Sector-Aware Debt Scoring: Financials structurally carry high debt.
+  // If sector is 'Financial Services', 'Bank', or 'REIT', bypass debt penalty entirely and assign full points.
+  const isDebtExempt = isDebtExemptSector(asset.sector);
+  if (isDebtExempt) {
+    qualityPts += 15; // Full points: bypass debt penalty for Financials/Banks/REITs
+  } else if (debtToEquity <= 0.30) {
+    qualityPts += 15;
+  } else if (debtToEquity <= 0.65) {
+    qualityPts += 10;
+  } else {
+    qualityPts += 5;
+  }
 
   // 2. Sustainable Economic Moat / ROE Durability
   if (roe >= 30) moatPts += 35;
@@ -351,13 +418,39 @@ export function evaluateLongTerm(asset) {
 
   const curr = asset.currencySymbol || (asset.market === 'IN' ? '₹' : '$');
 
+  const entryLow = Number((S * 0.94).toFixed(2));
+  const entryHigh = Number((S * 1.02).toFixed(2));
+  const entryZone = `${curr}${entryLow.toLocaleString()} – ${curr}${entryHigh.toLocaleString()}`;
+
+  let entryType = 'Generational Moat SIP Accumulation';
+  if (asset.assetType === 'INDEX') entryType = 'Passive Index SIP Engine';
+  else if (asset.assetType === 'ETF') entryType = 'Secular Thematic DCA Accumulation';
+  else if (fScore >= 8 && roe >= 25) entryType = 'High-ROIC Monopoly Accumulation';
+
+  const entryStrategy = {
+    idealEntryPrice: S,
+    entryZone,
+    entryType,
+    orderType: 'Systematic Monthly SIP / Value Averaging',
+    stagingStyle: 'Pyramid DCA Over 3-6 Months',
+    trancheSummary: '35% / 35% / 30% SIP',
+    entryTrigger: `Initiate Tranche 1 (35%) core starter at current price (${curr}${S.toLocaleString()}); accumulate Tranche 2 (35%) on structural market drawdowns (-5% to -8%); deploy Tranche 3 (30%) on 200-SMA weekly support test (${curr}${entryLow.toLocaleString()}).`,
+    tranchePlan: `Tranche 1 (35% allocation): Immediate foundational core holding. Tranche 2 (35% allocation): Value limit orders at ${curr}${entryLow.toLocaleString()}. Tranche 3 (30% allocation): Systematic monthly SIP or opportunistic dip-buying.`,
+    invalidationRule: `Long-term accumulation thesis broken ONLY if structural moat collapses: Piotroski F-Score drops < 5 or structural ROE drops permanently below 12%.`
+  };
+
   const exitStrategy = {
     target1Price,
     target1GainPct: `+${target1Pct}%`,
-    target1Action: 'Extract original invested principal (optional rebalancing) and let accrued profits compound risk-free.',
+    target1BookPct: 33,
+    target1BookLabel: 'Book 33%',
+    target1Action: `Book 33% of position at ${curr}${target1Price.toLocaleString()} (+${target1Pct}%) to de-risk and recoup initial capital principal; leave remaining 67% to compound uninterrupted toward multi-year ${compoundMultiplier}x wealth objective.`,
     target2Price: targetPrice,
     target2GainPct: `+${totalReturnPct}%`,
-    target2Action: `Achieves projected ${compoundMultiplier}x capital multiplier; rebalance back to benchmark portfolio weighting.`,
+    target2BookPct: 67,
+    target2BookLabel: 'Hold 67% (Compounder)',
+    target2Action: `Achieves projected ${compoundMultiplier}x capital multiplier at ${curr}${targetPrice.toLocaleString()} (+${totalReturnPct}%); rebalance excess profits back to benchmark portfolio weighting.`,
+    partialBookingRule: `Book 33% profit at Target 1 (${curr}${target1Price.toLocaleString()}) to fully recoup initial principal, leaving remaining 67% to compound indefinitely.`,
     stopLossPrice,
     stopLossPct: `-${stopLossPct.toFixed(1)}%`,
     stopLossType: 'Structural Moat / Balance Sheet Deterioration Floor',
@@ -411,6 +504,7 @@ export function evaluateLongTerm(asset) {
     riskReward: `1 : ${longRiskReward}`,
     compoundMultiplier: `${compoundMultiplier}x Wealth Multiplier`,
     fScoreText: `${fScore}/9 (Piotroski Health)`,
+    entryStrategy,
     exitStrategy,
     reasoning,
     keyIndicators: [

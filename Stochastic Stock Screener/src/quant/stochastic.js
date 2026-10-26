@@ -1,11 +1,11 @@
 /**
  * Stochastic Oscillator on a Closing Basis Engine
- * Default parameters: %K = 4, %K Smoothing = 3, %D Signal = 3
+ * Default parameters: %K = 14, %K Smoothing = 3, %D Signal = 3
  * Evaluated strictly on Closing Prices (Close-Only Stochastic)
  */
 
 export const DEFAULT_STOCHASTIC_PARAMS = {
-  kPeriod: 4,
+  kPeriod: 14,
   kSmoothing: 3,
   dPeriod: 3,
   overboughtThreshold: 80,
@@ -199,6 +199,22 @@ export function screenStockStochastic(ticker, name, candles, options = {}) {
   const change = Number((currentClose - prevClose).toFixed(2));
   const changePct = Number(((change / Math.max(0.01, prevClose)) * 100).toFixed(2));
 
+  // 50-period SMA Calculation / Baseline Trend Filter
+  let sma50 = candles?.sma50 ?? options?.sma50 ?? (Array.isArray(candles) ? candles[candles.length - 1]?.sma50 : null) ?? null;
+  if (sma50 === null || isNaN(sma50)) {
+    const allCloses = Array.isArray(candles)
+      ? candles.map(c => c?.close).filter(c => typeof c === 'number' && !isNaN(c))
+      : [];
+    if (allCloses.length >= 50) {
+      const slice50 = allCloses.slice(-50);
+      const sum50 = slice50.reduce((acc, c) => acc + c, 0);
+      sma50 = Number((sum50 / 50).toFixed(2));
+    }
+  }
+
+  const isBelowSma50 = sma50 != null && currentClose < sma50 * 0.95;
+  const sma50DiffPct = sma50 != null ? Number((((currentClose - sma50) / sma50) * 100).toFixed(2)) : null;
+
   // Determine Divergence Pattern across last 15-20 bars
   const divergence = detectDivergence(series.slice(-20));
 
@@ -209,7 +225,19 @@ export function screenStockStochastic(ticker, name, candles, options = {}) {
   }
 
   // Quantitative Entry & Exit Strategy Formulation
-  const strategy = computeEntryExitStrategy(ticker, currentClose, series, opts);
+  const strategyOpts = { ...opts, sma50 };
+  const strategy = computeEntryExitStrategy(ticker, currentClose, series, strategyOpts);
+
+  // Baseline Trend Filter Guardrail:
+  // If price is significantly below 50-SMA (> 5% below) and a Golden Cross occurs,
+  // downgrade action to COUNTER_TREND_WATCH and conviction to 'Low - Fighting Primary Downtrend'
+  const isGoldenCross = latest.signalType.includes('BULLISH_CROSSOVER');
+  if (isBelowSma50 && isGoldenCross) {
+    strategy.action = 'COUNTER_TREND_WATCH';
+    strategy.actionLabel = 'Counter-Trend Watch (Below 50-SMA)';
+    strategy.actionBadge = 'badge-counter-trend';
+    strategy.conviction = 'Low - Fighting Primary Downtrend';
+  }
 
   return {
     ticker: ticker.toUpperCase(),
@@ -227,9 +255,12 @@ export function screenStockStochastic(ticker, name, candles, options = {}) {
     signalSeverity: latest.signalSeverity,
     divergence,
     strategy,
+    sma50,
+    isBelowSma50,
+    sma50DiffPct,
     isOverbought: latest.slowK >= opts.overboughtThreshold,
     isOversold: latest.slowK <= opts.oversoldThreshold,
-    isBullishCross: latest.signalType.includes('BULLISH_CROSSOVER'),
+    isBullishCross: isGoldenCross,
     isBearishCross: latest.signalType.includes('BEARISH_CROSSOVER'),
     kPeriod: opts.kPeriod,
     kSmoothing: opts.kSmoothing,
@@ -253,8 +284,13 @@ export function computeEntryExitStrategy(ticker, currentPrice, series, opts = {}
   const isOversold = kVal <= (opts.oversoldThreshold || 20);
   const isDeepOversold = kVal <= 10;
 
+  // 50-SMA Baseline Trend Filter
+  const sma50 = opts.sma50 ?? null;
+  const isBelowSma50 = sma50 != null && currentPrice < sma50 * 0.95;
+  const sma50DiffPct = sma50 != null ? Number((((currentPrice - sma50) / sma50) * 100).toFixed(2)) : null;
+
   // Calculate Support & Range
-  const kWindow = Math.max(4, opts.kPeriod || 4);
+  const kWindow = Math.max(4, opts.kPeriod || 14);
   const minCloseWindow = Math.min(...closes.slice(-kWindow));
   const swingLow = Math.min(...closes);
   const swingHigh = Math.max(...closes);
@@ -274,16 +310,24 @@ export function computeEntryExitStrategy(ticker, currentPrice, series, opts = {}
   let actionBadge = 'badge-neutral';
   let conviction = 'Moderate';
 
-  if (isGoldenCross && isOversold) {
-    action = 'BUY_CONFIRMED';
-    actionLabel = '★ Actionable Buy (Golden Cross in Oversold)';
-    actionBadge = 'badge-golden-cross';
-    conviction = 'High (Momentum Reversal Trigger)';
-  } else if (isGoldenCross) {
-    action = 'BUY_MOMENTUM';
-    actionLabel = 'Bullish Crossover Entry';
-    actionBadge = 'badge-bullish-cross';
-    conviction = 'Moderate-High';
+  if (isGoldenCross) {
+    if (isBelowSma50) {
+      // Trend Filter: Downgrade when fighting primary downtrend (>5% below 50-SMA)
+      action = 'COUNTER_TREND_WATCH';
+      actionLabel = 'Counter-Trend Watch (Below 50-SMA)';
+      actionBadge = 'badge-counter-trend';
+      conviction = 'Low - Fighting Primary Downtrend';
+    } else if (isOversold) {
+      action = 'BUY_CONFIRMED';
+      actionLabel = '★ Actionable Buy (Golden Cross in Oversold)';
+      actionBadge = 'badge-golden-cross';
+      conviction = 'High (Momentum Reversal Trigger)';
+    } else {
+      action = 'BUY_MOMENTUM';
+      actionLabel = 'Bullish Crossover Entry';
+      actionBadge = 'badge-bullish-cross';
+      conviction = 'Moderate-High';
+    }
   } else if (isDeepOversold) {
     action = 'ACCUMULATE_DIP';
     actionLabel = 'Extreme Capitulation Buy Bracket (%K < 10)';
@@ -331,7 +375,9 @@ export function computeEntryExitStrategy(ticker, currentPrice, series, opts = {}
 
   // Step-by-Step Tactical Rules Playbook
   const playbook = [
-    `1. Entry Zone: Initiate long positions inside ${curr}${entryMin.toLocaleString()} - ${curr}${entryMax.toLocaleString()} as Stochastic %K confirms upward momentum.`,
+    isBelowSma50
+      ? `1. Counter-Trend Warning: Price (${curr}${currentPrice.toLocaleString()}) is trading ${Math.abs(sma50DiffPct)}% below its 50-day SMA (${curr}${sma50.toLocaleString()}). Fighting primary downtrend; consider watching for base confirmation or keep position size minimal.`
+      : `1. Entry Zone: Initiate long positions inside ${curr}${entryMin.toLocaleString()} - ${curr}${entryMax.toLocaleString()} as Stochastic %K confirms upward momentum.`,
     `2. Capital Protection: Place hard Stop Loss at ${curr}${stopLoss.toLocaleString()} (-${riskPct}%). Risk strictly limited to 1-2% portfolio allocation.`,
     `3. Profit Taking Milestone 1: At Target 1 (${curr}${target1.toLocaleString()}, +${target1GainPct}%), liquidate 50% position and advance Stop Loss to Breakeven (${curr}${currentPrice.toLocaleString()}).`,
     `4. Profit Taking Milestone 2: At Target 2 (${curr}${target2.toLocaleString()}, +${target2GainPct}%), liquidate remaining 50% as Stochastic %K touches the 80 overbought exhaustion band.`,
@@ -358,57 +404,90 @@ export function computeEntryExitStrategy(ticker, currentPrice, series, opts = {}
     target2Condition: 'Overbought Peak (%K > 80)',
     rrRatio: `1 : ${rrRatio}`,
     rrValue: rrRatio,
+    sma50,
+    isBelowSma50,
+    sma50DiffPct,
     playbook
   };
 }
 
-
 /**
  * Detect Regular Bullish and Bearish Divergences on a Closing Basis
+ * Independently tracks swing lows and swing highs
  */
-function detectDivergence(recentBars) {
-  if (recentBars.length < 8) return null;
+export function detectDivergence(recentBars) {
+  if (!Array.isArray(recentBars) || recentBars.length < 8) return null;
 
-  // Find swing lows and swing highs on close
-  let lowestBarIdx = 0;
-  let secondLowestBarIdx = -1;
+  // Independently track both swing lows and swing highs on close
+  const swingLows = [];
+  const swingHighs = [];
 
-  for (let i = 1; i < recentBars.length - 2; i++) {
+  for (let i = 1; i < recentBars.length - 1; i++) {
     const cur = recentBars[i];
     const prev = recentBars[i - 1];
     const next = recentBars[i + 1];
 
-    if (cur.close < prev.close && cur.close < next.close) {
-      if (secondLowestBarIdx === -1) {
-        secondLowestBarIdx = i;
-      } else {
-        lowestBarIdx = i;
+    if (cur.close != null && prev.close != null && next.close != null) {
+      if (cur.close < prev.close && cur.close < next.close) {
+        swingLows.push({ index: i, bar: cur });
+      }
+      if (cur.close > prev.close && cur.close > next.close) {
+        swingHighs.push({ index: i, bar: cur });
       }
     }
   }
 
-  if (secondLowestBarIdx !== -1 && lowestBarIdx !== -1 && lowestBarIdx > secondLowestBarIdx) {
-    const p1 = recentBars[secondLowestBarIdx];
-    const p2 = recentBars[lowestBarIdx];
+  let bullishDiv = null;
+  let bullishIdx = -1;
+  // 1. Evaluate Bullish Divergence using the last two swingLows
+  if (swingLows.length >= 2) {
+    const p1 = swingLows[swingLows.length - 2].bar;
+    const p2 = swingLows[swingLows.length - 1].bar;
 
     // Bullish Divergence: Price makes Lower Low, but %K makes Higher Low
-    if (p2.close < p1.close && p2.slowK !== null && p1.slowK !== null && p2.slowK > p1.slowK && p2.slowK < 35) {
-      return {
+    if (
+      p2.close < p1.close &&
+      p2.slowK !== null &&
+      p1.slowK !== null &&
+      p2.slowK > p1.slowK &&
+      p2.slowK < 35
+    ) {
+      bullishDiv = {
         type: 'BULLISH_DIVERGENCE',
         label: 'Bullish Divergence (Price Lower Low vs Stochastic Higher Low)',
         severity: 'bullish'
       };
+      bullishIdx = swingLows[swingLows.length - 1].index;
     }
+  }
+
+  let bearishDiv = null;
+  let bearishIdx = -1;
+  // 2. Evaluate Bearish Divergence using the last two swingHighs
+  if (swingHighs.length >= 2) {
+    const p1 = swingHighs[swingHighs.length - 2].bar;
+    const p2 = swingHighs[swingHighs.length - 1].bar;
 
     // Bearish Divergence: Price makes Higher High, but %K makes Lower High
-    if (p2.close > p1.close && p2.slowK !== null && p1.slowK !== null && p2.slowK < p1.slowK && p2.slowK > 65) {
-      return {
+    if (
+      p2.close > p1.close &&
+      p2.slowK !== null &&
+      p1.slowK !== null &&
+      p2.slowK < p1.slowK &&
+      p2.slowK > 65
+    ) {
+      bearishDiv = {
         type: 'BEARISH_DIVERGENCE',
         label: 'Bearish Divergence (Price Higher High vs Stochastic Lower High)',
         severity: 'bearish'
       };
+      bearishIdx = swingHighs[swingHighs.length - 1].index;
     }
   }
 
-  return null;
+  // If both patterns occurred, return the one whose swing pivot formed most recently
+  if (bullishDiv && bearishDiv) {
+    return bullishIdx >= bearishIdx ? bullishDiv : bearishDiv;
+  }
+  return bullishDiv || bearishDiv || null;
 }

@@ -442,11 +442,23 @@ export function scanStrategiesForAsset(quote) {
 
   const strategies = [];
 
+  const hasEarningsBefore = (dte) => {
+    return (
+      quote.daysToEarnings !== undefined &&
+      quote.daysToEarnings !== null &&
+      !isNaN(quote.daysToEarnings) &&
+      Number(quote.daysToEarnings) >= 0 &&
+      Number(quote.daysToEarnings) < dte
+    );
+  };
+
+  const earningsWarning = "<strong>WARNING: Earnings event occurs before expiration. Exit position BEFORE the announcement to avoid IV Crush.</strong>";
+
   // -------------------------------------------------------------
   // 1. STRATEGY: Long Call (Momentum Breakout)
-  // Optimal when IV Rank is low to moderate (< 45%) and bullish trend
+  // Optimal when IV Rank is low to moderate (ivRank <= 50) and bullish trend
   // -------------------------------------------------------------
-  {
+  if (ivRank <= 50) {
     const exp = (weeklyExp.dte >= 2) ? weeklyExp : currentMonthlyExp;
     const dte = exp.dte;
     const T = dte / 365;
@@ -476,6 +488,11 @@ export function scanStrategiesForAsset(quote) {
       premium,
       step
     });
+
+    let catalyst = `Bullish momentum breakout with low IV Rank (${ivRank}%). Provisioned with disciplined Stop Loss at ${curr}${exitPlan.stopLoss.spotPrice} and Target Booking at ${curr}${exitPlan.targetBooking.spotPrice}.`;
+    if (hasEarningsBefore(dte)) {
+      catalyst += ` ${earningsWarning}`;
+    }
 
     strategies.push({
       id: `${quote.ticker}-LONG-CALL-${strike}`,
@@ -511,15 +528,16 @@ export function scanStrategiesForAsset(quote) {
       ivRank,
       netDelta: payoff.netDelta,
       netTheta: payoff.netTheta,
-      catalyst: `Bullish momentum breakout with low IV Rank (${ivRank}%). Provisioned with disciplined Stop Loss at ${curr}${exitPlan.stopLoss.spotPrice} and Target Booking at ${curr}${exitPlan.targetBooking.spotPrice}.`
+      catalyst
     });
   }
 
   // -------------------------------------------------------------
   // 2. STRATEGY: Bull Call Spread (Debit Spread)
   // Buy ATM Call + Sell OTM Call (Caps risk, cuts cost by 40-50%)
+  // Generated only when ivRank <= 50
   // -------------------------------------------------------------
-  {
+  if (ivRank <= 50) {
     const exp = currentMonthlyExp;
     const dte = exp.dte;
     const T = dte / 365;
@@ -529,161 +547,177 @@ export function scanStrategiesForAsset(quote) {
     const lowerGreeks = calculateGreeks('call', S, lowerStrike, T, r, ivDecimal);
     const upperGreeks = calculateGreeks('call', S, upperStrike, T, r, ivDecimal);
 
-    const netDebit = Math.max(0.05, Number((lowerGreeks.price - upperGreeks.price).toFixed(2)));
-    const spreadWidth = upperStrike - lowerStrike;
-    const maxProfitPerShare = spreadWidth - netDebit;
-    const breakeven = Number((lowerStrike + netDebit).toFixed(2));
-    const pop = calculatePOP(S, breakeven, T, ivDecimal, true);
+    // Skip generating if long leg (anchor/protection leg) evaluates to less than $0.05
+    if (lowerGreeks.price >= 0.05) {
+      const netDebit = Math.max(0.05, Number((lowerGreeks.price - upperGreeks.price).toFixed(2)));
+      const spreadWidth = upperStrike - lowerStrike;
+      const maxProfitPerShare = spreadWidth - netDebit;
+      const breakeven = Number((lowerStrike + netDebit).toFixed(2));
+      const pop = calculatePOP(S, breakeven, T, ivDecimal, true);
 
-    const legs = [
-      { type: 'call', action: 'buy', strike: lowerStrike, premium: lowerGreeks.price, contracts: 1, label: `Buy ${curr}${lowerStrike} Call` },
-      { type: 'call', action: 'sell', strike: upperStrike, premium: upperGreeks.price, contracts: 1, label: `Sell ${curr}${upperStrike} Call` }
-    ];
+      const legs = [
+        { type: 'call', action: 'buy', strike: lowerStrike, premium: lowerGreeks.price, contracts: 1, label: `Buy ${curr}${lowerStrike} Call` },
+        { type: 'call', action: 'sell', strike: upperStrike, premium: upperGreeks.price, contracts: 1, label: `Sell ${curr}${upperStrike} Call` }
+      ];
 
-    const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
-    const netCost = Number((netDebit * lotSize).toFixed(2));
-    const maxProfit = Number((maxProfitPerShare * lotSize).toFixed(2));
-    const maxLoss = netCost;
+      const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
+      const netCost = Number((netDebit * lotSize).toFixed(2));
+      const maxProfit = Number((maxProfitPerShare * lotSize).toFixed(2));
+      const maxLoss = netCost;
 
-    const exitPlan = buildExitPlan({
-      type: 'BULL_CALL_SPREAD',
-      S,
-      lotSize,
-      netCost,
-      maxProfit,
-      maxLoss,
-      isCredit: false,
-      curr,
-      upperStrike,
-      lowerStrike,
-      step
-    });
+      const exitPlan = buildExitPlan({
+        type: 'BULL_CALL_SPREAD',
+        S,
+        lotSize,
+        netCost,
+        maxProfit,
+        maxLoss,
+        isCredit: false,
+        curr,
+        upperStrike,
+        lowerStrike,
+        step
+      });
 
-    strategies.push({
-      id: `${quote.ticker}-BULL-CALL-SPREAD-${lowerStrike}-${upperStrike}`,
-      ticker: quote.ticker,
-      displayTicker: quote.displayTicker,
-      name: quote.name,
-      market: quote.market,
-      type: quote.type,
-      currency: quote.currency,
-      currencySymbol: curr,
-      strategyName: 'Bull Call Spread (Debit)',
-      category: STRATEGY_CATEGORIES.DEBIT_SPREADS,
-      sentiment: 'Bullish',
-      directionBadge: 'Bullish Spread',
-      badgeClass: 'badge-bullish',
-      conviction: 'Defined Risk',
-      dte,
-      expiryDate: exp.dateStr,
-      expiryLabel: `${exp.dateStr} (${exp.type})`,
-      transactSpec: buildTransactSpec(quote, exp, 'Bull Call Spread', dte),
-      spotPrice: S,
-      targetPrice: exitPlan.targetBooking.spotPrice,
-      stopLossPrice: exitPlan.stopLoss.spotPrice,
-      exitPlan,
-      legs,
-      netCost,
-      isCredit: false,
-      maxProfit,
-      maxLoss,
-      breakevens: [breakeven],
-      riskReward: `1 : ${(maxProfitPerShare / netDebit).toFixed(2)}`,
-      pop,
-      ivRank,
-      netDelta: payoff.netDelta,
-      netTheta: payoff.netTheta,
-      catalyst: `Defines upside target at ${curr}${upperStrike}. Stop Loss limits loss to ${curr}${exitPlan.stopLoss.lossPerLot.toLocaleString()} while booking 70% max spread gain at ${curr}${exitPlan.targetBooking.spotPrice}.`
-    });
+      strategies.push({
+        id: `${quote.ticker}-BULL-CALL-SPREAD-${lowerStrike}-${upperStrike}`,
+        ticker: quote.ticker,
+        displayTicker: quote.displayTicker,
+        name: quote.name,
+        market: quote.market,
+        type: quote.type,
+        currency: quote.currency,
+        currencySymbol: curr,
+        strategyName: 'Bull Call Spread (Debit)',
+        category: STRATEGY_CATEGORIES.DEBIT_SPREADS,
+        sentiment: 'Bullish',
+        directionBadge: 'Bullish Spread',
+        badgeClass: 'badge-bullish',
+        conviction: 'Defined Risk',
+        dte,
+        expiryDate: exp.dateStr,
+        expiryLabel: `${exp.dateStr} (${exp.type})`,
+        transactSpec: buildTransactSpec(quote, exp, 'Bull Call Spread', dte),
+        spotPrice: S,
+        targetPrice: exitPlan.targetBooking.spotPrice,
+        stopLossPrice: exitPlan.stopLoss.spotPrice,
+        exitPlan,
+        legs,
+        netCost,
+        isCredit: false,
+        maxProfit,
+        maxLoss,
+        breakevens: [breakeven],
+        riskReward: `1 : ${(maxProfitPerShare / netDebit).toFixed(2)}`,
+        pop,
+        ivRank,
+        netDelta: payoff.netDelta,
+        netTheta: payoff.netTheta,
+        catalyst: `Defines upside target at ${curr}${upperStrike}. Stop Loss limits loss to ${curr}${exitPlan.stopLoss.lossPerLot.toLocaleString()} while booking 70% max spread gain at ${curr}${exitPlan.targetBooking.spotPrice}.`
+      });
+    }
   }
 
   // -------------------------------------------------------------
   // 3. STRATEGY: Bull Put Spread (Credit Spread)
   // Sell OTM Put + Buy Lower OTM Put (High probability income)
+  // Generated only when ivRank >= 40
   // -------------------------------------------------------------
-  {
-    const exp = currentMonthlyExp.dte >= 7 ? currentMonthlyExp : nextMonthlyExp;
+  if (ivRank >= 40) {
+    // Force nextMonthlyExp to target 30-45 DTE window and avoid late-stage Gamma explosion
+    const exp = nextMonthlyExp;
     const dte = exp.dte;
     const T = dte / 365;
-    const shortStrike = atmStrike - step * 2;
-    const longStrike = atmStrike - step * 4;
 
-    const shortGreeks = calculateGreeks('put', S, shortStrike, T, r, ivDecimal);
-    const longGreeks = calculateGreeks('put', S, longStrike, T, r, ivDecimal);
+    // Binary event check: Avoid gap risk if earnings event occurs before expiration
+    if (!hasEarningsBefore(dte)) {
+      const shortStrike = atmStrike - step * 2;
+      const longStrike = atmStrike - step * 4;
 
-    const netCredit = Math.max(0.05, Number((shortGreeks.price - longGreeks.price).toFixed(2)));
-    const spreadWidth = shortStrike - longStrike;
-    const maxLossPerShare = spreadWidth - netCredit;
-    const breakeven = Number((shortStrike - netCredit).toFixed(2));
-    const pop = calculatePOP(S, breakeven, T, ivDecimal, true);
+      const shortGreeks = calculateGreeks('put', S, shortStrike, T, r, ivDecimal);
+      const longGreeks = calculateGreeks('put', S, longStrike, T, r, ivDecimal);
 
-    const legs = [
-      { type: 'put', action: 'sell', strike: shortStrike, premium: shortGreeks.price, contracts: 1, label: `Sell ${curr}${shortStrike} Put` },
-      { type: 'put', action: 'buy', strike: longStrike, premium: longGreeks.price, contracts: 1, label: `Buy ${curr}${longStrike} Put` }
-    ];
+      // Low-Liquidity Wing filter: protection leg must evaluate to at least $0.05
+      if (longGreeks.price >= 0.05) {
+        const spreadWidth = shortStrike - longStrike;
+        const netCredit = Math.max(0.05, Number((shortGreeks.price - longGreeks.price).toFixed(2)));
 
-    const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
-    const netCost = Number((netCredit * lotSize).toFixed(2));
-    const maxProfit = netCost;
-    const maxLoss = Number((maxLossPerShare * lotSize).toFixed(2));
+        // Minimum Net Credit Floor: net credit collected must be >= 15% of spreadWidth
+        if (netCredit >= 0.15 * spreadWidth) {
+          const maxLossPerShare = spreadWidth - netCredit;
+          const breakeven = Number((shortStrike - netCredit).toFixed(2));
+          const pop = calculatePOP(S, breakeven, T, ivDecimal, true);
 
-    const exitPlan = buildExitPlan({
-      type: 'BULL_PUT_SPREAD',
-      S,
-      lotSize,
-      netCost,
-      maxProfit,
-      maxLoss,
-      isCredit: true,
-      curr,
-      shortStrike,
-      longStrike,
-      step
-    });
+          const legs = [
+            { type: 'put', action: 'sell', strike: shortStrike, premium: shortGreeks.price, contracts: 1, label: `Sell ${curr}${shortStrike} Put` },
+            { type: 'put', action: 'buy', strike: longStrike, premium: longGreeks.price, contracts: 1, label: `Buy ${curr}${longStrike} Put` }
+          ];
 
-    strategies.push({
-      id: `${quote.ticker}-BULL-PUT-SPREAD-${shortStrike}-${longStrike}`,
-      ticker: quote.ticker,
-      displayTicker: quote.displayTicker,
-      name: quote.name,
-      market: quote.market,
-      type: quote.type,
-      currency: quote.currency,
-      currencySymbol: curr,
-      strategyName: 'Bull Put Spread (Credit)',
-      category: STRATEGY_CATEGORIES.CREDIT_SPREADS,
-      sentiment: 'Bullish',
-      directionBadge: 'Bullish Credit',
-      badgeClass: 'badge-credit',
-      conviction: pop > 70 ? 'High Win Rate (POP > 70%)' : 'Income Play',
-      dte,
-      expiryDate: exp.dateStr,
-      expiryLabel: `${exp.dateStr} (${exp.type})`,
-      transactSpec: buildTransactSpec(quote, exp, 'Iron Condor', dte),
-      spotPrice: S,
-      targetPrice: exitPlan.targetBooking.spotPrice,
-      stopLossPrice: exitPlan.stopLoss.spotPrice,
-      exitPlan,
-      legs,
-      netCost,
-      isCredit: true,
-      maxProfit,
-      maxLoss,
-      breakevens: [breakeven],
-      riskReward: `1 : ${(netCredit / maxLossPerShare).toFixed(2)}`,
-      pop,
-      ivRank,
-      netDelta: payoff.netDelta,
-      netTheta: payoff.netTheta,
-      catalyst: `High-probability theta harvest with cushion down to ${curr}${breakeven}. Disciplined exit books 50% credit (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}) and cuts loss at 1.5x credit to protect capital.`
-    });
+          const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
+          const netCost = Number((netCredit * lotSize).toFixed(2));
+          const maxProfit = netCost;
+          const maxLoss = Number((maxLossPerShare * lotSize).toFixed(2));
+
+          const exitPlan = buildExitPlan({
+            type: 'BULL_PUT_SPREAD',
+            S,
+            lotSize,
+            netCost,
+            maxProfit,
+            maxLoss,
+            isCredit: true,
+            curr,
+            shortStrike,
+            longStrike,
+            step
+          });
+
+          strategies.push({
+            id: `${quote.ticker}-BULL-PUT-SPREAD-${shortStrike}-${longStrike}`,
+            ticker: quote.ticker,
+            displayTicker: quote.displayTicker,
+            name: quote.name,
+            market: quote.market,
+            type: quote.type,
+            currency: quote.currency,
+            currencySymbol: curr,
+            strategyName: 'Bull Put Spread (Credit)',
+            category: STRATEGY_CATEGORIES.CREDIT_SPREADS,
+            sentiment: 'Bullish',
+            directionBadge: 'Bullish Credit',
+            badgeClass: 'badge-credit',
+            conviction: pop > 70 ? 'High Win Rate (POP > 70%)' : 'Income Play',
+            dte,
+            expiryDate: exp.dateStr,
+            expiryLabel: `${exp.dateStr} (${exp.type})`,
+            transactSpec: buildTransactSpec(quote, exp, 'Bull Put Spread', dte),
+            spotPrice: S,
+            targetPrice: exitPlan.targetBooking.spotPrice,
+            stopLossPrice: exitPlan.stopLoss.spotPrice,
+            exitPlan,
+            legs,
+            netCost,
+            isCredit: true,
+            maxProfit,
+            maxLoss,
+            breakevens: [breakeven],
+            riskReward: `1 : ${(netCredit / maxLossPerShare).toFixed(2)}`,
+            pop,
+            ivRank,
+            netDelta: payoff.netDelta,
+            netTheta: payoff.netTheta,
+            catalyst: `High-probability theta harvest with cushion down to ${curr}${breakeven}. Disciplined exit books 50% credit (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}) and cuts loss at 1.5x credit to protect capital.`
+          });
+        }
+      }
+    }
   }
 
   // -------------------------------------------------------------
   // 4. STRATEGY: Long Put (Bearish Breakdown)
-  // Direct downside directional leverage
+  // Direct downside directional leverage (ivRank <= 50)
   // -------------------------------------------------------------
-  {
+  if (ivRank <= 50) {
     const exp = (weeklyExp.dte >= 2) ? weeklyExp : currentMonthlyExp;
     const dte = exp.dte;
     const T = dte / 365;
@@ -714,6 +748,11 @@ export function scanStrategiesForAsset(quote) {
       premium,
       step
     });
+
+    let catalyst = `Protective downside momentum. Provisioned with strict Stop Loss at ${curr}${exitPlan.stopLoss.spotPrice} (-40% premium risk) and Target Profit Booking at ${curr}${exitPlan.targetBooking.spotPrice}.`;
+    if (hasEarningsBefore(dte)) {
+      catalyst += ` ${earningsWarning}`;
+    }
 
     strategies.push({
       id: `${quote.ticker}-LONG-PUT-${strike}`,
@@ -749,15 +788,15 @@ export function scanStrategiesForAsset(quote) {
       ivRank,
       netDelta: payoff.netDelta,
       netTheta: payoff.netTheta,
-      catalyst: `Protective downside momentum. Provisioned with strict Stop Loss at ${curr}${exitPlan.stopLoss.spotPrice} (-40% premium risk) and Target Profit Booking at ${curr}${exitPlan.targetBooking.spotPrice}.`
+      catalyst
     });
   }
 
   // -------------------------------------------------------------
   // 5. STRATEGY: Bear Put Spread (Debit Spread)
-  // Buy Higher Put + Sell Lower Put
+  // Buy Higher Put + Sell Lower Put (ivRank <= 50)
   // -------------------------------------------------------------
-  {
+  if (ivRank <= 50) {
     const exp = currentMonthlyExp;
     const dte = exp.dte;
     const T = dte / 365;
@@ -767,175 +806,191 @@ export function scanStrategiesForAsset(quote) {
     const higherGreeks = calculateGreeks('put', S, higherStrike, T, r, ivDecimal);
     const lowerGreeks = calculateGreeks('put', S, lowerStrike, T, r, ivDecimal);
 
-    const netDebit = Math.max(0.05, Number((higherGreeks.price - lowerGreeks.price).toFixed(2)));
-    const spreadWidth = higherStrike - lowerStrike;
-    const maxProfitPerShare = spreadWidth - netDebit;
-    const breakeven = Number((higherStrike - netDebit).toFixed(2));
-    const pop = calculatePOP(S, breakeven, T, ivDecimal, false);
+    // Skip generating if long leg (anchor/protection leg) evaluates to less than $0.05
+    if (higherGreeks.price >= 0.05) {
+      const netDebit = Math.max(0.05, Number((higherGreeks.price - lowerGreeks.price).toFixed(2)));
+      const spreadWidth = higherStrike - lowerStrike;
+      const maxProfitPerShare = spreadWidth - netDebit;
+      const breakeven = Number((higherStrike - netDebit).toFixed(2));
+      const pop = calculatePOP(S, breakeven, T, ivDecimal, false);
 
-    const legs = [
-      { type: 'put', action: 'buy', strike: higherStrike, premium: higherGreeks.price, contracts: 1, label: `Buy ${curr}${higherStrike} Put` },
-      { type: 'put', action: 'sell', strike: lowerStrike, premium: lowerGreeks.price, contracts: 1, label: `Sell ${curr}${lowerStrike} Put` }
-    ];
+      const legs = [
+        { type: 'put', action: 'buy', strike: higherStrike, premium: higherGreeks.price, contracts: 1, label: `Buy ${curr}${higherStrike} Put` },
+        { type: 'put', action: 'sell', strike: lowerStrike, premium: lowerGreeks.price, contracts: 1, label: `Sell ${curr}${lowerStrike} Put` }
+      ];
 
-    const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
-    const netCost = Number((netDebit * lotSize).toFixed(2));
-    const maxProfit = Number((maxProfitPerShare * lotSize).toFixed(2));
-    const maxLoss = netCost;
+      const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
+      const netCost = Number((netDebit * lotSize).toFixed(2));
+      const maxProfit = Number((maxProfitPerShare * lotSize).toFixed(2));
+      const maxLoss = netCost;
 
-    const exitPlan = buildExitPlan({
-      type: 'BEAR_PUT_SPREAD',
-      S,
-      lotSize,
-      netCost,
-      maxProfit,
-      maxLoss,
-      isCredit: false,
-      curr,
-      upperStrike: higherStrike,
-      lowerStrike,
-      step
-    });
+      const exitPlan = buildExitPlan({
+        type: 'BEAR_PUT_SPREAD',
+        S,
+        lotSize,
+        netCost,
+        maxProfit,
+        maxLoss,
+        isCredit: false,
+        curr,
+        upperStrike: higherStrike,
+        lowerStrike,
+        step
+      });
 
-    strategies.push({
-      id: `${quote.ticker}-BEAR-PUT-SPREAD-${higherStrike}-${lowerStrike}`,
-      ticker: quote.ticker,
-      displayTicker: quote.displayTicker,
-      name: quote.name,
-      market: quote.market,
-      type: quote.type,
-      currency: quote.currency,
-      currencySymbol: curr,
-      strategyName: 'Bear Put Spread (Debit)',
-      category: STRATEGY_CATEGORIES.DEBIT_SPREADS,
-      sentiment: 'Bearish',
-      directionBadge: 'Bearish Spread',
-      badgeClass: 'badge-bearish',
-      conviction: 'Defined Risk',
-      dte,
-      expiryDate: exp.dateStr,
-      expiryLabel: `${exp.dateStr} (${exp.type})`,
-      transactSpec: buildTransactSpec(quote, exp, 'Bull Put Spread', dte),
-      spotPrice: S,
-      targetPrice: exitPlan.targetBooking.spotPrice,
-      stopLossPrice: exitPlan.stopLoss.spotPrice,
-      exitPlan,
-      legs,
-      netCost,
-      isCredit: false,
-      maxProfit,
-      maxLoss,
-      breakevens: [breakeven],
-      riskReward: `1 : ${(maxProfitPerShare / netDebit).toFixed(2)}`,
-      pop,
-      ivRank,
-      netDelta: payoff.netDelta,
-      netTheta: payoff.netTheta,
-      catalyst: `Limits downside cost by selling ${curr}${lowerStrike} Put. Exit rule secures 70% of max spread profit (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}) while cutting loss if spot rises above ${curr}${exitPlan.stopLoss.spotPrice}.`
-    });
+      strategies.push({
+        id: `${quote.ticker}-BEAR-PUT-SPREAD-${higherStrike}-${lowerStrike}`,
+        ticker: quote.ticker,
+        displayTicker: quote.displayTicker,
+        name: quote.name,
+        market: quote.market,
+        type: quote.type,
+        currency: quote.currency,
+        currencySymbol: curr,
+        strategyName: 'Bear Put Spread (Debit)',
+        category: STRATEGY_CATEGORIES.DEBIT_SPREADS,
+        sentiment: 'Bearish',
+        directionBadge: 'Bearish Spread',
+        badgeClass: 'badge-bearish',
+        conviction: 'Defined Risk',
+        dte,
+        expiryDate: exp.dateStr,
+        expiryLabel: `${exp.dateStr} (${exp.type})`,
+        transactSpec: buildTransactSpec(quote, exp, 'Bear Put Spread', dte),
+        spotPrice: S,
+        targetPrice: exitPlan.targetBooking.spotPrice,
+        stopLossPrice: exitPlan.stopLoss.spotPrice,
+        exitPlan,
+        legs,
+        netCost,
+        isCredit: false,
+        maxProfit,
+        maxLoss,
+        breakevens: [breakeven],
+        riskReward: `1 : ${(maxProfitPerShare / netDebit).toFixed(2)}`,
+        pop,
+        ivRank,
+        netDelta: payoff.netDelta,
+        netTheta: payoff.netTheta,
+        catalyst: `Limits downside cost by selling ${curr}${lowerStrike} Put. Exit rule secures 70% of max spread profit (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}) while cutting loss if spot rises above ${curr}${exitPlan.stopLoss.spotPrice}.`
+      });
+    }
   }
 
   // -------------------------------------------------------------
   // 6. STRATEGY: Iron Condor (Range-Bound / Delta-Neutral)
   // Sell OTM Put Spread + Sell OTM Call Spread (4 legs)
-  // Optimal when IV Rank is elevated (> 50%) and stock is consolidating
+  // Optimal when IV Rank is elevated (ivRank >= 40) and stock is consolidating
   // -------------------------------------------------------------
-  {
-    const exp = currentMonthlyExp.dte >= 7 ? currentMonthlyExp : nextMonthlyExp;
+  if (ivRank >= 40) {
+    // Force nextMonthlyExp to target 30-45 DTE window and avoid late-stage Gamma explosion
+    const exp = nextMonthlyExp;
     const dte = exp.dte;
     const T = dte / 365;
-    const putShort = atmStrike - step * 2;
-    const putLong  = atmStrike - step * 4;
-    const callShort = atmStrike + step * 2;
-    const callLong  = atmStrike + step * 4;
 
-    const psGreeks = calculateGreeks('put', S, putShort, T, r, ivDecimal);
-    const plGreeks = calculateGreeks('put', S, putLong, T, r, ivDecimal);
-    const csGreeks = calculateGreeks('call', S, callShort, T, r, ivDecimal);
-    const clGreeks = calculateGreeks('call', S, callLong, T, r, ivDecimal);
+    // Binary event check: Avoid gap risk if earnings event occurs before expiration
+    if (!hasEarningsBefore(dte)) {
+      const putShort = atmStrike - step * 2;
+      const putLong  = atmStrike - step * 4;
+      const callShort = atmStrike + step * 2;
+      const callLong  = atmStrike + step * 4;
 
-    const putCredit = Math.max(0.02, psGreeks.price - plGreeks.price);
-    const callCredit = Math.max(0.02, csGreeks.price - clGreeks.price);
-    const totalCredit = Number((putCredit + callCredit).toFixed(2));
+      const psGreeks = calculateGreeks('put', S, putShort, T, r, ivDecimal);
+      const plGreeks = calculateGreeks('put', S, putLong, T, r, ivDecimal);
+      const csGreeks = calculateGreeks('call', S, callShort, T, r, ivDecimal);
+      const clGreeks = calculateGreeks('call', S, callLong, T, r, ivDecimal);
 
-    const wingWidth = step * 2;
-    const maxLossPerShare = Number((wingWidth - totalCredit).toFixed(2));
-    const lowerBE = Number((putShort - totalCredit).toFixed(2));
-    const upperBE = Number((callShort + totalCredit).toFixed(2));
+      // Low-Liquidity Wing filter: both long protection legs must evaluate to at least $0.05
+      if (plGreeks.price >= 0.05 && clGreeks.price >= 0.05) {
+        const putCredit = Math.max(0.02, psGreeks.price - plGreeks.price);
+        const callCredit = Math.max(0.02, csGreeks.price - clGreeks.price);
+        const totalCredit = Number((putCredit + callCredit).toFixed(2));
 
-    const popLower = calculatePOP(S, lowerBE, T, ivDecimal, true);
-    const popUpper = calculatePOP(S, upperBE, T, ivDecimal, false);
-    const pop = Number((Math.min(95, Math.max(50, (popLower + popUpper) / 2))).toFixed(1));
+        const spreadWidth = step * 2; // Wing width of each credit spread
 
-    const legs = [
-      { type: 'put', action: 'buy', strike: putLong, premium: plGreeks.price, contracts: 1, label: `Buy ${curr}${putLong} Put` },
-      { type: 'put', action: 'sell', strike: putShort, premium: psGreeks.price, contracts: 1, label: `Sell ${curr}${putShort} Put` },
-      { type: 'call', action: 'sell', strike: callShort, premium: csGreeks.price, contracts: 1, label: `Sell ${curr}${callShort} Call` },
-      { type: 'call', action: 'buy', strike: callLong, premium: clGreeks.price, contracts: 1, label: `Buy ${curr}${callLong} Call` }
-    ];
+        // Minimum Net Credit Floor: total credit collected must be >= 15% of spreadWidth
+        if (totalCredit >= 0.15 * spreadWidth) {
+          const wingWidth = spreadWidth;
+          const maxLossPerShare = Number((wingWidth - totalCredit).toFixed(2));
+          const lowerBE = Number((putShort - totalCredit).toFixed(2));
+          const upperBE = Number((callShort + totalCredit).toFixed(2));
 
-    const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
-    const netCost = Number((totalCredit * lotSize).toFixed(2));
-    const maxProfit = netCost;
-    const maxLoss = Number((maxLossPerShare * lotSize).toFixed(2));
+          const popLower = calculatePOP(S, lowerBE, T, ivDecimal, true);
+          const popUpper = calculatePOP(S, upperBE, T, ivDecimal, false);
+          const pop = Number((Math.min(95, Math.max(50, (popLower + popUpper) / 2))).toFixed(1));
 
-    const exitPlan = buildExitPlan({
-      type: 'IRON_CONDOR',
-      S,
-      lotSize,
-      netCost,
-      maxProfit,
-      maxLoss,
-      isCredit: true,
-      curr,
-      shortStrike: putShort,
-      longStrike: putLong,
-      step
-    });
+          const legs = [
+            { type: 'put', action: 'buy', strike: putLong, premium: plGreeks.price, contracts: 1, label: `Buy ${curr}${putLong} Put` },
+            { type: 'put', action: 'sell', strike: putShort, premium: psGreeks.price, contracts: 1, label: `Sell ${curr}${putShort} Put` },
+            { type: 'call', action: 'sell', strike: callShort, premium: csGreeks.price, contracts: 1, label: `Sell ${curr}${callShort} Call` },
+            { type: 'call', action: 'buy', strike: callLong, premium: clGreeks.price, contracts: 1, label: `Buy ${curr}${callLong} Call` }
+          ];
 
-    strategies.push({
-      id: `${quote.ticker}-IRON-CONDOR-${putShort}-${callShort}`,
-      ticker: quote.ticker,
-      displayTicker: quote.displayTicker,
-      name: quote.name,
-      market: quote.market,
-      type: quote.type,
-      currency: quote.currency,
-      currencySymbol: curr,
-      strategyName: 'Iron Condor (Delta-Neutral)',
-      category: STRATEGY_CATEGORIES.IRON_CONDORS,
-      sentiment: 'Neutral',
-      directionBadge: 'Delta Neutral',
-      badgeClass: 'badge-neutral',
-      conviction: ivRank > 50 ? 'Prime Volatility Crush' : 'Income Range',
-      dte,
-      expiryDate: exp.dateStr,
-      expiryLabel: `${exp.dateStr} (${exp.type})`,
-      transactSpec: buildTransactSpec(quote, exp, 'Iron Condor', dte),
-      spotPrice: S,
-      targetPrice: S,
-      stopLossPrice: putShort,
-      exitPlan,
-      legs,
-      netCost,
-      isCredit: true,
-      maxProfit,
-      maxLoss,
-      breakevens: [lowerBE, upperBE],
-      riskReward: `1 : ${(totalCredit / maxLossPerShare).toFixed(2)}`,
-      pop,
-      ivRank,
-      netDelta: payoff.netDelta,
-      netTheta: payoff.netTheta,
-      catalyst: `Profits from time decay and IV crush between ${curr}${lowerBE} and ${curr}${upperBE}. Exit rule books 50% max credit (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}) and stops loss at 1.5x credit to protect capital.`
-    });
+          const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
+          const netCost = Number((totalCredit * lotSize).toFixed(2));
+          const maxProfit = netCost;
+          const maxLoss = Number((maxLossPerShare * lotSize).toFixed(2));
+
+          const exitPlan = buildExitPlan({
+            type: 'IRON_CONDOR',
+            S,
+            lotSize,
+            netCost,
+            maxProfit,
+            maxLoss,
+            isCredit: true,
+            curr,
+            shortStrike: putShort,
+            longStrike: putLong,
+            step
+          });
+
+          strategies.push({
+            id: `${quote.ticker}-IRON-CONDOR-${putShort}-${callShort}`,
+            ticker: quote.ticker,
+            displayTicker: quote.displayTicker,
+            name: quote.name,
+            market: quote.market,
+            type: quote.type,
+            currency: quote.currency,
+            currencySymbol: curr,
+            strategyName: 'Iron Condor (Delta-Neutral)',
+            category: STRATEGY_CATEGORIES.IRON_CONDORS,
+            sentiment: 'Neutral',
+            directionBadge: 'Delta Neutral',
+            badgeClass: 'badge-neutral',
+            conviction: ivRank > 50 ? 'Prime Volatility Crush' : 'Income Range',
+            dte,
+            expiryDate: exp.dateStr,
+            expiryLabel: `${exp.dateStr} (${exp.type})`,
+            transactSpec: buildTransactSpec(quote, exp, 'Iron Condor', dte),
+            spotPrice: S,
+            targetPrice: S,
+            stopLossPrice: putShort,
+            exitPlan,
+            legs,
+            netCost,
+            isCredit: true,
+            maxProfit,
+            maxLoss,
+            breakevens: [lowerBE, upperBE],
+            riskReward: `1 : ${(totalCredit / maxLossPerShare).toFixed(2)}`,
+            pop,
+            ivRank,
+            netDelta: payoff.netDelta,
+            netTheta: payoff.netTheta,
+            catalyst: `Profits from time decay and IV crush between ${curr}${lowerBE} and ${curr}${upperBE}. Exit rule books 50% max credit (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}) and stops loss at 1.5x credit to protect capital.`
+          });
+        }
+      }
+    }
   }
 
   // -------------------------------------------------------------
   // 7. STRATEGY: Long Straddle (Volatility Expansion)
-  // Buy ATM Call + Buy ATM Put (Explosive Breakout Play)
+  // Buy ATM Call + Buy ATM Put (Explosive Breakout Play, ivRank <= 50)
   // -------------------------------------------------------------
-  {
+  if (ivRank <= 50) {
     const exp = (weeklyExp.dte >= 2) ? weeklyExp : currentMonthlyExp;
     const dte = exp.dte;
     const T = dte / 365;
@@ -966,6 +1021,11 @@ export function scanStrategiesForAsset(quote) {
       premium: totalCost,
       step
     });
+
+    let catalyst = `Underpriced option volatility. Provisioned with +45% Target Booking (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}) and a strict 5-day / 35% time stop to prevent theta decay.`;
+    if (hasEarningsBefore(dte)) {
+      catalyst += ` ${earningsWarning}`;
+    }
 
     strategies.push({
       id: `${quote.ticker}-LONG-STRADDLE-${atmStrike}`,
@@ -1001,102 +1061,114 @@ export function scanStrategiesForAsset(quote) {
       ivRank,
       netDelta: payoff.netDelta,
       netTheta: payoff.netTheta,
-      catalyst: `Underpriced option volatility. Provisioned with +45% Target Booking (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}) and a strict 5-day / 35% time stop to prevent theta decay.`
+      catalyst
     });
   }
 
   // -------------------------------------------------------------
   // 8. STRATEGY: Theta Decay Harvester (Iron Butterfly Pin)
   // Sell ATM Call + Sell ATM Put + Buy OTM Protective Wings (4 legs)
-  // Maximum Positive Net Theta decay strategy at ATM strike
+  // Maximum Positive Net Theta decay strategy at ATM strike (ivRank >= 40)
   // -------------------------------------------------------------
-  {
-    const exp = currentMonthlyExp;
+  if (ivRank >= 40) {
+    // Force nextMonthlyExp to target 30-45 DTE window and avoid late-stage Gamma explosion
+    const exp = nextMonthlyExp;
     const dte = exp.dte;
     const T = dte / 365;
-    const wingWidth = step * 3;
-    const putWing = atmStrike - wingWidth;
-    const callWing = atmStrike + wingWidth;
 
-    const atmCallGreeks = calculateGreeks('call', S, atmStrike, T, r, ivDecimal);
-    const atmPutGreeks = calculateGreeks('put', S, atmStrike, T, r, ivDecimal);
-    const callWingGreeks = calculateGreeks('call', S, callWing, T, r, ivDecimal);
-    const putWingGreeks = calculateGreeks('put', S, putWing, T, r, ivDecimal);
+    // Binary event check: Avoid gap risk if earnings event occurs before expiration
+    if (!hasEarningsBefore(dte)) {
+      const wingWidth = step * 3;
+      const spreadWidth = wingWidth;
+      const putWing = atmStrike - wingWidth;
+      const callWing = atmStrike + wingWidth;
 
-    const creditCollected = (atmCallGreeks.price + atmPutGreeks.price) - (callWingGreeks.price + putWingGreeks.price);
-    const totalCredit = Math.max(0.10, Number(creditCollected.toFixed(2)));
+      const atmCallGreeks = calculateGreeks('call', S, atmStrike, T, r, ivDecimal);
+      const atmPutGreeks = calculateGreeks('put', S, atmStrike, T, r, ivDecimal);
+      const callWingGreeks = calculateGreeks('call', S, callWing, T, r, ivDecimal);
+      const putWingGreeks = calculateGreeks('put', S, putWing, T, r, ivDecimal);
 
-    const maxLossPerShare = Number((wingWidth - totalCredit).toFixed(2));
-    const lowerBE = Number((atmStrike - totalCredit).toFixed(2));
-    const upperBE = Number((atmStrike + totalCredit).toFixed(2));
+      // Low-Liquidity Wing filter: both long protection legs must evaluate to at least $0.05
+      if (callWingGreeks.price >= 0.05 && putWingGreeks.price >= 0.05) {
+        const creditCollected = (atmCallGreeks.price + atmPutGreeks.price) - (callWingGreeks.price + putWingGreeks.price);
+        const totalCredit = Math.max(0.10, Number(creditCollected.toFixed(2)));
 
-    const popLower = calculatePOP(S, lowerBE, T, ivDecimal, true);
-    const popUpper = calculatePOP(S, upperBE, T, ivDecimal, false);
-    const pop = Number((Math.min(95, Math.max(52, (popLower + popUpper) / 2))).toFixed(1));
+        // Minimum Net Credit Floor: total credit collected must be >= 15% of spreadWidth
+        if (totalCredit >= 0.15 * spreadWidth) {
+          const maxLossPerShare = Number((wingWidth - totalCredit).toFixed(2));
+          const lowerBE = Number((atmStrike - totalCredit).toFixed(2));
+          const upperBE = Number((atmStrike + totalCredit).toFixed(2));
 
-    const legs = [
-      { type: 'put', action: 'buy', strike: putWing, premium: putWingGreeks.price, contracts: 1, label: `Buy ${curr}${putWing} Put (Wing Protection)` },
-      { type: 'put', action: 'sell', strike: atmStrike, premium: atmPutGreeks.price, contracts: 1, label: `Sell ${curr}${atmStrike} Put (Theta Decay)` },
-      { type: 'call', action: 'sell', strike: atmStrike, premium: atmCallGreeks.price, contracts: 1, label: `Sell ${curr}${atmStrike} Call (Theta Decay)` },
-      { type: 'call', action: 'buy', strike: callWing, premium: callWingGreeks.price, contracts: 1, label: `Buy ${curr}${callWing} Call (Wing Protection)` }
-    ];
+          const popLower = calculatePOP(S, lowerBE, T, ivDecimal, true);
+          const popUpper = calculatePOP(S, upperBE, T, ivDecimal, false);
+          const pop = Number((Math.min(95, Math.max(52, (popLower + popUpper) / 2))).toFixed(1));
 
-    const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
-    const netCost = Number((totalCredit * lotSize).toFixed(2));
-    const maxProfit = netCost;
-    const maxLoss = Number((maxLossPerShare * lotSize).toFixed(2));
+          const legs = [
+            { type: 'put', action: 'buy', strike: putWing, premium: putWingGreeks.price, contracts: 1, label: `Buy ${curr}${putWing} Put (Wing Protection)` },
+            { type: 'put', action: 'sell', strike: atmStrike, premium: atmPutGreeks.price, contracts: 1, label: `Sell ${curr}${atmStrike} Put (Theta Decay)` },
+            { type: 'call', action: 'sell', strike: atmStrike, premium: atmCallGreeks.price, contracts: 1, label: `Sell ${curr}${atmStrike} Call (Theta Decay)` },
+            { type: 'call', action: 'buy', strike: callWing, premium: callWingGreeks.price, contracts: 1, label: `Buy ${curr}${callWing} Call (Wing Protection)` }
+          ];
 
-    const exitPlan = buildExitPlan({
-      type: 'THETA_DECAY',
-      S,
-      lotSize,
-      netCost,
-      maxProfit,
-      maxLoss,
-      isCredit: true,
-      curr,
-      atmStrike,
-      step
-    });
+          const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
+          const netCost = Number((totalCredit * lotSize).toFixed(2));
+          const maxProfit = netCost;
+          const maxLoss = Number((maxLossPerShare * lotSize).toFixed(2));
 
-    const netDailyThetaCurr = Math.abs(payoff.netTheta).toFixed(1);
+          const exitPlan = buildExitPlan({
+            type: 'THETA_DECAY',
+            S,
+            lotSize,
+            netCost,
+            maxProfit,
+            maxLoss,
+            isCredit: true,
+            curr,
+            atmStrike,
+            step
+          });
 
-    strategies.push({
-      id: `${quote.ticker}-THETA-DECAY-${atmStrike}`,
-      ticker: quote.ticker,
-      displayTicker: quote.displayTicker,
-      name: quote.name,
-      market: quote.market,
-      type: quote.type,
-      currency: quote.currency,
-      currencySymbol: curr,
-      strategyName: 'Theta Decay Harvester (Iron Butterfly Pin)',
-      category: STRATEGY_CATEGORIES.THETA_DECAY,
-      sentiment: 'Neutral',
-      directionBadge: 'Theta Decay',
-      badgeClass: 'badge-theta',
-      conviction: 'Pure Time Decay',
-      dte,
-      expiryDate: exp.dateStr,
-      expiryLabel: `${exp.dateStr} (${exp.type})`,
-      transactSpec: buildTransactSpec(quote, exp, 'Theta Decay Harvester', dte),
-      spotPrice: S,
-      targetPrice: atmStrike,
-      stopLossPrice: exitPlan.stopLoss.spotPrice,
-      exitPlan,
-      legs,
-      netCost,
-      isCredit: true,
-      maxProfit,
-      maxLoss,
-      breakevens: [lowerBE, upperBE],
-      riskReward: `1 : ${(totalCredit / maxLossPerShare).toFixed(2)}`,
-      pop,
-      ivRank,
-      netDelta: payoff.netDelta,
-      netTheta: payoff.netTheta,
-      catalyst: `Engineered for pure positive time decay. Generates +${curr}${netDailyThetaCurr}/day Theta harvest around ${curr}${atmStrike}. Exit rule books 50% credit (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}) within 7-10 days.`
-    });
+          const netDailyThetaCurr = Math.abs(payoff.netTheta).toFixed(1);
+
+          strategies.push({
+            id: `${quote.ticker}-THETA-DECAY-${atmStrike}`,
+            ticker: quote.ticker,
+            displayTicker: quote.displayTicker,
+            name: quote.name,
+            market: quote.market,
+            type: quote.type,
+            currency: quote.currency,
+            currencySymbol: curr,
+            strategyName: 'Theta Decay Harvester (Iron Butterfly Pin)',
+            category: STRATEGY_CATEGORIES.THETA_DECAY,
+            sentiment: 'Neutral',
+            directionBadge: 'Theta Decay',
+            badgeClass: 'badge-theta',
+            conviction: 'Pure Time Decay',
+            dte,
+            expiryDate: exp.dateStr,
+            expiryLabel: `${exp.dateStr} (${exp.type})`,
+            transactSpec: buildTransactSpec(quote, exp, 'Theta Decay Harvester', dte),
+            spotPrice: S,
+            targetPrice: atmStrike,
+            stopLossPrice: exitPlan.stopLoss.spotPrice,
+            exitPlan,
+            legs,
+            netCost,
+            isCredit: true,
+            maxProfit,
+            maxLoss,
+            breakevens: [lowerBE, upperBE],
+            riskReward: `1 : ${(totalCredit / maxLossPerShare).toFixed(2)}`,
+            pop,
+            ivRank,
+            netDelta: payoff.netDelta,
+            netTheta: payoff.netTheta,
+            catalyst: `Engineered for pure positive time decay. Generates +${curr}${netDailyThetaCurr}/day Theta harvest around ${curr}${atmStrike}. Exit rule books 50% credit (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}) within 7-10 days.`
+          });
+        }
+      }
+    }
   }
 
   return strategies;

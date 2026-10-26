@@ -7,7 +7,8 @@ import * as XLSX from 'xlsx';
 import { 
   DEFAULT_STOCHASTIC_PARAMS, 
   calculateStochasticSeries, 
-  screenStockStochastic 
+  screenStockStochastic,
+  detectDivergence 
 } from './src/quant/stochastic.js';
 import { 
   parseStockDocument, 
@@ -258,6 +259,133 @@ console.log('\n▶ Test 7: Entry & Exit Strategy Blueprint Formulation for Overs
   console.log(`     Playbook Rules : ${strat.playbook.length} tactical execution steps verified.`);
 }
 
-console.log('\n🎉 ALL 7 TESTS PASSED SUCCESSFULLY! Quantitative Entry & Exit Strategy Blueprint verified.\n');
+// TEST 8: DEFAULT_STOCHASTIC_PARAMS Industry Standard (14, 3, 3)
+console.log('\n▶ Test 8: DEFAULT_STOCHASTIC_PARAMS Industry Standard Lookback Window (14, 3, 3)');
+{
+  assert.strictEqual(DEFAULT_STOCHASTIC_PARAMS.kPeriod, 14, 'kPeriod must be 14 to reduce noise');
+  assert.strictEqual(DEFAULT_STOCHASTIC_PARAMS.kSmoothing, 3, 'kSmoothing must remain 3');
+  assert.strictEqual(DEFAULT_STOCHASTIC_PARAMS.dPeriod, 3, 'dPeriod must remain 3');
+  assert.strictEqual(DEFAULT_STOCHASTIC_PARAMS.useClosingOnly, true, 'useClosingOnly must be true');
+  console.log('  ✅ Verified DEFAULT_STOCHASTIC_PARAMS: kPeriod=14, kSmoothing=3, dPeriod=3, useClosingOnly=true');
+}
+
+// TEST 9: Divergence Detection Bug Fix (Independent Swing Lows & Swing Highs)
+console.log('\n▶ Test 9: Divergence Engine Verification (Independent Swing Lows & Swing Highs)');
+{
+  // Test 9A: Bullish Divergence with two confirmed swing lows
+  // Swing low 1 at bar 3 (price: 100, slowK: 14)
+  // Swing low 2 at bar 8 (price: 94, slowK: 24) -> Lower low in price, higher low in %K (< 35)
+  const bullishBars = [
+    { date: 'B0', close: 110, slowK: 30 },
+    { date: 'B1', close: 104, slowK: 20 },
+    { date: 'B2', close: 100, slowK: 14 }, // swing low 1 (cur < prev && cur < next)
+    { date: 'B3', close: 105, slowK: 22 },
+    { date: 'B4', close: 108, slowK: 35 },
+    { date: 'B5', close: 102, slowK: 26 },
+    { date: 'B6', close: 98, slowK: 19 },
+    { date: 'B7', close: 94, slowK: 24 },  // swing low 2 (cur < prev && cur < next: 94 < 98 && 94 < 99)
+    { date: 'B8', close: 99, slowK: 29 },
+    { date: 'B9', close: 103, slowK: 36 }
+  ];
+
+  // Test 9B: Bearish Divergence with two confirmed swing highs
+  // Swing high 1 at bar 2 (price: 150, slowK: 85)
+  // Swing high 2 at bar 7 (price: 160, slowK: 72) -> Higher high in price, lower high in %K (> 65)
+  const bearishBars = [
+    { date: 'B0', close: 140, slowK: 65 },
+    { date: 'B1', close: 146, slowK: 78 },
+    { date: 'B2', close: 150, slowK: 85 }, // swing high 1 (cur > prev && cur > next: 150 > 146 && 150 > 144)
+    { date: 'B3', close: 144, slowK: 74 },
+    { date: 'B4', close: 142, slowK: 68 },
+    { date: 'B5', close: 148, slowK: 70 },
+    { date: 'B6', close: 155, slowK: 71 },
+    { date: 'B7', close: 160, slowK: 72 }, // swing high 2 (cur > prev && cur > next: 160 > 155 && 160 > 152)
+    { date: 'B8', close: 152, slowK: 66 },
+    { date: 'B9', close: 149, slowK: 60 }
+  ];
+
+  const resBullish = detectDivergence(bullishBars);
+  const resBearish = detectDivergence(bearishBars);
+
+  assert(resBullish !== null, 'Bullish divergence should be detected');
+  assert.strictEqual(resBullish.type, 'BULLISH_DIVERGENCE', 'Expected BULLISH_DIVERGENCE');
+  console.log(`  ✅ Bullish Divergence detected correctly: ${resBullish.label}`);
+
+  assert(resBearish !== null, 'Bearish divergence should be detected');
+  assert.strictEqual(resBearish.type, 'BEARISH_DIVERGENCE', 'Expected BEARISH_DIVERGENCE');
+  console.log(`  ✅ Bearish Divergence detected correctly: ${resBearish.label}`);
+}
+
+// TEST 10: 50-SMA Baseline Trend Filter Guardrail
+console.log('\n▶ Test 10: 50-SMA Baseline Trend Filter in screenStockStochastic');
+{
+  // Build 60 candles in a primary downtrend
+  // 50-SMA will be around ~180-200, but latest price drops sharply to 150 (> 15% below 50 SMA)
+  // then generates an oversold Golden Cross
+  const candlesDowntrend = [];
+  let price = 220;
+  for (let i = 0; i < 55; i++) {
+    price -= 1.2;
+    candlesDowntrend.push({
+      date: `2026-01-${i + 1}`,
+      close: Number(price.toFixed(2)),
+      high: Number((price + 1).toFixed(2)),
+      low: Number((price - 1).toFixed(2)),
+      volume: 100000
+    });
+  }
+  // Sharp drop to 140
+  for (let i = 0; i < 5; i++) {
+    price -= 4;
+    candlesDowntrend.push({
+      date: `2026-02-${i + 1}`,
+      close: Number(price.toFixed(2)),
+      high: Number((price + 1).toFixed(2)),
+      low: Number((price - 1).toFixed(2)),
+      volume: 150000
+    });
+  }
+  // Turnaround: golden cross in deep oversold on final bar
+  candlesDowntrend.push({ date: '2026-02-07', close: price + 4, high: price + 5, low: price - 1, volume: 200000 });
+
+  const screenedDowntrend = screenStockStochastic('FALLING.NS', 'Falling Knife Stock', candlesDowntrend);
+
+  assert(screenedDowntrend !== null, 'Should return screened result');
+  assert(screenedDowntrend.sma50 !== null, '50-SMA must be calculated');
+  assert(screenedDowntrend.isBelowSma50 === true, 'Stock must be detected as >5% below 50-SMA');
+  assert(screenedDowntrend.isBullishCross === true, 'Golden Cross occurred');
+  
+  // Guardrail Verification:
+  assert.strictEqual(
+    screenedDowntrend.strategy.action, 
+    'COUNTER_TREND_WATCH', 
+    `Action must be downgraded to COUNTER_TREND_WATCH, got: ${screenedDowntrend.strategy.action}`
+  );
+  assert.strictEqual(
+    screenedDowntrend.strategy.conviction, 
+    'Low - Fighting Primary Downtrend', 
+    `Conviction must be 'Low - Fighting Primary Downtrend', got: ${screenedDowntrend.strategy.conviction}`
+  );
+  assert(
+    !screenedDowntrend.strategy.actionLabel.includes('★ Actionable Buy'), 
+    'Must NOT be classified as Actionable Buy when fighting primary downtrend'
+  );
+
+  console.log(`  ✅ 50-SMA Trend Filter successfully downgraded falling knife Golden Cross:`);
+  console.log(`     Price: ₹${screenedDowntrend.price} vs 50-SMA: ₹${screenedDowntrend.sma50} (${screenedDowntrend.sma50DiffPct}%)`);
+  console.log(`     Action: ${screenedDowntrend.strategy.action} [${screenedDowntrend.strategy.actionLabel}]`);
+  console.log(`     Conviction: ${screenedDowntrend.strategy.conviction}`);
+
+  // Test 10B: Pre-calculated candles.sma50 option
+  const mockCandlesWithSma = [{ close: 100 }, { close: 102 }, { close: 105 }];
+  mockCandlesWithSma.sma50 = 150; // current 105 is > 25% below 150
+  const screenedWithPrecalculated = screenStockStochastic('PRE.NS', 'Precalculated SMA', mockCandlesWithSma);
+  assert.strictEqual(screenedWithPrecalculated.sma50, 150, 'Must accept precalculated candles.sma50');
+  assert.strictEqual(screenedWithPrecalculated.isBelowSma50, true, 'isBelowSma50 must be true for precalculated');
+  console.log('  ✅ Pre-calculated candles.sma50 parameter properly accepted and validated.');
+}
+
+console.log('\n🎉 ALL 10 TESTS PASSED SUCCESSFULLY! Stochastic Engine Refactoring Fully Verified.\n');
+
 
 

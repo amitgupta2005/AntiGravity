@@ -149,7 +149,8 @@ export const OPTION_UNIVERSE = [
     sector: 'Consumer Electronics & Services',
     riskFreeRate: 0.045,
     beta: 1.08,
-    alpha: 3.5
+    alpha: 3.5,
+    daysToEarnings: 2
   },
   {
     ticker: 'TSLA',
@@ -169,7 +170,8 @@ export const OPTION_UNIVERSE = [
     sector: 'Automotive & Clean Energy',
     riskFreeRate: 0.045,
     beta: 2.15,
-    alpha: 6.2
+    alpha: 6.2,
+    daysToEarnings: 14
   },
   {
     ticker: 'MSFT',

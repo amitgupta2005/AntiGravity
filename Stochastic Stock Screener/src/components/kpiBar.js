@@ -13,6 +13,10 @@ export function renderKpiBar(results = [], containerId = 'kpi-container') {
   const oversold = results.filter(r => (r.slowK ?? r.stoch?.k ?? 50) < 20).length;
   const overbought = results.filter(r => (r.slowK ?? r.stoch?.k ?? 50) > 80).length;
 
+  const kP = results[0]?.kPeriod || 14;
+  const kS = results[0]?.kSmoothing || 3;
+  const dP = results[0]?.dPeriod || 3;
+
   container.innerHTML = `
     <div class="kpi-grid">
       <div class="kpi-card" data-filter="all">
@@ -65,7 +69,7 @@ export function renderKpiBar(results = [], containerId = 'kpi-container') {
           <span class="kpi-title">Stochastic Model</span>
           <span class="kpi-badge">Active</span>
         </div>
-        <div class="kpi-strategy-val">4, 3, 3</div>
+        <div class="kpi-strategy-val">${kP}, ${kS}, ${dP}</div>
         <div class="kpi-subtitle">Strict Close-Only Basis</div>
       </div>
     </div>

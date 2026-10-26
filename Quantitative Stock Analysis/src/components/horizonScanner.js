@@ -432,6 +432,69 @@ function renderCardsView(items) {
               </div>
             </div>
 
+            <!-- Dedicated Tactical Entry Strategy & Sizing -->
+            <div class="h-entry-card-section">
+              <div class="h-entry-header">
+                <span class="h-entry-title">
+                  <i data-lucide="log-in" class="inline-icon"></i> Entry Strategy & Sizing
+                </span>
+                <span class="h-entry-type-badge font-mono font-bold">
+                  ${evaluation.entryStrategy.orderType}
+                </span>
+              </div>
+
+              <div class="h-entry-grid">
+                <!-- Optimal Entry Zone -->
+                <div class="h-entry-col col-zone">
+                  <span class="h-entry-lbl text-cyan">Optimal Entry Zone</span>
+                  <span class="h-entry-price font-mono font-bold text-cyan">
+                    ${evaluation.entryStrategy.entryZone}
+                  </span>
+                  <span class="h-entry-sub text-dim font-mono">
+                    Current: ${curr}${asset.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                <!-- Setup Style -->
+                <div class="h-entry-col col-setup">
+                  <span class="h-entry-lbl text-emerald">Entry Setup</span>
+                  <span class="h-entry-price font-mono font-bold text-emerald">
+                    ${evaluation.entryStrategy.entryType}
+                  </span>
+                  <span class="h-entry-sub text-dim font-mono">
+                    ${evaluation.entryStrategy.stagingStyle}
+                  </span>
+                </div>
+
+                <!-- Sizing & Tranches -->
+                <div class="h-entry-col col-sizing">
+                  <span class="h-entry-lbl text-amber">Tranche Sizing</span>
+                  <span class="h-entry-price font-mono font-bold text-amber">
+                    ${evaluation.entryStrategy.trancheSummary}
+                  </span>
+                  <span class="h-entry-sub text-dim font-mono">
+                    Staged Allocation
+                  </span>
+                </div>
+              </div>
+
+              <!-- Entry Rules -->
+              <div class="h-entry-rules">
+                <div class="h-entry-rule-item">
+                  <span class="rule-icon-tag tag-entry">Trigger</span>
+                  <span>${evaluation.entryStrategy.entryTrigger}</span>
+                </div>
+                <div class="h-entry-rule-item">
+                  <span class="rule-icon-tag tag-tranche">Tranches</span>
+                  <span>${evaluation.entryStrategy.tranchePlan}</span>
+                </div>
+                <div class="h-entry-rule-item">
+                  <span class="rule-icon-tag tag-invalid">Invalidation</span>
+                  <span>${evaluation.entryStrategy.invalidationRule}</span>
+                </div>
+              </div>
+            </div>
+
             <!-- Dedicated Tactical Exit Strategy & Stop Loss -->
             <div class="h-exit-card-section">
               <div class="h-exit-header">
@@ -446,23 +509,29 @@ function renderCardsView(items) {
               <div class="h-exit-grid">
                 <!-- Target 1 -->
                 <div class="h-exit-col col-target1">
-                  <span class="h-exit-lbl text-emerald">🎯 Target 1 (Partial)</span>
+                  <div class="h-exit-top-row">
+                    <span class="h-exit-lbl text-emerald">🎯 Target 1</span>
+                    <span class="h-book-badge badge-emerald font-mono font-bold">Book ${evaluation.exitStrategy.target1BookPct}%</span>
+                  </div>
                   <span class="h-exit-price font-mono font-bold text-emerald">
                     ${curr}${evaluation.exitStrategy.target1Price.toLocaleString()}
                   </span>
                   <span class="h-exit-sub text-emerald font-mono">
-                    ${evaluation.exitStrategy.target1GainPct}
+                    ${evaluation.exitStrategy.target1GainPct} • Lock ${evaluation.exitStrategy.target1BookPct}% Profit
                   </span>
                 </div>
 
                 <!-- Target 2 -->
                 <div class="h-exit-col col-target2">
-                  <span class="h-exit-lbl text-cyan">🚀 Target 2 (Runner)</span>
+                  <div class="h-exit-top-row">
+                    <span class="h-exit-lbl text-cyan">🚀 Target 2</span>
+                    <span class="h-book-badge badge-cyan font-mono font-bold">${evaluation.exitStrategy.target2BookLabel || 'Runner'}</span>
+                  </div>
                   <span class="h-exit-price font-mono font-bold text-cyan">
                     ${curr}${evaluation.exitStrategy.target2Price.toLocaleString()}
                   </span>
                   <span class="h-exit-sub text-cyan font-mono">
-                    ${evaluation.exitStrategy.target2GainPct}
+                    ${evaluation.exitStrategy.target2GainPct} • Final Target
                   </span>
                 </div>
 
@@ -480,6 +549,10 @@ function renderCardsView(items) {
 
               <!-- Rules & Execution -->
               <div class="h-exit-rules">
+                <div class="h-exit-rule-item">
+                  <span class="rule-icon-tag tag-t1">Book T1</span>
+                  <span><strong>${evaluation.exitStrategy.target1BookLabel}:</strong> ${evaluation.exitStrategy.target1Action}</span>
+                </div>
                 <div class="h-exit-rule-item">
                   <span class="rule-icon-tag tag-sl">Exit Trigger</span>
                   <span>${evaluation.exitStrategy.stopLossRule}</span>
@@ -552,7 +625,8 @@ function renderTableView(items) {
             <th>Type</th>
             <th>Horizon & Strategy</th>
             <th>Current Price</th>
-            <th>Targets (T1 / T2)</th>
+            <th>Entry Strategy & Zone</th>
+            <th>Targets & Book T1 %</th>
             <th>Stop Loss & Rules</th>
             <th>Quant Score</th>
             <th>Quantitative Reasoning</th>
@@ -566,6 +640,7 @@ function renderTableView(items) {
             const activeH = activeHorizonFilter === 'ALL' ? item.bestFitHorizon : activeHorizonFilter;
             const evaluation = item.evaluations[activeH];
             const hMeta = evaluation.horizonMeta;
+            const entry = evaluation.entryStrategy;
             const exit = evaluation.exitStrategy;
             const isChgPositive = asset.changePercent >= 0;
 
@@ -597,9 +672,19 @@ function renderTableView(items) {
                   </div>
                 </td>
                 <td>
+                  <div class="table-entry-cell font-mono">
+                    <div class="text-cyan font-bold" style="font-size: 0.75rem;">${entry.entryZone}</div>
+                    <div class="text-emerald" style="font-size: 0.69rem;">${entry.entryType}</div>
+                    <div class="text-dim" style="font-size: 0.67rem;">${entry.trancheSummary}</div>
+                  </div>
+                </td>
+                <td>
                   <div class="table-targets-cell font-mono">
-                    <span class="text-emerald font-bold">T1: ${curr}${exit.target1Price.toLocaleString()} (${exit.target1GainPct})</span>
-                    <span class="text-cyan">T2: ${curr}${exit.target2Price.toLocaleString()} (${exit.target2GainPct})</span>
+                    <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                      <span class="text-emerald font-bold">T1: ${curr}${exit.target1Price.toLocaleString()} (${exit.target1GainPct})</span>
+                      <span class="h-book-badge-sm badge-emerald font-bold">Book ${exit.target1BookPct}%</span>
+                    </div>
+                    <span class="text-cyan" style="font-size: 0.72rem;">T2: ${curr}${exit.target2Price.toLocaleString()} (${exit.target2GainPct})</span>
                   </div>
                 </td>
                 <td>
@@ -769,7 +854,7 @@ function attachHorizonEventListeners(containerId, onSelectAssetForModel, onSelec
         const activeH = activeHorizonFilter === 'ALL' ? rec.bestFitHorizon : activeHorizonFilter;
         const evaluation = rec.evaluations[activeH];
         const asset = rec.asset;
-        const curr = asset.currencySymbol || (asset.market === 'IN' ? '₹' : '$');
+        const entry = evaluation.entryStrategy;
         const exit = evaluation.exitStrategy;
         const reasoning = evaluation.reasoning;
 
@@ -780,11 +865,20 @@ function attachHorizonEventListeners(containerId, onSelectAssetForModel, onSelec
           `Strategy: ${evaluation.strategyType} | Conviction: ${evaluation.conviction} (${evaluation.score}/100)`,
           `Current Price: ${curr}${asset.price.toLocaleString()}`,
           ``,
+          `📥 ENTRY STRATEGY & SIZING:`,
+          `• Setup: ${entry.entryType} [${entry.orderType}]`,
+          `• Optimal Entry Zone: ${entry.entryZone} (Current: ${curr}${asset.price.toLocaleString()})`,
+          `• Tranche Sizing: ${entry.trancheSummary} (${entry.stagingStyle})`,
+          `• Entry Trigger: ${entry.entryTrigger}`,
+          `• Tranche Plan: ${entry.tranchePlan}`,
+          `• Invalidation Rule: ${entry.invalidationRule}`,
+          ``,
           `📊 EXIT STRATEGY & STOP LOSS:`,
-          `• Target 1 (Partial 50% Profit): ${curr}${exit.target1Price.toLocaleString()} (${exit.target1GainPct})`,
+          `• Target 1 (${exit.target1BookLabel.toUpperCase()} OF POSITION): ${curr}${exit.target1Price.toLocaleString()} (${exit.target1GainPct})`,
           `  Action: ${exit.target1Action}`,
-          `• Target 2 (Runner / Objective): ${curr}${exit.target2Price.toLocaleString()} (${exit.target2GainPct})`,
+          `• Target 2 (${exit.target2BookLabel.toUpperCase()}): ${curr}${exit.target2Price.toLocaleString()} (${exit.target2GainPct})`,
           `  Action: ${exit.target2Action}`,
+          `• Partial Booking Rule: ${exit.partialBookingRule}`,
           `• Stop Loss: ${curr}${exit.stopLossPrice.toLocaleString()} (${exit.stopLossPct}) [${exit.stopLossType}]`,
           `• Stop Loss Trigger: ${exit.stopLossRule}`,
           `• Trailing Stop Rule: ${exit.trailingStopRule}`,
@@ -797,7 +891,7 @@ function attachHorizonEventListeners(containerId, onSelectAssetForModel, onSelec
         ].join('\n');
 
         navigator.clipboard?.writeText(copyText);
-        showHorizonToast(`Exit strategy & reasoning for ${asset.displayTicker} copied!`);
+        showHorizonToast(`Entry, Exit strategy & plan for ${asset.displayTicker} copied!`);
 
         btn.innerHTML = '<i data-lucide="check" class="text-emerald" style="width: 14px; height: 14px;"></i>';
         if (window.lucide && typeof window.lucide.createIcons === 'function') {

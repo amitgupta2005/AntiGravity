@@ -72,14 +72,21 @@ export function calculateProjectedReturn({
 
 /**
  * Scenario Analysis: Bear, Base, Bull Cases
+ * Supports dynamic scenario probabilities (default: 25% bear, 50% base, 25% bull)
  */
 export function calculateScenarios({
   currentPrice,
   baseEPS,
   growthBase,
   peBase,
-  years = 3
-}) {
+  years = 3,
+  probabilities = { bear: 0.25, base: 0.50, bull: 0.25 }
+} = {}, secondArgProbabilities = null) {
+  const probs = secondArgProbabilities || probabilities || { bear: 0.25, base: 0.50, bull: 0.25 };
+  const pBear = probs.bear !== undefined ? Number(probs.bear) : 0.25;
+  const pBase = probs.base !== undefined ? Number(probs.base) : 0.50;
+  const pBull = probs.bull !== undefined ? Number(probs.bull) : 0.25;
+
   // Bear case: 30% lower growth, 20% multiple compression
   const bearGrowth = Math.max(5, growthBase * 0.70);
   const bearPE = Math.max(10, peBase * 0.80);
@@ -111,16 +118,21 @@ export function calculateScenarios({
     years
   });
 
-  // Probability-weighted expected CAGR (Bear 25%, Base 50%, Bull 25%)
-  const weightedCAGR = Number((bear.cagr * 0.25 + base.cagr * 0.50 + bull.cagr * 0.25).toFixed(1));
-  const weightedTarget = Number((bear.targetPrice * 0.25 + base.targetPrice * 0.50 + bull.targetPrice * 0.25).toFixed(2));
+  // Dynamic Probability-weighted expected CAGR and target price
+  const weightedCAGR = Number((bear.cagr * pBear + base.cagr * pBase + bull.cagr * pBull).toFixed(1));
+  const weightedTarget = Number((bear.targetPrice * pBear + base.targetPrice * pBase + bull.targetPrice * pBull).toFixed(2));
+
+  const weightBearPct = pBear <= 1 ? Math.round(pBear * 100) : pBear;
+  const weightBasePct = pBase <= 1 ? Math.round(pBase * 100) : pBase;
+  const weightBullPct = pBull <= 1 ? Math.round(pBull * 100) : pBull;
 
   return {
-    bear: { ...bear, growth: Number(bearGrowth.toFixed(1)), exitPE: Number(bearPE.toFixed(1)), weight: 25 },
-    base: { ...base, growth: Number(growthBase.toFixed(1)), exitPE: Number(peBase.toFixed(1)), weight: 50 },
-    bull: { ...bull, growth: Number(bullGrowth.toFixed(1)), exitPE: Number(bullPE.toFixed(1)), weight: 25 },
+    bear: { ...bear, growth: Number(bearGrowth.toFixed(1)), exitPE: Number(bearPE.toFixed(1)), weight: weightBearPct },
+    base: { ...base, growth: Number(growthBase.toFixed(1)), exitPE: Number(peBase.toFixed(1)), weight: weightBasePct },
+    bull: { ...bull, growth: Number(bullGrowth.toFixed(1)), exitPE: Number(bullPE.toFixed(1)), weight: weightBullPct },
     weightedCAGR,
-    weightedTarget
+    weightedTarget,
+    probabilities: { bear: pBear, base: pBase, bull: pBull }
   };
 }
 
@@ -175,6 +187,22 @@ export function generateSensitivityMatrix({
 }
 
 /**
+ * Check if sector is structurally high-debt/deposit-leveraged (Financial Services, Bank, REIT)
+ */
+export function isDebtExemptSector(sector) {
+  if (!sector || typeof sector !== 'string') return false;
+  const s = sector.trim().toLowerCase();
+  return (
+    s === 'financial services' ||
+    s === 'bank' ||
+    s === 'reit' ||
+    s.includes('financial') ||
+    s.includes('bank') ||
+    s.includes('reit')
+  );
+}
+
+/**
  * Multi-Factor Quantitative Rating Engine (Score 0 - 100)
  */
 export function calculateQuantScore(stock) {
@@ -202,6 +230,13 @@ export function calculateQuantScore(stock) {
   else if (epsGrowth >= 10) growthScore += 11;
   else growthScore += 6;
 
+  // Cyclical Growth Peak Guardrails:
+  // If epsGrowth > 40 AND stock.roe < 15, cap growthScore to 15 points instead of 25.
+  // Prevents the engine from blindly assigning max scores to low-quality commodity stocks experiencing a temporary one-off cyclical boom.
+  if (epsGrowth > 40 && ((stock.roe === undefined || stock.roe === null) ? true : stock.roe < 15)) {
+    growthScore = Math.min(growthScore, 15);
+  }
+
   // 3. Quality Factor (0 - 25)
   // ROE component (max 10)
   if (stock.roe >= 35) qualityScore += 10;
@@ -216,10 +251,20 @@ export function calculateQuantScore(stock) {
   else qualityScore += 2;
 
   // Balance sheet health / Debt to Equity (max 7)
-  if (stock.debtToEquity <= 0.25) qualityScore += 7;
-  else if (stock.debtToEquity <= 0.60) qualityScore += 5;
-  else if (stock.debtToEquity <= 1.20) qualityScore += 3;
-  else qualityScore += 1;
+  // Sector-Aware Debt Scoring: Financials structurally carry high debt.
+  // If sector is 'Financial Services', 'Bank', or 'REIT', bypass penalty entirely and assign full points.
+  const isDebtExempt = isDebtExemptSector(stock.sector);
+  if (isDebtExempt) {
+    qualityScore += 7; // Full points for Financials/Banks/REITs
+  } else if (stock.debtToEquity <= 0.25) {
+    qualityScore += 7;
+  } else if (stock.debtToEquity <= 0.60) {
+    qualityScore += 5;
+  } else if (stock.debtToEquity <= 1.20) {
+    qualityScore += 3;
+  } else {
+    qualityScore += 1;
+  }
 
   // 4. Momentum & Technicals (0 - 20)
   // RSI (max 7)

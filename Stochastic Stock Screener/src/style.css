@@ -1006,6 +1006,12 @@ body.light-theme .meter-track {
   color: var(--text-secondary);
 }
 
+.badge-counter-trend {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+}
+
 .btn-inspect {
   display: inline-flex;
   align-items: center;
