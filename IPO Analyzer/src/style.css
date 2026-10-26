@@ -1364,6 +1364,119 @@ body {
   line-height: 1.6;
 }
 
+/* DRHP Financials Section & Disclosures */
+.drhp-financials-section {
+  border-color: rgba(56, 189, 248, 0.28);
+  background: linear-gradient(180deg, rgba(13, 19, 31, 0.9) 0%, rgba(10, 15, 24, 0.95) 100%);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
+}
+
+.drhp-badge {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.drhp-source-pill {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-dim);
+  border: 1px solid var(--border-subtle);
+  padding: 0.25rem 0.65rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.drhp-financial-table {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.drhp-financial-table th {
+  background: #080d16;
+  font-size: 0.76rem;
+}
+
+.drhp-financial-table tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.drhp-financial-table tr.sub-row {
+  font-size: 0.78rem;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.drhp-financial-table tr.sub-row td {
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+}
+
+.drhp-financial-table tr.highlight-profit-row {
+  background: rgba(16, 185, 129, 0.04);
+  border-top: 1px solid rgba(16, 185, 129, 0.2);
+  border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.drhp-financial-table tr.highlight-profit-row td {
+  padding-top: 0.85rem;
+  padding-bottom: 0.85rem;
+}
+
+/* DRHP Solvency & Balance Sheet Grid */
+.drhp-solvency-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.solvency-card {
+  background: var(--bg-darkest);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  transition: var(--transition-fast);
+}
+
+.solvency-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.solvency-card .sc-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.solvency-card .sc-val {
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.solvency-card .sc-hint {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  line-height: 1.35;
+}
+
+.solvency-card-clean {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.03) 0%, var(--bg-darkest) 100%);
+}
+
+.solvency-card-spike {
+  border-color: rgba(239, 68, 68, 0.5);
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.07) 0%, var(--bg-darkest) 100%);
+}
+
 .business-content-grid {
   display: grid;
   grid-template-columns: 1.2fr 1fr;

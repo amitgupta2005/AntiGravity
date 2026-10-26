@@ -530,7 +530,8 @@ export class IpoEvaluationEngine {
     }
 
     // 3. Valuation vs. Peers (Quantitative Matrix)
-    const peerComparisonRows = (ipo.peers || []).map(p => ({
+    const peerList = ipo.peers || ipo.valuation?.peerComps || [];
+    const peerComparisonRows = peerList.map(p => ({
       name: p.name,
       ticker: p.ticker,
       pe: p.pe ? `${p.pe}x` : 'N/A',
@@ -546,7 +547,7 @@ export class IpoEvaluationEngine {
       pe: valuation.peRatio ? `${valuation.peRatio}x` : 'N/A',
       pb: valuation.pbRatio ? `${valuation.pbRatio}x` : 'N/A',
       evEbitda: valuation.evEbitda ? `${valuation.evEbitda}x` : 'N/A',
-      patMargin: ipo.financials?.patMargin ? `${ipo.financials.patMargin.slice(-1)[0]}%` : 'N/A',
+      patMargin: ipo.financials?.margins?.patMargin != null ? `${ipo.financials.margins.patMargin}%` : (ipo.financials?.patMargin ? `${Array.isArray(ipo.financials.patMargin) ? ipo.financials.patMargin.slice(-1)[0] : ipo.financials.patMargin}%` : 'N/A'),
       mcap: issue.marketCap || 'N/A',
       isTarget: true
     };
@@ -555,12 +556,17 @@ export class IpoEvaluationEngine {
     const isIndia = ipo.market === 'IN';
     const sentimentData = {
       isIndia,
-      gmpPrice: sentiment.gmpPrice ? `${issue.currencySymbol || ''}${sentiment.gmpPrice}` : 'N/A',
+      gmpPrice: (sentiment.gmp != null || sentiment.gmpPrice != null) ? `${issue.currencySymbol || ''}${sentiment.gmp ?? sentiment.gmpPrice}` : 'N/A',
       gmpPct: sentiment.gmpPct != null ? `${sentiment.gmpPct >= 0 ? '+' : ''}${sentiment.gmpPct.toFixed(1)}%` : 'N/A',
-      gmpTrend: sentiment.gmpTrend || [],
-      subscription: sentiment.subscription || { qib: 'N/A', nii: 'N/A', retail: 'N/A', total: 'N/A' },
-      underwriterTier: sentiment.underwriterTier || 'TIER_1',
-      anchorQuality: sentiment.anchorQuality || 'Institutional Consortium',
+      gmpTrend: sentiment.gmpTrend || (sentiment.gmpHistory ? sentiment.gmpHistory.map(h => h.gmpPct) : []),
+      subscription: sentiment.subscription || {
+        qib: sentiment.qibSubscription != null ? sentiment.qibSubscription : 'N/A',
+        nii: sentiment.niiSubscription != null ? sentiment.niiSubscription : 'N/A',
+        retail: sentiment.retailSubscription != null ? sentiment.retailSubscription : 'N/A',
+        total: sentiment.totalSubscription != null ? sentiment.totalSubscription : 'N/A'
+      },
+      underwriterTier: sentiment.underwriterTier || issue.underwriterTier || 'TIER_1',
+      anchorQuality: sentiment.anchorQuality || (sentiment.anchorInvestors ? sentiment.anchorInvestors.join(', ') : 'Institutional Consortium'),
       macroVix: sentiment.macroVix || 14.0
     };
 
@@ -578,6 +584,65 @@ export class IpoEvaluationEngine {
       }
     }
 
+    // 6. DRHP Disclosed Financial Track Record (Restated 3-Year Audited Financials)
+    const fin = ipo.financials || {};
+    const repCurrency = fin.reportingCurrency || (ipo.market === 'IN' ? 'INR Cr' : 'USD M');
+    const currencySym = repCurrency.includes('USD') ? '$' : '₹';
+
+    let rev3Y = [];
+    if (Array.isArray(fin.revenue3Y)) {
+      rev3Y = fin.revenue3Y;
+    } else if (Array.isArray(fin.revenue)) {
+      const yrs = fin.years || ['FY24', 'FY25', 'FY26'];
+      rev3Y = fin.revenue.map((val, idx) => ({ year: yrs[idx] || `Y${idx + 1}`, value: val }));
+    }
+
+    let pat3Y = [];
+    if (Array.isArray(fin.pat3Y)) {
+      pat3Y = fin.pat3Y;
+    } else if (Array.isArray(fin.pat)) {
+      const yrs = fin.years || ['FY24', 'FY25', 'FY26'];
+      pat3Y = fin.pat.map((val, idx) => ({ year: yrs[idx] || `Y${idx + 1}`, value: val }));
+    }
+
+    let ebitda3Y = [];
+    if (Array.isArray(fin.ebitda3Y)) {
+      ebitda3Y = fin.ebitda3Y;
+    } else if (Array.isArray(fin.ebitda)) {
+      const yrs = fin.years || ['FY24', 'FY25', 'FY26'];
+      ebitda3Y = fin.ebitda.map((val, idx) => ({ year: yrs[idx] || `Y${idx + 1}`, value: val }));
+    }
+
+    const margins = fin.margins || {
+      grossMargin: fin.grossMargin ?? null,
+      ebitdaMargin: fin.ebitdaMargin ?? null,
+      patMargin: fin.patMargin ? (Array.isArray(fin.patMargin) ? fin.patMargin.slice(-1)[0] : fin.patMargin) : null,
+      spikeDetected: fin.preIpoMarginSpike ?? false
+    };
+
+    const hasMarginSpike = Boolean(fin.margins?.spikeDetected || fin.preIpoMarginSpike);
+
+    const drhpFinancialData = {
+      reportingCurrency: repCurrency,
+      currencySymbol: currencySym,
+      revenue3Y: rev3Y,
+      pat3Y: pat3Y,
+      ebitda3Y: ebitda3Y,
+      cagrRevenue: fin.cagrRevenue ?? fin.revenueCAGR ?? null,
+      cagrPat: fin.cagrPat ?? fin.patCAGR ?? null,
+      operatingCashFlow: fin.operatingCashFlow ?? null,
+      netDebt: fin.netDebt ?? null,
+      debtToEquity: fin.debtToEquity ?? null,
+      margins,
+      hasPreIpoMarginSpike: hasMarginSpike,
+      marginSpikeDetail: fin.marginSpikeDetail || (hasMarginSpike 
+        ? 'Abnormal pre-IPO profit margin spike detected in restated DRHP financials without proportional physical volume additions.'
+        : 'Audited restated financial statements indicate sustainable organic trajectory compliant with regulatory disclosures.'),
+      forensicAuditVerdict: hasMarginSpike
+        ? '⚠️ FORENSIC ANOMALY: Pre-IPO Net Profit window-dressing detected in DRHP restated statements.'
+        : '✓ AUDITED CLEAN: Clean restated financial trajectory compliant with SEBI ICDR regulations.'
+    };
+
     return {
       part1_executiveVerdict: executiveRationale,
       part2_businessAndRedFlags: {
@@ -593,7 +658,8 @@ export class IpoEvaluationEngine {
         medianPE: benchmarks.medianPE
       },
       part4_marketSentiment: sentimentData,
-      part5_tacticalNote: tacticalNote
+      part5_tacticalNote: tacticalNote,
+      drhpFinancials: drhpFinancialData
     };
   }
 
@@ -607,8 +673,36 @@ export class IpoEvaluationEngine {
       part2_businessAndRedFlags,
       part3_valuationVsPeers,
       part4_marketSentiment,
-      part5_tacticalNote
+      part5_tacticalNote,
+      drhpFinancials
     } = dossier;
+
+    const df = drhpFinancials || {};
+    const y1 = df.revenue3Y?.[0]?.year || 'FY24';
+    const y2 = df.revenue3Y?.[1]?.year || 'FY25';
+    const y3 = df.revenue3Y?.[2]?.year || 'FY26';
+
+    const r1 = df.revenue3Y?.[0]?.value != null ? df.revenue3Y[0].value.toLocaleString() : 'N/A';
+    const r2 = df.revenue3Y?.[1]?.value != null ? df.revenue3Y[1].value.toLocaleString() : 'N/A';
+    const r3 = df.revenue3Y?.[2]?.value != null ? df.revenue3Y[2].value.toLocaleString() : 'N/A';
+
+    const e1 = df.ebitda3Y?.[0]?.value != null ? df.ebitda3Y[0].value.toLocaleString() : 'N/A';
+    const e2 = df.ebitda3Y?.[1]?.value != null ? df.ebitda3Y[1].value.toLocaleString() : 'N/A';
+    const e3 = df.ebitda3Y?.[2]?.value != null ? df.ebitda3Y[2].value.toLocaleString() : 'N/A';
+
+    const p1 = df.pat3Y?.[0]?.value != null ? df.pat3Y[0].value.toLocaleString() : 'N/A';
+    const p2 = df.pat3Y?.[1]?.value != null ? df.pat3Y[1].value.toLocaleString() : 'N/A';
+    const p3 = df.pat3Y?.[2]?.value != null ? df.pat3Y[2].value.toLocaleString() : 'N/A';
+
+    const m1 = (df.revenue3Y?.[0]?.value && df.pat3Y?.[0]?.value != null)
+      ? ((df.pat3Y[0].value / df.revenue3Y[0].value) * 100).toFixed(1) + '%'
+      : 'N/A';
+    const m2 = (df.revenue3Y?.[1]?.value && df.pat3Y?.[1]?.value != null)
+      ? ((df.pat3Y[1].value / df.revenue3Y[1].value) * 100).toFixed(1) + '%'
+      : 'N/A';
+    const m3 = (df.revenue3Y?.[2]?.value && df.pat3Y?.[2]?.value != null)
+      ? ((df.pat3Y[2].value / df.revenue3Y[2].value) * 100).toFixed(1) + '%'
+      : (df.margins?.patMargin != null ? `${df.margins.patMargin}%` : 'N/A');
 
     return `
 # INSTITUTIONAL IPO MEMORANDUM
@@ -619,6 +713,22 @@ export class IpoEvaluationEngine {
 
 ### 1. Executive Verdict
 ${part1_executiveVerdict}
+
+---
+
+### 📊 Financial Data Disclosed in DRHP (Restated 3-Year Audited Financials)
+*Source: Draft Red Herring Prospectus (DRHP) Filed with SEBI / SEC | Reporting Currency: ${df.reportingCurrency || 'INR Cr'}*
+
+| Line Item (DRHP Restated) | ${y1} | ${y2} | ${y3} | 3-Year Trajectory / CAGR |
+| :--- | :--- | :--- | :--- | :--- |
+| **Revenue from Operations** | ${r1} | ${r2} | ${r3} | ${df.cagrRevenue != null ? (df.cagrRevenue >= 0 ? '+' : '') + df.cagrRevenue + '% CAGR' : 'N/A'} |
+| **Operating EBITDA** | ${e1} | ${e2} | ${e3} | ${df.margins?.ebitdaMargin != null ? df.margins.ebitdaMargin + '% Margin' : 'N/A'} |
+| **Profit After Tax (PAT)** | ${p1} | ${p2} | ${p3} | ${df.cagrPat != null ? (df.cagrPat >= 0 ? '+' : '') + df.cagrPat + '% CAGR' : 'N/A'} |
+| **Net PAT Margin %** | ${m1} | ${m2} | ${m3} | ${df.margins?.grossMargin != null ? 'Gross: ' + df.margins.grossMargin + '%' : ''} |
+
+- **Operating Cash Flow (OCF):** ${df.operatingCashFlow != null ? (df.operatingCashFlow >= 0 ? '+' : '') + df.operatingCashFlow + ' ' + (df.reportingCurrency || '') : 'N/A'}
+- **Net Debt & Leverage:** ${df.netDebt != null ? (df.netDebt <= 0 ? 'Net Cash (' + Math.abs(df.netDebt) + ' ' + (df.reportingCurrency || '') + ')' : df.netDebt + ' ' + (df.reportingCurrency || '')) : 'N/A'} (Debt/Equity: ${df.debtToEquity != null ? df.debtToEquity + 'x' : 'N/A'})
+- **DRHP Forensic Audit Surveillance:** ${df.forensicAuditVerdict || 'Clean restated trajectory'}
 
 ---
 

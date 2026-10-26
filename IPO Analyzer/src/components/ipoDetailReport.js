@@ -21,6 +21,27 @@ export function openIpoDetailModal(ipo) {
   const issue = ipo.issueDetails || {};
   const isIndia = ipo.market === 'IN';
 
+  const df = dossier.drhpFinancials || {};
+  const repCurrency = df.reportingCurrency || (isIndia ? 'INR Cr' : 'USD M');
+  const currSym = repCurrency.includes('USD') ? '$' : '₹';
+  const years = (df.revenue3Y && df.revenue3Y.length >= 3)
+    ? df.revenue3Y.map(r => r.year)
+    : ['FY24', 'FY25', 'FY26'];
+  const rev = df.revenue3Y?.map(r => r.value) || [];
+  const ebitda = df.ebitda3Y?.map(e => e.value) || [];
+  const pat = df.pat3Y?.map(p => p.value) || [];
+  const hasSpike = Boolean(df.hasPreIpoMarginSpike);
+
+  const fmtFinancial = (val) => {
+    if (val == null) return 'N/A';
+    return (val < 0 ? '-' : '') + currSym + Math.abs(val).toLocaleString();
+  };
+
+  const calcMargin = (num, denom) => {
+    if (num == null || denom == null || denom === 0) return 'N/A';
+    return ((num / denom) * 100).toFixed(1) + '%';
+  };
+
   modal.innerHTML = `
     <div class="modal-dialog institutional-dossier-dialog" role="dialog" aria-modal="true">
       <div class="modal-header">
@@ -114,6 +135,96 @@ export function openIpoDetailModal(ipo) {
           <h3 class="section-title">Executive Verdict</h3>
           <div class="verdict-callout-box">
             <p class="verdict-prose">${formatBoldText(dossier.part1_executiveVerdict)}</p>
+          </div>
+        </section>
+
+        <!-- DRHP FINANCIAL DATA DISCLOSURE -->
+        <section class="dossier-section drhp-financials-section">
+          <div class="section-badge drhp-badge">DRHP Disclosures</div>
+          <div class="section-title-row">
+            <h3 class="section-title">📊 Financial Data Disclosed in DRHP (Restated 3-Year Audited Financials)</h3>
+            <span class="drhp-source-pill">SEBI / SEC Prospectus Filing • Reporting Currency: ${escapeHtml(repCurrency)}</span>
+          </div>
+
+          <!-- 3-Year Audited Restated Income Statement Table -->
+          <div class="table-responsive">
+            <table class="institutional-table drhp-financial-table">
+              <thead>
+                <tr>
+                  <th>Financial Line Item (DRHP Restated)</th>
+                  ${years.map(y => `<th class="text-right">${escapeHtml(y)}</th>`).join('')}
+                  <th class="text-right">3-Year Trajectory / CAGR</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Revenue from Operations</strong></td>
+                  ${rev.map(v => `<td class="text-right font-mono">${fmtFinancial(v)}</td>`).join('')}
+                  <td class="text-right font-mono text-accent">
+                    <strong>${df.cagrRevenue != null ? (df.cagrRevenue >= 0 ? '+' : '') + df.cagrRevenue + '% CAGR' : 'N/A'}</strong>
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Operating EBITDA</strong></td>
+                  ${ebitda.map(v => `<td class="text-right font-mono">${fmtFinancial(v)}</td>`).join('')}
+                  <td class="text-right font-mono text-muted">
+                    ${df.margins?.ebitdaMargin != null ? df.margins.ebitdaMargin + '% Margin' : 'N/A'}
+                  </td>
+                </tr>
+                <tr class="sub-row">
+                  <td class="text-dim" style="padding-left: 1.5rem;">↳ Operating EBITDA Margin %</td>
+                  ${ebitda.map((v, i) => `<td class="text-right font-mono text-dim">${calcMargin(v, rev[i])}</td>`).join('')}
+                  <td class="text-right text-dim">Operating Efficiency</td>
+                </tr>
+                <tr class="highlight-profit-row">
+                  <td><strong>Profit After Tax (PAT / Net Profit)</strong></td>
+                  ${pat.map(v => `<td class="text-right font-mono ${v < 0 ? 'text-danger' : 'text-success'}"><strong>${fmtFinancial(v)}</strong></td>`).join('')}
+                  <td class="text-right font-mono ${df.cagrPat != null && df.cagrPat < 0 ? 'text-danger' : 'text-success'}">
+                    <strong>${df.cagrPat != null ? (df.cagrPat >= 0 ? '+' : '') + df.cagrPat + '% CAGR' : 'N/A'}</strong>
+                  </td>
+                </tr>
+                <tr class="sub-row">
+                  <td class="text-dim" style="padding-left: 1.5rem;">↳ Net PAT Margin %</td>
+                  ${pat.map((v, i) => `<td class="text-right font-mono text-dim">${calcMargin(v, rev[i])}</td>`).join('')}
+                  <td class="text-right text-dim">${df.margins?.patMargin != null ? 'FY26 Margin: ' + df.margins.patMargin + '%' : ''}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- DRHP Solvency, Cash Flows & Forensic Integrity Grid -->
+          <div class="drhp-solvency-grid mt-3">
+            <div class="solvency-card">
+              <span class="sc-label">Operating Cash Flow (OCF)</span>
+              <span class="sc-val font-mono ${df.operatingCashFlow != null && df.operatingCashFlow < 0 ? 'text-danger' : 'text-success'}">
+                ${df.operatingCashFlow != null ? (df.operatingCashFlow >= 0 ? '+' : '') + fmtFinancial(df.operatingCashFlow) : 'N/A'}
+              </span>
+              <span class="sc-hint">${df.operatingCashFlow != null && df.operatingCashFlow >= 0 ? '✓ Positive core operating cash flow' : '⚠️ Cash drain from operations / working capital'}</span>
+            </div>
+
+            <div class="solvency-card">
+              <span class="sc-label">Net Debt & Capital Structure</span>
+              <span class="sc-val font-mono">
+                ${df.netDebt != null ? (df.netDebt <= 0 ? 'Net Cash (+ ' + fmtFinancial(Math.abs(df.netDebt)) + ')' : fmtFinancial(df.netDebt) + ' Debt') : 'N/A'}
+              </span>
+              <span class="sc-hint">Debt-to-Equity: <strong>${df.debtToEquity != null ? df.debtToEquity + 'x' : 'N/A'}</strong> ${df.debtToEquity != null && df.debtToEquity < 0.5 ? '(Conservative Leverage)' : '(Leveraged)'}</span>
+            </div>
+
+            <div class="solvency-card">
+              <span class="sc-label">Gross Margin Profile</span>
+              <span class="sc-val font-mono text-accent">
+                ${df.margins?.grossMargin != null ? df.margins.grossMargin + '%' : 'N/A'}
+              </span>
+              <span class="sc-hint">Gross value addition & raw material discipline</span>
+            </div>
+
+            <div class="solvency-card ${hasSpike ? 'solvency-card-spike' : 'solvency-card-clean'}">
+              <span class="sc-label">DRHP Forensic Window-Dressing Audit</span>
+              <span class="sc-val ${hasSpike ? 'text-danger' : 'text-success'}">
+                ${hasSpike ? '🚨 Margin Window-Dressing Risk' : '✓ Clean Restated Trajectory'}
+              </span>
+              <span class="sc-hint">${escapeHtml(df.marginSpikeDetail || df.forensicAuditVerdict)}</span>
+            </div>
           </div>
         </section>
 
