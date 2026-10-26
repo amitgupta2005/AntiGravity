@@ -518,6 +518,40 @@ body {
   border-color: var(--accent-blue);
 }
 
+.kbd-shortcuts-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 7px;
+  padding: 3px 6px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  font-size: 0.66rem;
+  color: var(--text-dim);
+  user-select: none;
+}
+
+.kbd-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.kbd-tag kbd {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--accent-blue);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
 .filter-pills {
   display: flex;
   gap: 4px;
@@ -583,6 +617,13 @@ body {
   background: var(--bg-surface-elevated);
   border-color: var(--accent-blue);
   box-shadow: 0 0 0 1px var(--accent-blue);
+}
+
+.stock-card:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -1px;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 1px var(--accent-blue), 0 0 12px rgba(56, 189, 248, 0.4);
 }
 
 .card-top {

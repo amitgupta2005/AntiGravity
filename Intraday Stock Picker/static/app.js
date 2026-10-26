@@ -15,6 +15,7 @@ let currentFrameSizePreset = localStorage.getItem("apex_frame_preset") || "auto"
 let isMaximized = false;
 let autoRefreshTimer = null;
 let currentStocks = [];
+let displayedStocks = [];
 let activeStockAnalysis = null;
 let rawChartData = null;
 let currentTheme = localStorage.getItem("apex_theme") || "dark";
@@ -633,6 +634,7 @@ function renderStockCards() {
   });
 
   if (filtered.length === 0) {
+    displayedStocks = [];
     stockCardsContainer.innerHTML = `
       <div class="state-container">
         <p>No stocks currently match the "${currentFilter.toUpperCase()}" filter.</p>
@@ -640,12 +642,16 @@ function renderStockCards() {
     return;
   }
 
+  displayedStocks = filtered;
   stockCardsContainer.innerHTML = "";
 
   filtered.forEach(stock => {
     const card = document.createElement("div");
     card.className = `stock-card ${stock.ticker === currentTicker ? "active" : ""}`;
     card.id = `card-${stock.ticker.replace(".", "_")}`;
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", `Select stock ${stock.ticker}`);
 
     const isUp = stock.change_pct >= 0;
     const changeClass = isUp ? "up" : "down";
@@ -695,6 +701,16 @@ function renderStockCards() {
       }
     });
 
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        selectStock(stock.ticker);
+        if (window.innerWidth <= 1024) {
+          setMobileView("chart");
+        }
+      }
+    });
+
     stockCardsContainer.appendChild(card);
   });
 }
@@ -705,7 +721,10 @@ function selectStock(ticker) {
   currentTicker = ticker;
   document.querySelectorAll(".stock-card").forEach(c => c.classList.remove("active"));
   const activeCard = document.getElementById(`card-${ticker.replace(".", "_")}`);
-  if (activeCard) activeCard.classList.add("active");
+  if (activeCard) {
+    activeCard.classList.add("active");
+    activeCard.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
 
   loadChartData(ticker, currentTimeframe);
 }
@@ -1366,6 +1385,193 @@ function setupEventListeners() {
     }
   });
   replayExitBtn.addEventListener("click", exitReplayMode);
+
+  // Global Keyboard Navigation (Arrow Keys for browsing & scrolling)
+  window.addEventListener("keydown", handleGlobalKeyDown);
+}
+
+function navigateStockList(delta) {
+  if (!displayedStocks || displayedStocks.length === 0) return;
+
+  let currentIndex = displayedStocks.findIndex(s => s.ticker === currentTicker);
+  let nextIndex;
+
+  if (currentIndex === -1) {
+    nextIndex = delta > 0 ? 0 : displayedStocks.length - 1;
+  } else {
+    nextIndex = currentIndex + delta;
+    if (nextIndex < 0) nextIndex = 0;
+    if (nextIndex >= displayedStocks.length) nextIndex = displayedStocks.length - 1;
+  }
+
+  const targetStock = displayedStocks[nextIndex];
+  if (targetStock) {
+    selectStock(targetStock.ticker);
+  }
+}
+
+function jumpToStockBoundary(toEnd = false) {
+  if (!displayedStocks || displayedStocks.length === 0) return;
+  const targetIndex = toEnd ? displayedStocks.length - 1 : 0;
+  const targetStock = displayedStocks[targetIndex];
+  if (targetStock) {
+    selectStock(targetStock.ticker);
+  }
+}
+
+function scrollChartByBars(barOffset) {
+  if (!mainChart) return;
+  const ts = mainChart.timeScale();
+  const currentRange = ts.getVisibleLogicalRange();
+  if (!currentRange) return;
+
+  ts.setVisibleLogicalRange({
+    from: currentRange.from + barOffset,
+    to: currentRange.to + barOffset
+  });
+  if (rsiChart) {
+    rsiChart.timeScale().setVisibleLogicalRange({
+      from: currentRange.from + barOffset,
+      to: currentRange.to + barOffset
+    });
+  }
+}
+
+function handleGlobalKeyDown(e) {
+  // If user is focused on an editable input/textarea/select, let native typing & editing occur
+  const activeEl = document.activeElement;
+  const isInput = activeEl && (
+    activeEl.tagName === "INPUT" ||
+    activeEl.tagName === "TEXTAREA" ||
+    activeEl.tagName === "SELECT" ||
+    activeEl.isContentEditable
+  );
+
+  if (isInput) {
+    if (e.key === "Escape") {
+      activeEl.blur();
+      e.preventDefault();
+    }
+    return;
+  }
+
+  // Session Replay Simulator shortcuts
+  if (isReplayActive) {
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      pauseReplay();
+      if (rawChartData && rawChartData.candles) {
+        replayIndex = Math.min(rawChartData.candles.length, replayIndex + 1);
+        applyReplayStep();
+      }
+      return;
+    }
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      pauseReplay();
+      replayIndex = Math.max(1, replayIndex - 1);
+      applyReplayStep();
+      return;
+    }
+    if (e.key === " ") {
+      e.preventDefault();
+      if (replayTimer) pauseReplay();
+      else playReplay();
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      exitReplayMode();
+      return;
+    }
+  }
+
+  // Browse Stocks with Up / Down Arrow Keys
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    if (e.ctrlKey || e.altKey) {
+      stockCardsContainer.scrollBy({ top: 120, behavior: "smooth" });
+    } else {
+      navigateStockList(1);
+    }
+    return;
+  }
+
+  if (e.key === "ArrowUp") {
+    e.preventDefault();
+    if (e.ctrlKey || e.altKey) {
+      stockCardsContainer.scrollBy({ top: -120, behavior: "smooth" });
+    } else {
+      navigateStockList(-1);
+    }
+    return;
+  }
+
+  // Scroll Chart with Left / Right Arrow Keys
+  if (e.key === "ArrowLeft") {
+    e.preventDefault();
+    const offset = e.shiftKey ? -25 : -8;
+    scrollChartByBars(offset);
+    return;
+  }
+
+  if (e.key === "ArrowRight") {
+    e.preventDefault();
+    const offset = e.shiftKey ? 25 : 8;
+    scrollChartByBars(offset);
+    return;
+  }
+
+  // Fast PageUp / PageDown navigation through stocks
+  if (e.key === "PageDown") {
+    e.preventDefault();
+    navigateStockList(5);
+    return;
+  }
+
+  if (e.key === "PageUp") {
+    e.preventDefault();
+    navigateStockList(-5);
+    return;
+  }
+
+  // Home / End: jump to first / last stock in active screener
+  if (e.key === "Home") {
+    e.preventDefault();
+    jumpToStockBoundary(false);
+    return;
+  }
+
+  if (e.key === "End") {
+    e.preventDefault();
+    jumpToStockBoundary(true);
+    return;
+  }
+
+  // Quick zoom controls via keyboard: + or = zooms in, - or _ zooms out, 0 fits frame
+  if (e.key === "+" || e.key === "=") {
+    e.preventDefault();
+    zoomCandles(-20);
+    return;
+  }
+
+  if (e.key === "-" || e.key === "_") {
+    e.preventDefault();
+    zoomCandles(20);
+    return;
+  }
+
+  if (e.key === "0") {
+    e.preventDefault();
+    fitChartToFrame("fit-frame");
+    return;
+  }
+
+  if (e.key === "Escape") {
+    if (activeEl && typeof activeEl.blur === "function") {
+      activeEl.blur();
+    }
+  }
 }
 
 function updatePanelLayout() {
