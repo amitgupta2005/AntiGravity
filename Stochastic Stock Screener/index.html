@@ -35,10 +35,26 @@
           <i data-lucide="layers"></i> Universe:
         </label>
         <select id="universeSelect" class="universe-dropdown">
-          <option value="nifty50" selected>🇮🇳 Nifty 50 (India Benchmark)</option>
-          <option value="niftyNext50">🇮🇳 Nifty Next 50 (High Momentum)</option>
-          <option value="usMegaTech">🇺🇸 US Mega Tech &amp; Giants</option>
-          <option value="etfs">🌐 Global &amp; Sector ETFs</option>
+          <optgroup label="🇮🇳 India Equities">
+            <option value="nifty50" selected>🇮🇳 Nifty 50 (India Benchmark)</option>
+            <option value="niftyNext50">🇮🇳 Nifty Next 50 (Large-Mid Growth)</option>
+            <option value="indiaMidcap">🇮🇳 Nifty Midcap 100 Leaders</option>
+            <option value="indiaSmallcap">🇮🇳 Nifty Smallcap Breakouts</option>
+          </optgroup>
+          <optgroup label="🇺🇸 USA Equities">
+            <option value="usMegaTech">🇺🇸 US Mega Tech &amp; Giants</option>
+            <option value="usMidcap">🇺🇸 US Midcap Growth (S&amp;P 400)</option>
+            <option value="usSmallcap">🇺🇸 US Smallcap Breakouts (Russell 2000)</option>
+          </optgroup>
+          <optgroup label="🌐 Global Equities">
+            <option value="globalMidSmall">🌐 Global Mid &amp; Small Caps</option>
+          </optgroup>
+          <optgroup label="📊 Exchange Traded Funds (ETFs)">
+            <option value="etfs">🌐 All Leading ETFs (US, Global &amp; India)</option>
+            <option value="indiaETFs">🇮🇳 India ETFs (Nifty, Bank, Gold, Midcap)</option>
+            <option value="usETFs">🇺🇸 USA Core &amp; Sector ETFs</option>
+            <option value="globalETFs">🌐 Global &amp; Emerging Market ETFs</option>
+          </optgroup>
         </select>
       </div>
 

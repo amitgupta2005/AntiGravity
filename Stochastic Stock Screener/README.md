@@ -56,10 +56,22 @@ A professional quantitative stock screening platform built under the **AntiGravi
    - Dual chart rendering and chart screenshots automatically adapt to the active theme.
 
 7. **Curated Out-of-the-Box Universes**:
-   - 🇮🇳 **NIFTY 50** (NSE India Bluechips)
-   - 🇮🇳 **NIFTY Next 50** (High Growth & Momentum)
-   - 🇺🇸 **US Mega Tech & S&P 500 Leaders** (NVDA, AAPL, MSFT, GOOGL, etc.)
-   - 🌐 **Benchmark Indices & ETFs** (Nifty BeES, SPY, QQQ, SMH)
+   - 🇮🇳 **India Equities**:
+     - **NIFTY 50** (NSE India Bluechips)
+     - **NIFTY Next 50** (NSE Large-Mid Growth & Momentum)
+     - **NIFTY Midcap 100 Leaders** (High-beta growth leaders: Dixon, Polycab, Persistent, Coforge, Trent, etc.)
+     - **NIFTY Smallcap Breakouts** (Momentum breakouts: RVNL, Ircon, Hudco, CDSL, BSE, Angel One, Kaynes, etc.)
+   - 🇺🇸 **USA Equities**:
+     - **US Mega Tech & S&P 500 Leaders** (NVDA, AAPL, MSFT, GOOGL, AMZN, META, TSLA, etc.)
+     - **US Midcap Growth & Breakouts (S&P 400)** (PLTR, COIN, SMCI, CRWD, NET, DKNG, APP, AXON, etc.)
+     - **US Smallcap High-Beta & Breakouts (Russell 2000)** (IREN, CIFR, CLSK, IONQ, SOUND, ACHR, ASTS, RKLB, etc.)
+   - 🌐 **Global Equities**:
+     - **Global Mid & Small Cap Innovators** (ASML, TSM, ARM, BABA, JD, PDD, SE, MELI, GRAB, NU, SPOT, SHOP, etc.)
+   - 📊 **Exchange Traded Funds (ETFs)**:
+     - **All Leading ETFs** (Multi-market blend: SPY, QQQ, IWM, SMH, Nifty BeES, Bank BeES, Gold BeES, ACWI, INDA, etc.)
+     - **India ETFs** (NIFTYBEES, BANKBEES, JUNIORBEES, MID150BEES, GOLDBEES, SILVERBEES, ITBEES, AUTOBEES, CPSEETF, etc.)
+     - **USA Core & Sector ETFs** (SPY, QQQ, IWM, DIA, SMH, XLF, XLE, XLK, XLV, XLI, XLY, XLP, ARKK, VOO, VTI, SCHD, TLT, GLD)
+     - **Global & Emerging Market ETFs** (ACWI, VT, VEA, VWO, EEM, INDA, EWJ, FXI, MCHI, VGK, EWT, EWZ, EFA, IEMG)
 
 8. **Deep-Dive Stock Inspector & Dual Chart Modal**:
    - Closing price history chart with volume context.

@@ -103,15 +103,35 @@ console.log('\n▶ Test 4: Preset Universes Validation');
 {
   const nifty50 = getUniverseList('nifty50');
   const niftyNext50 = getUniverseList('niftyNext50');
+  const indiaMidcap = getUniverseList('indiaMidcap');
+  const indiaSmallcap = getUniverseList('indiaSmallcap');
   const usTech = getUniverseList('usMegaTech');
+  const usMidcap = getUniverseList('usMidcap');
+  const usSmallcap = getUniverseList('usSmallcap');
+  const globalMidSmall = getUniverseList('globalMidSmall');
   const etfs = getUniverseList('etfs');
+  const indiaETFs = getUniverseList('indiaETFs');
+  const usETFs = getUniverseList('usETFs');
+  const globalETFs = getUniverseList('globalETFs');
 
   assert(nifty50.length >= 50, `Nifty 50 count should be 50+, got ${nifty50.length}`);
   assert(niftyNext50.length >= 20, `Nifty Next 50 count should be 20+, got ${niftyNext50.length}`);
+  assert(indiaMidcap.length >= 20, `India Midcap count should be 20+, got ${indiaMidcap.length}`);
+  assert(indiaSmallcap.length >= 20, `India Smallcap count should be 20+, got ${indiaSmallcap.length}`);
   assert(usTech.length >= 15, `US Tech count should be 15+, got ${usTech.length}`);
-  assert(etfs.length >= 8, `ETFs count should be 8+, got ${etfs.length}`);
+  assert(usMidcap.length >= 20, `US Midcap count should be 20+, got ${usMidcap.length}`);
+  assert(usSmallcap.length >= 20, `US Smallcap count should be 20+, got ${usSmallcap.length}`);
+  assert(globalMidSmall.length >= 15, `Global Mid/Small count should be 15+, got ${globalMidSmall.length}`);
+  assert(etfs.length >= 12, `All ETFs count should be 12+, got ${etfs.length}`);
+  assert(indiaETFs.length >= 10, `India ETFs count should be 10+, got ${indiaETFs.length}`);
+  assert(usETFs.length >= 12, `US ETFs count should be 12+, got ${usETFs.length}`);
+  assert(globalETFs.length >= 10, `Global ETFs count should be 10+, got ${globalETFs.length}`);
 
-  console.log(`  ✅ Nifty 50: ${nifty50.length} stocks, Nifty Next 50: ${niftyNext50.length} stocks, US Tech: ${usTech.length} stocks, ETFs: ${etfs.length} funds.`);
+  console.log(`  ✅ Nifty 50: ${nifty50.length} stocks, Nifty Next 50: ${niftyNext50.length} stocks.`);
+  console.log(`  ✅ India Midcap: ${indiaMidcap.length} stocks, India Smallcap: ${indiaSmallcap.length} stocks.`);
+  console.log(`  ✅ US Tech: ${usTech.length} stocks, US Midcap: ${usMidcap.length} stocks, US Smallcap: ${usSmallcap.length} stocks.`);
+  console.log(`  ✅ Global Mid/Small: ${globalMidSmall.length} stocks.`);
+  console.log(`  ✅ ETFs: All=${etfs.length}, India ETFs=${indiaETFs.length}, US ETFs=${usETFs.length}, Global ETFs=${globalETFs.length}.`);
 }
 
 // TEST 5: Batch Screening Simulation
