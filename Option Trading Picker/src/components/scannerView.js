@@ -1,6 +1,7 @@
 /**
  * Option Strategy Scanner View Component
  * Multi-filter strategy scanner with real-time analytics, Stop Loss & Target Booking exit rules
+ * Supports high-density Tabular view (Default) and visual Card Grid view.
  */
 
 import { STRATEGY_CATEGORIES, RISK_PROFILES } from '../quant/strategyEngine.js';
@@ -20,6 +21,15 @@ export function filterStrategies(strategies, filters) {
     // 2. Instrument Type Filter (All, STOCK, INDEX)
     if (filters.assetType && filters.assetType !== 'ALL' && strat.type !== filters.assetType) {
       return false;
+    }
+
+    // 2b. Market Cap Filter (All, LARGE, MID, SMALL, MID_SMALL)
+    if (filters.cap && filters.cap !== 'ALL') {
+      if (filters.cap === 'MID_SMALL') {
+        if (strat.cap !== 'MID' && strat.cap !== 'SMALL') return false;
+      } else if (strat.cap !== filters.cap) {
+        return false;
+      }
     }
 
     // 3. Strategy Category Filter
@@ -57,7 +67,9 @@ export function filterStrategies(strategies, filters) {
       const matchDisplay = strat.displayTicker.toLowerCase().includes(q);
       const matchName = strat.name.toLowerCase().includes(q);
       const matchStrat = strat.strategyName.toLowerCase().includes(q);
-      if (!matchTicker && !matchDisplay && !matchName && !matchStrat) {
+      const matchCap = (strat.cap || '').toLowerCase().includes(q);
+      const matchSector = (strat.sector || '').toLowerCase().includes(q);
+      if (!matchTicker && !matchDisplay && !matchName && !matchStrat && !matchCap && !matchSector) {
         return false;
       }
     }
@@ -67,37 +79,292 @@ export function filterStrategies(strategies, filters) {
 }
 
 /**
- * Render strategy cards into the scanner container
+ * Reusable Empty State Renderer
+ */
+function renderEmptyState(container) {
+  container.innerHTML = `
+    <div class="empty-state-card">
+      <i data-lucide="filter-x" class="empty-icon"></i>
+      <h3>No Option Strategies Matched</h3>
+      <p>Try broadening your filters (Market, Strategy Category, Risk Profile, or Sentiment) or clear the search query.</p>
+      <button class="btn btn-secondary" id="btnResetFilters">
+        <i data-lucide="rotate-ccw"></i> Reset Filters
+      </button>
+    </div>
+  `;
+  if (typeof window.refreshIcons === 'function') {
+    window.refreshIcons();
+  }
+  const resetBtn = document.getElementById('btnResetFilters');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      const evt = new CustomEvent('reset-scanner-filters');
+      window.dispatchEvent(evt);
+    });
+  }
+}
+
+/**
+ * Unified Scanner View Dispatcher (Tabular default vs Cards)
+ */
+export function renderScannerView(containerId, strategies, viewMode = 'table', onSelectStrategy, onViewChain, onCustomBuild) {
+  if (viewMode === 'cards') {
+    renderScannerCards(containerId, strategies, onSelectStrategy, onViewChain, onCustomBuild);
+  } else {
+    renderScannerTable(containerId, strategies, onSelectStrategy, onViewChain, onCustomBuild);
+  }
+}
+
+/**
+ * Render strategy results in high-density Tabular format (Default)
+ */
+export function renderScannerTable(containerId, strategies, onSelectStrategy, onViewChain, onCustomBuild) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  if (strategies.length === 0) {
+    renderEmptyState(container);
+    return;
+  }
+
+  const rowsHtml = strategies.map(strat => {
+    const curr = strat.currencySymbol;
+    const isCredit = strat.isCredit;
+    const popClass = strat.pop >= 70 ? 'text-emerald' : strat.pop >= 55 ? 'text-cyan' : 'text-amber';
+
+    const legsHtml = strat.legs.map(leg => {
+      const isBuy = leg.action === 'buy';
+      const badgeStyle = isBuy ? 'badge-buy' : 'badge-sell';
+      const actionText = isBuy ? 'BUY' : 'SELL';
+      const typeText = leg.type.toUpperCase();
+      return `
+        <span class="leg-pill ${badgeStyle}">
+          <strong>${actionText}</strong> ${curr}${leg.strike} ${typeText} <span class="leg-prem font-mono">@ ${curr}${leg.premium}</span>
+        </span>
+      `;
+    }).join('');
+
+    const beStr = strat.breakevens.map(b => `${curr}${b}`).join(' & ');
+
+    return `
+      <tr class="scanner-table-row" data-id="${strat.id}">
+        <!-- 1. Asset & Price -->
+        <td>
+          <div class="td-asset-wrap">
+            <div class="td-asset-header">
+              <span class="strat-market-flag">${strat.market === 'US' ? '🇺🇸' : '🇮🇳'}</span>
+              <span class="td-ticker font-bold">${strat.displayTicker}</span>
+              <span class="badge badge-subtle font-mono">${strat.type}</span>
+              <span class="badge badge-cap font-mono badge-cap-${(strat.cap || 'LARGE').toLowerCase()}">${strat.cap || 'LARGE'}</span>
+            </div>
+            <div class="td-asset-name text-dim" title="${strat.name}">${strat.name}</div>
+            <div class="td-spot-price font-mono text-cyan font-bold">${curr}${Number(strat.spotPrice).toLocaleString()}</div>
+          </div>
+        </td>
+
+        <!-- 2. Strategy & Bias -->
+        <td>
+          <div class="td-strat-wrap">
+            <div class="td-strat-title font-bold">${strat.strategyName}</div>
+            <div class="td-strat-badges">
+              <span class="badge ${strat.badgeClass}">${strat.directionBadge}</span>
+            </div>
+            <div class="td-conviction text-dim font-mono">● ${strat.conviction}</div>
+          </div>
+        </td>
+
+        <!-- 3. Expiry / DTE -->
+        <td>
+          <div class="td-expiry-wrap font-mono">
+            <div class="td-exp-date font-bold">${strat.transactSpec?.expiryDate || strat.expiryLabel || `${strat.dte} DTE`}</div>
+            <div class="td-exp-meta">
+              <span class="badge badge-dte">${strat.dte} DTE</span>
+              ${strat.transactSpec?.dayOfWeek ? `<span class="text-dim">(${strat.transactSpec.dayOfWeek})</span>` : ''}
+            </div>
+            ${strat.transactSpec?.contractSeries ? `<div class="td-series text-dim font-mono" title="${strat.transactSpec.contractSeries}">${strat.transactSpec.contractSeries}</div>` : ''}
+          </div>
+        </td>
+
+        <!-- 4. Legs Structure -->
+        <td>
+          <div class="td-legs-wrap">${legsHtml}</div>
+        </td>
+
+        <!-- 5. Win Rate (POP) -->
+        <td class="text-right">
+          <div class="td-pop font-mono font-bold ${popClass}">
+            ${strat.pop}% POP
+          </div>
+        </td>
+
+        <!-- 6. Max Profit -->
+        <td class="text-right">
+          <div class="td-profit font-mono font-bold text-emerald">
+            ${typeof strat.maxProfit === 'number' ? `${curr}${strat.maxProfit.toLocaleString()}` : strat.maxProfit}
+          </div>
+          ${isCredit ? '<span class="td-credit-pill font-mono">Net Credit</span>' : ''}
+        </td>
+
+        <!-- 7. Max Loss -->
+        <td class="text-right">
+          <div class="td-loss font-mono font-bold text-rose">
+            -${curr}${strat.maxLoss.toLocaleString()}
+          </div>
+        </td>
+
+        <!-- 8. R:R -->
+        <td class="text-center font-mono">
+          <span class="badge badge-subtle font-bold">${strat.riskReward}</span>
+        </td>
+
+        <!-- 9. Breakevens -->
+        <td class="font-mono text-dim">
+          <div class="td-be-wrap">${beStr}</div>
+        </td>
+
+        <!-- 10. IV Rank & Theta -->
+        <td class="text-center font-mono">
+          <div class="td-ivr-badge font-bold">${strat.ivRank}% IVR</div>
+          <div class="${strat.netTheta >= 0 ? 'text-emerald' : 'text-rose'} font-bold">
+            ${strat.netTheta >= 0 ? '+' : ''}${curr}${strat.netTheta}/d
+          </div>
+        </td>
+
+        <!-- 11. Simple Exit Plan (Target / Stop) -->
+        <td>
+          <div class="td-exit-plan font-mono">
+            ${strat.exitPlan ? `
+              <div class="exit-rule-pill target-pill" title="${strat.exitPlan.targetBooking.laymanAction || strat.exitPlan.targetBooking.rule}">
+                <span class="text-emerald font-bold">🎯 Target:</span>
+                <span>${curr}${strat.exitPlan.targetBooking.spotPrice}</span>
+                <span class="text-emerald font-bold">(+${curr}${strat.exitPlan.targetBooking.profitPerLot}/lot)</span>
+              </div>
+              <div class="exit-rule-pill stop-pill" title="${strat.exitPlan.stopLoss.laymanAction || strat.exitPlan.stopLoss.rule}">
+                <span class="text-rose font-bold">🛑 Stop:</span>
+                <span>${curr}${strat.exitPlan.stopLoss.spotPrice}</span>
+                <span class="text-rose font-bold">(-${curr}${strat.exitPlan.stopLoss.lossPerLot}/lot)</span>
+              </div>
+            ` : '<span class="text-dim">Standard Expiry</span>'}
+          </div>
+        </td>
+
+        <!-- 12. Actions -->
+        <td class="text-center">
+          <div class="table-actions-group">
+            <button class="btn btn-primary btn-xs btn-analyze" data-id="${strat.id}" title="Analyze Payoff Curve">
+              <i data-lucide="trending-up"></i> Analyze
+            </button>
+            <button class="btn btn-secondary btn-xs btn-chain" data-ticker="${strat.ticker}" title="View Option Chain">
+              <i data-lucide="list"></i> Chain
+            </button>
+            <button class="btn btn-ghost btn-xs btn-build" data-id="${strat.id}" title="Customize in Builder">
+              <i data-lucide="sliders"></i>
+            </button>
+            <button class="btn btn-ghost btn-xs btn-table-expand" data-id="${strat.id}" title="Inspect Details & Catalyst">
+              <i data-lucide="chevron-down" id="expand-icon-${strat.id}" class="expand-icon"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Expandable Detail Drawer Row -->
+      <tr class="strat-table-detail-row hidden" id="detail-${strat.id}">
+        <td colspan="12" class="strat-table-detail-cell">
+          <div class="strat-table-detail-box">
+            <!-- Left: Catalyst & Series Specs -->
+            <div class="detail-col-catalyst">
+              <div class="detail-section-header">
+                <i data-lucide="zap" class="text-amber"></i>
+                <span class="font-bold">Institutional Catalyst & Series Guidance</span>
+              </div>
+              <p class="catalyst-text">${strat.catalyst}</p>
+              ${strat.transactSpec ? `
+                <div class="transact-guidance-pill font-mono">
+                  <span class="font-bold text-cyan">📅 Recommended Cycle:</span>
+                  <span>${strat.transactSpec.cycleType} • ${strat.transactSpec.contractSeries} (${strat.transactSpec.dte} DTE)</span>
+                  <div class="text-dim" style="margin-top: 0.35rem;">${strat.transactSpec.recommendationNote}</div>
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Right: Layman Exit Plan Guide -->
+            ${strat.exitPlan ? `
+              <div class="detail-col-exit">
+                <div class="detail-section-header">
+                  <i data-lucide="shield-check" class="text-cyan"></i>
+                  <span class="font-bold">Simple Exit Plan & Layman Rules</span>
+                  <span class="badge ${strat.exitPlan.riskProfile === 'CONSERVATIVE' ? 'badge-credit' : 'badge-subtle'} font-mono">
+                    ${strat.exitPlan.riskProfile === 'CONSERVATIVE' ? 'Low Risk' : 'Balanced'}
+                  </span>
+                </div>
+                <div class="detail-exit-rules">
+                  <div class="detail-rule-card bg-emerald-soft">
+                    <span class="text-emerald font-bold">👉 Profit Target (${strat.exitPlan.targetBooking.profitPct}):</span>
+                    <span class="text-emerald-light">${strat.exitPlan.targetBooking.laymanAction || strat.exitPlan.targetBooking.rule}</span>
+                  </div>
+                  <div class="detail-rule-card bg-rose-soft">
+                    <span class="text-rose font-bold">👉 Stop Loss (${strat.exitPlan.stopLoss.lossPct}):</span>
+                    <span class="text-rose-light">${strat.exitPlan.stopLoss.laymanAction || strat.exitPlan.stopLoss.rule}</span>
+                  </div>
+                </div>
+                <div class="detail-exit-summary text-dim font-mono">
+                  <div>💡 <strong>Plain Rule:</strong> ${strat.exitPlan.laymanSummary?.plainRule || ''}</div>
+                  <div class="detail-exit-pills-row">
+                    <span class="detail-pill">⚖️ Risk:Reward <strong>${strat.exitPlan.managedRiskReward}</strong></span>
+                    <span class="detail-pill">🛡️ Preserves <strong>${strat.exitPlan.capitalPreservedPct}% Capital</strong></span>
+                    <span class="detail-pill text-amber">⏱️ ${strat.exitPlan.laymanSummary?.timeExitRule || 'Close before expiry week'}</span>
+                  </div>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="scanner-table-container">
+      <table class="scanner-table font-mono">
+        <thead>
+          <tr>
+            <th class="th-asset">Asset & Price</th>
+            <th class="th-strategy">Strategy / Bias</th>
+            <th class="th-expiry">Expiry / DTE</th>
+            <th class="th-structure">Legs Structure</th>
+            <th class="th-pop text-right">POP</th>
+            <th class="th-profit text-right">Max Profit</th>
+            <th class="th-loss text-right">Max Loss</th>
+            <th class="th-rr text-center">R:R</th>
+            <th class="th-be">Breakeven(s)</th>
+            <th class="th-ivr text-center">IVR / Theta</th>
+            <th class="th-exit">Simple Exit Rule</th>
+            <th class="th-actions text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  attachScannerEvents(container, strategies, onSelectStrategy, onViewChain, onCustomBuild);
+}
+
+/**
+ * Render strategy results in visual Card Grid format
  */
 export function renderScannerCards(containerId, strategies, onSelectStrategy, onViewChain, onCustomBuild) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
   if (strategies.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state-card">
-        <i data-lucide="filter-x" class="empty-icon"></i>
-        <h3>No Option Strategies Matched</h3>
-        <p>Try broadening your filters (Market, Strategy Category, Risk Profile, or Sentiment) or clear the search query.</p>
-        <button class="btn btn-secondary" id="btnResetFilters">
-          <i data-lucide="rotate-ccw"></i> Reset Filters
-        </button>
-      </div>
-    `;
-    if (typeof window.refreshIcons === 'function') {
-      window.refreshIcons();
-    }
-    const resetBtn = document.getElementById('btnResetFilters');
-    if (resetBtn) {
-      resetBtn.addEventListener('click', () => {
-        const evt = new CustomEvent('reset-scanner-filters');
-        window.dispatchEvent(evt);
-      });
-    }
+    renderEmptyState(container);
     return;
   }
 
-  container.innerHTML = strategies.map(strat => {
+  const cardsHtml = strategies.map(strat => {
     const curr = strat.currencySymbol;
     const isCredit = strat.isCredit;
     const popClass = strat.pop >= 70 ? 'text-emerald' : strat.pop >= 55 ? 'text-cyan' : 'text-amber';
@@ -126,6 +393,7 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
               <div class="strat-ticker-row">
                 <span class="strat-ticker font-mono font-bold">${strat.displayTicker}</span>
                 <span class="badge badge-subtle font-mono">${strat.type}</span>
+                <span class="badge badge-cap font-mono badge-cap-${(strat.cap || 'LARGE').toLowerCase()}">${strat.cap || 'LARGE'}</span>
                 <span class="badge ${strat.badgeClass}">${strat.directionBadge}</span>
               </div>
               <span class="strat-asset-name text-dim">${strat.name}</span>
@@ -208,7 +476,7 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
           <div class="metric-cell">
             <span class="m-label text-dim">Max Loss (At Expiry)</span>
             <span class="m-val font-mono font-bold text-rose">
-              ${curr}${strat.maxLoss.toLocaleString()}
+              -${curr}${strat.maxLoss.toLocaleString()}
             </span>
           </div>
           <div class="metric-cell">
@@ -327,13 +595,22 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
     `;
   }).join('');
 
+  container.innerHTML = `<div class="strategy-cards-grid">${cardsHtml}</div>`;
+  attachScannerEvents(container, strategies, onSelectStrategy, onViewChain, onCustomBuild);
+}
+
+/**
+ * Attach Event Listeners to rendered strategy view components
+ */
+function attachScannerEvents(container, strategies, onSelectStrategy, onViewChain, onCustomBuild) {
   if (typeof window.refreshIcons === 'function') {
     window.refreshIcons();
   }
 
-  // Bind Event Listeners to Card Buttons
+  // Analyze Buttons
   container.querySelectorAll('.btn-analyze').forEach(btn => {
     btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       const id = e.currentTarget.dataset.id;
       const strat = strategies.find(s => s.id === id);
       if (strat && typeof onSelectStrategy === 'function') {
@@ -342,8 +619,10 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
     });
   });
 
+  // Option Chain Buttons
   container.querySelectorAll('.btn-chain').forEach(btn => {
     btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       const ticker = e.currentTarget.dataset.ticker;
       if (typeof onViewChain === 'function') {
         onViewChain(ticker);
@@ -351,8 +630,10 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
     });
   });
 
+  // Customize in Builder Buttons
   container.querySelectorAll('.btn-build').forEach(btn => {
     btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       const id = e.currentTarget.dataset.id;
       const strat = strategies.find(s => s.id === id);
       if (strat && typeof onCustomBuild === 'function') {
@@ -360,4 +641,45 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
       }
     });
   });
+
+  // Table Detail Row Expand / Collapse Toggle Buttons
+  container.querySelectorAll('.btn-table-expand').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = e.currentTarget.dataset.id;
+      toggleTableRowDetail(id);
+    });
+  });
+
+  // Click on Table Row (outside buttons) to expand details
+  container.querySelectorAll('.scanner-table-row').forEach(row => {
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.badge')) {
+        return;
+      }
+      const id = row.dataset.id;
+      toggleTableRowDetail(id);
+    });
+  });
+}
+
+/**
+ * Toggle detail drawer for a specific strategy row in tabular view
+ */
+function toggleTableRowDetail(id) {
+  const detailRow = document.getElementById(`detail-${id}`);
+  const parentRow = document.querySelector(`.scanner-table-row[data-id="${id}"]`);
+  const icon = document.getElementById(`expand-icon-${id}`);
+  if (!detailRow) return;
+
+  const isHidden = detailRow.classList.contains('hidden');
+  if (isHidden) {
+    detailRow.classList.remove('hidden');
+    parentRow?.classList.add('row-expanded');
+    if (icon) icon.style.transform = 'rotate(180deg)';
+  } else {
+    detailRow.classList.add('hidden');
+    parentRow?.classList.remove('row-expanded');
+    if (icon) icon.style.transform = 'rotate(0deg)';
+  }
 }

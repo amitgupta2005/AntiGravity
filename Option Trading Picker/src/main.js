@@ -7,7 +7,7 @@ import { createIcons, icons } from 'lucide';
 import { OPTION_UNIVERSE, findStockInUniverse } from './data/stockUniverse.js';
 import { fetchAllUniverseQuotes, fetchLiveQuote, getBaseQuote } from './data/marketDataFeed.js';
 import { scanAllUniverseStrategies } from './quant/strategyEngine.js';
-import { filterStrategies, renderScannerCards } from './components/scannerView.js';
+import { filterStrategies, renderScannerView, renderScannerCards, renderScannerTable } from './components/scannerView.js';
 import { renderPayoffChart, resizePayoffChart } from './components/payoffChart.js';
 import { renderOptionChain } from './components/optionChainView.js';
 import { initBuilderState, renderStrategyBuilder, addLegToBuilder } from './components/strategyBuilder.js';
@@ -34,9 +34,11 @@ const state = {
   activeStrategy: null,
   activeChainAsset: OPTION_UNIVERSE[0],
   activeTab: 'tab-scanner',
+  scannerViewMode: localStorage.getItem('opt_scanner_view_mode') || 'table', // Table format default
   isDarkMode: true,
   filters: {
     market: 'ALL',
+    cap: 'ALL',
     assetType: 'ALL',
     category: 'ALL',
     sentiment: 'ALL',
@@ -107,24 +109,33 @@ function populateChainAssetDropdown() {
   const select = document.getElementById('chainAssetSelector');
   if (!select) return;
 
-  const usIndices = OPTION_UNIVERSE.filter(a => a.market === 'US' && a.type === 'INDEX');
-  const usStocks  = OPTION_UNIVERSE.filter(a => a.market === 'US' && a.type === 'STOCK');
-  const inIndices = OPTION_UNIVERSE.filter(a => a.market === 'IN' && a.type === 'INDEX');
-  const inStocks  = OPTION_UNIVERSE.filter(a => a.market === 'IN' && a.type === 'STOCK');
+  const usIndices     = OPTION_UNIVERSE.filter(a => a.market === 'US' && a.type === 'INDEX');
+  const usLargeStocks = OPTION_UNIVERSE.filter(a => a.market === 'US' && a.type === 'STOCK' && a.cap === 'LARGE');
+  const usMidStocks   = OPTION_UNIVERSE.filter(a => a.market === 'US' && a.type === 'STOCK' && a.cap === 'MID');
+  const usSmallStocks = OPTION_UNIVERSE.filter(a => a.market === 'US' && a.type === 'STOCK' && a.cap === 'SMALL');
+
+  const inIndices     = OPTION_UNIVERSE.filter(a => a.market === 'IN' && a.type === 'INDEX');
+  const inLargeStocks = OPTION_UNIVERSE.filter(a => a.market === 'IN' && a.type === 'STOCK' && a.cap === 'LARGE');
+  const inMidStocks   = OPTION_UNIVERSE.filter(a => a.market === 'IN' && a.type === 'STOCK' && a.cap === 'MID');
+  const inSmallStocks = OPTION_UNIVERSE.filter(a => a.market === 'IN' && a.type === 'STOCK' && a.cap === 'SMALL');
 
   const makeOptGroup = (label, list) => `
     <optgroup label="${label}">
       ${list.map(a => `<option value="${a.ticker}" ${a.ticker === state.activeChainAsset.ticker ? 'selected' : ''}>
-        ${a.market === 'US' ? '🇺🇸' : '🇮🇳'} ${a.displayTicker} (${a.name})
+        ${a.market === 'US' ? '🇺🇸' : '🇮🇳'} ${a.displayTicker} (${a.name}) [${a.cap || 'LARGE'}]
       </option>`).join('')}
     </optgroup>
   `;
 
   select.innerHTML = `
-    ${makeOptGroup('🇺🇸 USA Benchmark Indices', usIndices)}
-    ${makeOptGroup('🇺🇸 USA High-Liquidity Stocks', usStocks)}
-    ${makeOptGroup('🇮🇳 India Benchmark Indices', inIndices)}
-    ${makeOptGroup('🇮🇳 India Nifty 50 Stocks', inStocks)}
+    ${makeOptGroup('🇺🇸 USA Benchmark Indices (Large, Mid & Small)', usIndices)}
+    ${makeOptGroup('🇺🇸 USA Large-Cap Equities', usLargeStocks)}
+    ${makeOptGroup('🇺🇸 USA Midcap Equities', usMidStocks)}
+    ${makeOptGroup('🇺🇸 USA Smallcap Equities', usSmallStocks)}
+    ${makeOptGroup('🇮🇳 India Benchmark Indices (Large, Mid & Small)', inIndices)}
+    ${makeOptGroup('🇮🇳 India Large-Cap Equities (Nifty 50)', inLargeStocks)}
+    ${makeOptGroup('🇮🇳 India Midcap Equities', inMidStocks)}
+    ${makeOptGroup('🇮🇳 India Smallcap Equities', inSmallStocks)}
   `;
 
   select.addEventListener('change', (e) => {
@@ -171,9 +182,15 @@ function renderScannerTab() {
     filtered.sort((a, b) => (a.dte || 0) - (b.dte || 0));
   }
 
-  renderScannerCards(
+  // Update Count Badge & View Mode Display
+  const countBadge = document.getElementById('scannerCountBadge');
+  if (countBadge) countBadge.textContent = String(filtered.length);
+  updateViewModeButtons();
+
+  renderScannerView(
     'scannerCardsContainer',
     filtered,
+    state.scannerViewMode,
     // On Select Strategy (Payoff Analysis)
     (strat) => {
       state.activeStrategy = strat;
@@ -197,6 +214,22 @@ function renderScannerTab() {
       showToast(`Loaded ${strat.strategyName} into Strategy Builder`, 'success');
     }
   );
+}
+
+/**
+ * Sync View Mode Toggle Buttons and mode indicator
+ */
+function updateViewModeButtons() {
+  const mode = state.scannerViewMode || 'table';
+  const btnTable = document.getElementById('btnViewTable');
+  const btnCards = document.getElementById('btnViewCards');
+  const indicator = document.getElementById('scannerModeIndicator');
+
+  if (btnTable) btnTable.classList.toggle('active', mode === 'table');
+  if (btnCards) btnCards.classList.toggle('active', mode === 'cards');
+  if (indicator) {
+    indicator.textContent = `• ${mode === 'table' ? 'Tabular View (Default)' : 'Card Grid View'}`;
+  }
 }
 
 /**
@@ -493,18 +526,31 @@ function setupEventListeners() {
       const filterType = e.currentTarget.dataset.marketFilter;
       if (filterType === 'ALL') {
         state.filters.market = 'ALL';
+        state.filters.cap = 'ALL';
         state.filters.assetType = 'ALL';
-      } else if (filterType === 'US_STOCKS') {
+      } else if (filterType === 'US_LARGE') {
         state.filters.market = 'US';
+        state.filters.cap = 'LARGE';
+        state.filters.assetType = 'STOCK';
+      } else if (filterType === 'US_MID_SMALL') {
+        state.filters.market = 'US';
+        state.filters.cap = 'MID_SMALL';
         state.filters.assetType = 'STOCK';
       } else if (filterType === 'US_INDICES') {
         state.filters.market = 'US';
+        state.filters.cap = 'ALL';
         state.filters.assetType = 'INDEX';
-      } else if (filterType === 'IN_STOCKS') {
+      } else if (filterType === 'IN_LARGE') {
         state.filters.market = 'IN';
+        state.filters.cap = 'LARGE';
+        state.filters.assetType = 'STOCK';
+      } else if (filterType === 'IN_MID_SMALL') {
+        state.filters.market = 'IN';
+        state.filters.cap = 'MID_SMALL';
         state.filters.assetType = 'STOCK';
       } else if (filterType === 'IN_INDICES') {
         state.filters.market = 'IN';
+        state.filters.cap = 'ALL';
         state.filters.assetType = 'INDEX';
       }
 
@@ -522,6 +568,16 @@ function setupEventListeners() {
       document.querySelectorAll('#filterMarketGroup .filter-pill').forEach(p => p.classList.remove('active'));
       e.currentTarget.classList.add('active');
       state.filters.market = e.currentTarget.dataset.val;
+      renderScannerTab();
+    });
+  });
+
+  // Market Cap Pills
+  document.querySelectorAll('#filterCapGroup .filter-pill').forEach(pill => {
+    pill.addEventListener('click', (e) => {
+      document.querySelectorAll('#filterCapGroup .filter-pill').forEach(p => p.classList.remove('active'));
+      e.currentTarget.classList.add('active');
+      state.filters.cap = e.currentTarget.dataset.val;
       renderScannerTab();
     });
   });
@@ -631,10 +687,27 @@ function setupEventListeners() {
     });
   }
 
-  // 5. Reset Filter Event
+  // 5. View Mode Switcher (Table Default vs Cards)
+  document.querySelectorAll('#scannerViewToggle .view-mode-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const mode = e.currentTarget.dataset.view;
+      if (mode && mode !== state.scannerViewMode) {
+        state.scannerViewMode = mode;
+        try {
+          localStorage.setItem('opt_scanner_view_mode', mode);
+        } catch (_) {}
+        updateViewModeButtons();
+        renderScannerTab();
+        showToast(`Switched to ${mode === 'table' ? 'Tabular format (Default)' : 'Card format'}`, 'info');
+      }
+    });
+  });
+
+  // 6. Reset Filter Event
   window.addEventListener('reset-scanner-filters', () => {
     state.filters = {
       market: 'ALL',
+      cap: 'ALL',
       assetType: 'ALL',
       category: 'ALL',
       sentiment: 'ALL',
@@ -693,6 +766,9 @@ function setupEventListeners() {
 function syncFilterToolbar() {
   document.querySelectorAll('#filterMarketGroup .filter-pill').forEach(p => {
     p.classList.toggle('active', p.dataset.val === state.filters.market);
+  });
+  document.querySelectorAll('#filterCapGroup .filter-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.val === state.filters.cap);
   });
   document.querySelectorAll('#filterAssetTypeGroup .filter-pill').forEach(p => {
     p.classList.toggle('active', p.dataset.val === state.filters.assetType);

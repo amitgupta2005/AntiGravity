@@ -16,13 +16,20 @@ The application utilizes the **Black-Scholes-Merton** mathematical pricing model
 ## 🌟 Key Functional Pillars
 
 ### 1. Dual-Market & Dual-Asset Coverage
-* **USA Benchmark Indices**: S&P 500 (`SPX`), Nasdaq 100 (`QQQ`), Dow Jones Industrial Average (`DIA`), Russell 2000 (`IWM`), CBOE Volatility Index (`VIX`).
-* **USA High-Liquidity Equities**: `NVDA`, `AAPL`, `TSLA`, `MSFT`, `AMZN`, `META`, `GOOGL`, `AMD`, `COIN`, `PLTR`.
-* **India Benchmark Indices (NSE / BSE)**: `NIFTY 50`, `BANKNIFTY`, `FINNIFTY`, `SENSEX`.
-* **India High-Volume F&O Equities**: `RELIANCE`, `HDFCBANK`, `TATAMOTORS`, `ICICIBANK`, `INFY`, `TCS`, `SBIN`, `BHARTIARTL`, `LT`, `ITC`, `BAJFINANCE`, `TATAPOWER`.
+* **USA Benchmark Indices (Large, Mid & Small)**: `SPX` (S&P 500), `QQQ` (Nasdaq 100), `DIA` (Dow Jones), `MDY` (S&P MidCap 400 ETF), `IWM` (Russell 2000 Small-Cap ETF), `IJR` (S&P Small-Cap 600 ETF), `VIX` (Volatility Index).
+* **USA Large-Cap Equities**: `NVDA`, `AAPL`, `TSLA`, `MSFT`, `AMZN`, `META`, `GOOGL`, `AMD`.
+* **USA Midcap Equities**: `COIN`, `PLTR`, `SMCI`, `CRWD`, `NET`, `DKNG`, `APP`, `HOOD`, `SOFI`.
+* **USA Smallcap Equities**: `IREN`, `CLSK`, `IONQ`, `ASTS`, `RKLB`, `UPST`, `HIMS`.
+* **India Benchmark Indices (Large, Mid & Small)**: `NIFTY 50`, `BANKNIFTY`, `FINNIFTY`, `MIDCPNIFTY` (NSE Nifty Midcap Select F&O), `NIFTY_SMALLCAP` (NIFTY Smallcap 100), `SENSEX`.
+* **India Large-Cap Equities (Nifty 50)**: `RELIANCE`, `HDFCBANK`, `TATAMOTORS`, `ICICIBANK`, `INFY`, `TCS`, `SBIN`, `BHARTIARTL`, `LT`, `ITC`, `BAJFINANCE`, `TATAPOWER`.
+* **India Midcap Equities**: `DIXON`, `POLYCAB`, `PERSISTENT`, `COFORGE`, `TRENT`, `VOLTAS`, `FEDERALBNK`, `ASHOKLEY`.
+* **India Smallcap Equities**: `SUZLON`, `RVNL`, `HUDCO`, `NBCC`, `CDSL`, `BSE`, `ANGELONE`, `EXIDEIND`.
 
-### 2. Multi-Regime Strategy Scanner
-Automatically classifies market regimes (directional momentum, high/low IV, support/resistance, range-bound consolidation) and suggests optimal multi-leg option structures:
+### 2. Multi-Regime Strategy Scanner (Tabular Format Default & Card Format)
+Automatically classifies market regimes (directional momentum, high/low IV, support/resistance, range-bound consolidation) and suggests optimal multi-leg option structures with flexible presentation modes:
+* **📋 Tabular Format (Default)**: High-density institutional table detailing Asset & Price, Strategy / Bias, Recommended Expiry & DTE, Legs Structure, POP Win Rate, Max Profit, Max Loss, R:R, Breakevens, IV Rank & Net Theta, Simple Exit Plan (Target & Stop spot levels with cash ROI per lot), and 1-click Action buttons (`Analyze`, `Chain`, `Build`, and Expandable Detail Drawer for institutional catalysts).
+* **🗂️ Card Grid Format**: Responsive visual card grid featuring financial metric blocks, visual directional badges, and simplified layman risk management guides.
+* **⚡ One-Click View Switcher**: Prominently situated view mode toggle (`Table` ⇄ `Cards`) with persistent local storage saving user preference.
 * **⚡ Theta Decay & Time Value Harvest**: Theta Decay Harvester (ATM Iron Butterfly Pin — pure positive Net Theta $\Theta > 0$ collection engine), Calendar Time Spreads.
 * **Bullish Momentum**: Long Call (Breakout), Bull Call Spread (Debit), Bull Put Spread (Credit), Cash-Secured Put.
 * **Bearish Momentum**: Long Put (Breakdown), Bear Put Spread (Debit), Bear Call Spread (Credit).

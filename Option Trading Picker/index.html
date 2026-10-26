@@ -79,9 +79,11 @@
       <!-- Quick Market Chips -->
       <div class="quick-market-chips">
         <button class="market-chip active" data-market-filter="ALL">All Markets</button>
-        <button class="market-chip" data-market-filter="US_STOCKS">🇺🇸 US Stocks</button>
+        <button class="market-chip" data-market-filter="US_LARGE">🇺🇸 US Large</button>
+        <button class="market-chip" data-market-filter="US_MID_SMALL">🇺🇸 US Mid & Small</button>
         <button class="market-chip" data-market-filter="US_INDICES">🇺🇸 US Indices</button>
-        <button class="market-chip" data-market-filter="IN_STOCKS">🇮🇳 India Stocks</button>
+        <button class="market-chip" data-market-filter="IN_LARGE">🇮🇳 India Large</button>
+        <button class="market-chip" data-market-filter="IN_MID_SMALL">🇮🇳 India Mid & Small</button>
         <button class="market-chip" data-market-filter="IN_INDICES">🇮🇳 India Indices</button>
       </div>
     </nav>
@@ -102,6 +104,17 @@
                 <button class="filter-pill active" data-val="ALL">All</button>
                 <button class="filter-pill" data-val="US">🇺🇸 USA</button>
                 <button class="filter-pill" data-val="IN">🇮🇳 India</button>
+              </div>
+            </div>
+
+            <!-- Market Cap Filter -->
+            <div class="filter-group">
+              <span class="filter-label">Cap:</span>
+              <div class="filter-pill-group" id="filterCapGroup">
+                <button class="filter-pill active" data-val="ALL">All</button>
+                <button class="filter-pill" data-val="LARGE">Large</button>
+                <button class="filter-pill" data-val="MID">Midcap</button>
+                <button class="filter-pill" data-val="SMALL">Smallcap</button>
               </div>
             </div>
 
@@ -166,19 +179,40 @@
               </select>
             </div>
 
-            <div style="margin-left: auto;">
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
               <select id="filterSortBy" class="filter-select font-mono font-bold">
                 <option value="POP_DESC">Sort: Probability of Profit (Highest)</option>
                 <option value="IVR_DESC">Sort: IV Rank (Highest First)</option>
                 <option value="IVR_ASC">Sort: IV Rank (Lowest / Cheapest First)</option>
                 <option value="DTE_ASC">Sort: DTE (Near-term First)</option>
               </select>
+
+              <!-- View Mode Switcher: Table Format (Default) vs Card Format -->
+              <div class="view-mode-toggle" id="scannerViewToggle" role="group" aria-label="Strategy Results View Format">
+                <button class="view-mode-btn active" data-view="table" id="btnViewTable" title="Tabular View (Default)">
+                  <i data-lucide="table"></i>
+                  <span>Table</span>
+                </button>
+                <button class="view-mode-btn" data-view="cards" id="btnViewCards" title="Card Grid View">
+                  <i data-lucide="layout-grid"></i>
+                  <span>Cards</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Strategy Cards Container -->
-        <div id="scannerCardsContainer" class="strategy-cards-grid">
+        <!-- Scanner Results Count & Status Ribbon -->
+        <div class="scanner-results-ribbon">
+          <div class="scanner-results-count">
+            <span class="text-dim">Matched Strategies:</span>
+            <span class="results-count-pill font-mono font-bold text-cyan" id="scannerCountBadge">0</span>
+            <span class="results-view-label font-mono text-dim" id="scannerModeIndicator">• Tabular View (Default)</span>
+          </div>
+        </div>
+
+        <!-- Strategy Results Container (Table format default, or Cards) -->
+        <div id="scannerCardsContainer" class="scanner-results-container">
           <!-- Populated dynamically via JS -->
         </div>
       </section>

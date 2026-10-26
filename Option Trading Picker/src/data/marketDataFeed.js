@@ -92,13 +92,15 @@ export function getMarketExpirations(asset = null) {
       const qtrExpiry = getLastDayOfWeekOfMonth(curYear, curMonth + 3, 4);
       results.push(formatDate(qtrExpiry, `${monthNames[(curMonth + 3) % 12]} Quarterly`, 'Quarterly Series'));
     } else {
-      // 2. Indian Index Options (NIFTY 50 -> Thu, BANKNIFTY -> Wed, FINNIFTY -> Tue, SENSEX -> Fri)
+      // 2. Indian Index Options (NIFTY 50 -> Thu, BANKNIFTY -> Wed, FINNIFTY -> Tue, MIDCPNIFTY -> Mon, SENSEX -> Fri)
       let expiryDay = 4; // Default Thursday for NIFTY
       let indexExchange = 'NSE';
       if (ticker === '^NSEBANK' || ticker.includes('BANKNIFTY')) {
         expiryDay = 3; // Wednesday
       } else if (ticker.includes('FIN_SERVICE') || ticker.includes('FINNIFTY')) {
         expiryDay = 2; // Tuesday
+      } else if (ticker.includes('MIDCPNIFTY') || ticker.includes('MIDCAP')) {
+        expiryDay = 1; // Monday (NSE Nifty Midcap Select F&O)
       } else if (ticker === '^BSESN' || ticker.includes('SENSEX')) {
         expiryDay = 5; // Friday
         indexExchange = 'BSE';

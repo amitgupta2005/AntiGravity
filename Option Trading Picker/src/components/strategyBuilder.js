@@ -87,6 +87,24 @@ export function renderStrategyBuilder(containerId, onPayoffUpdate) {
     strikeOptions.push(atm + i * step);
   }
 
+  const usIndices     = OPTION_UNIVERSE.filter(a => a.market === 'US' && a.type === 'INDEX');
+  const usLargeStocks = OPTION_UNIVERSE.filter(a => a.market === 'US' && a.type === 'STOCK' && a.cap === 'LARGE');
+  const usMidStocks   = OPTION_UNIVERSE.filter(a => a.market === 'US' && a.type === 'STOCK' && a.cap === 'MID');
+  const usSmallStocks = OPTION_UNIVERSE.filter(a => a.market === 'US' && a.type === 'STOCK' && a.cap === 'SMALL');
+
+  const inIndices     = OPTION_UNIVERSE.filter(a => a.market === 'IN' && a.type === 'INDEX');
+  const inLargeStocks = OPTION_UNIVERSE.filter(a => a.market === 'IN' && a.type === 'STOCK' && a.cap === 'LARGE');
+  const inMidStocks   = OPTION_UNIVERSE.filter(a => a.market === 'IN' && a.type === 'STOCK' && a.cap === 'MID');
+  const inSmallStocks = OPTION_UNIVERSE.filter(a => a.market === 'IN' && a.type === 'STOCK' && a.cap === 'SMALL');
+
+  const makeOptGroup = (label, list) => `
+    <optgroup label="${label}">
+      ${list.map(a => `<option value="${a.ticker}" ${a.ticker === asset.ticker ? 'selected' : ''}>
+        ${a.market === 'US' ? '🇺🇸' : '🇮🇳'} ${a.displayTicker} (${a.name}) [${a.cap || 'LARGE'}] — ${a.currencySymbol}${a.basePrice}
+      </option>`).join('')}
+    </optgroup>
+  `;
+
   container.innerHTML = `
     <div class="builder-panel">
       <!-- Builder Header: Asset Selection & Strategy Presets -->
@@ -94,11 +112,14 @@ export function renderStrategyBuilder(containerId, onPayoffUpdate) {
         <div class="builder-asset-select">
           <label class="control-label text-dim">Underlying Asset</label>
           <select id="builderAssetPicker" class="input-select font-mono font-bold">
-            ${OPTION_UNIVERSE.map(a => `
-              <option value="${a.ticker}" ${a.ticker === asset.ticker ? 'selected' : ''}>
-                ${a.market === 'US' ? '🇺🇸' : '🇮🇳'} ${a.displayTicker} (${a.name}) — ${a.currencySymbol}${a.basePrice}
-              </option>
-            `).join('')}
+            ${makeOptGroup('🇺🇸 USA Benchmark Indices (Large, Mid & Small)', usIndices)}
+            ${makeOptGroup('🇺🇸 USA Large-Cap Equities', usLargeStocks)}
+            ${makeOptGroup('🇺🇸 USA Midcap Equities', usMidStocks)}
+            ${makeOptGroup('🇺🇸 USA Smallcap Equities', usSmallStocks)}
+            ${makeOptGroup('🇮🇳 India Benchmark Indices (Large, Mid & Small)', inIndices)}
+            ${makeOptGroup('🇮🇳 India Large-Cap Equities (Nifty 50)', inLargeStocks)}
+            ${makeOptGroup('🇮🇳 India Midcap Equities', inMidStocks)}
+            ${makeOptGroup('🇮🇳 India Smallcap Equities', inSmallStocks)}
           </select>
         </div>
 
