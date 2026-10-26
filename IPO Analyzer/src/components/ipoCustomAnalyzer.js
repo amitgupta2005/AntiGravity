@@ -1,5 +1,5 @@
 /**
- * Apex Custom IPO Analyzer Component
+ * IPO Analyzer Custom IPO Analyzer Component
  * Allows users to input any custom IPO across India Mainboard, SME, or US Market
  * and generates the complete 5-part institutional evaluation dossier instantly.
  */
@@ -290,8 +290,8 @@ export class IpoCustomAnalyzer {
       });
     } else if (presetKey === 'sme-flagged') {
       this.populateForm({
-        name: 'Apex Precision Tools SME',
-        ticker: 'APEXTOOLS',
+        name: 'Precision Tools SME',
+        ticker: 'TOOLSSME',
         market: 'IN_SME',
         sector: 'Industrial Tooling & Hardware',
         issueSize: '₹18 Cr',

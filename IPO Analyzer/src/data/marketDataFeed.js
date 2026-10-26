@@ -1,5 +1,5 @@
 /**
- * Apex Real-Time Market Data & Live Quote Feed Service
+ * IPO Analyzer Real-Time Market Data & Live Quote Feed Service
  * Centralized live pub/sub data engine powering real-time quotes, macro VIX,
  * peer multiples, live subscription counters, and GMP ticks across the entire application.
  * Dual-Source Engine:
@@ -184,24 +184,26 @@ export class MarketDataFeed {
   static async fetchLivePeerQuotes() {
     // List of active symbols across NSE India and US exchanges strictly for FY 2026-27 listed universe
     const symbolsToQuery = [
-      'PREMIER.NS',
+      'PREMIERENE.NS',
       'FIRSTCRY.NS',
       'OLAELEC.NS',
-      'ATHER.NS',
+      'ATHERENERG.NS',
       'AKUMS.NS',
       'EMCURE.NS',
       'IXIGO.NS',
       'SANSTAR.NS',
       'BANSALWIRE.NS',
       'STANLEY.NS',
-      'DEEDET.NS',
+      'DEEDEV.NS',
       'KRONOX.NS',
       'ORIENTTECH.NS',
       'CEIGALL.NS',
       'SSDL.NS',
-      'UNIEST.NS',
-      'AWN',
-      'LINE',
+      'UNIECOM.NS',
+      'SWASTIK-SM.NS',
+      'KRN.NS',
+      'ALAB',
+      'RDDT',
       'RELIANCE.NS',
       'NVDA'
     ];
@@ -233,15 +235,14 @@ export class MarketDataFeed {
                 if (this.universeRef && Array.isArray(this.universeRef)) {
                   const targetIpo = this.universeRef.find(u => 
                     u.liveSymbol === sym || 
-                    u.ticker === sym || 
-                    (u.ticker === 'ZINKA' && sym === 'BLACKBUCK.NS')
+                    u.ticker === sym
                   );
 
                   if (targetIpo) {
                     targetIpo.currentMarketPrice = price;
                     targetIpo.dayChange = dayChange;
                     targetIpo.dayChangePct = dayChangePct;
-                    targetIpo.liveDataSource = sym.endsWith('.NS') ? 'NSE India Live Feed' : 'US Market Live Feed';
+                    targetIpo.liveDataSource = 'Yahoo Finance (Real-Time)';
                     targetIpo.livePriceSyncedAt = this.lastSyncTimestamp;
 
                     // Compute returns since issue price

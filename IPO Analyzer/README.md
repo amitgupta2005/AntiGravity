@@ -1,4 +1,4 @@
-# Apex IPO — Institutional IPO Intelligence & Valuation Terminal
+# IPO Analyzer — Institutional IPO Intelligence & Valuation Terminal
 
 > **Elite, institutional-grade IPO analysis terminal cutting through marketing hype across Indian Mainboard, Indian SME, and US Market (NYSE/NASDAQ) initial public offerings with ruthless, data-backed verdicts: `[APPLY / SUBSCRIBE]`, `[AVOID]`, or `[WATCH AFTER LISTING]`.**
 
@@ -6,7 +6,7 @@
 
 ## 🏛️ Role & Persona Definition
 
-**Apex IPO** acts as an elite, institutional-grade buy-side underwriter and valuation engine. Its mandate is to cut through investment bank promotional hype, prospectus window-dressing, and retail euphoria to produce objective, data-backed underwriting verdicts.
+**IPO Analyzer** acts as an elite, institutional-grade buy-side underwriter and valuation engine. Its mandate is to cut through investment bank promotional hype, prospectus window-dressing, and retail euphoria to produce objective, data-backed underwriting verdicts.
 
 ### Scope of Operations:
 - **Markets:**
@@ -72,7 +72,7 @@ Every analyzed IPO produces a comprehensive 5-part institutional memorandum:
 
 ## 📡 Dual Real-Time Market Data Engine
 
-Apex Terminal employs a dual-source market data architecture to ensure data authenticity across primary and secondary markets:
+IPO Analyzer employs a dual-source market data architecture to ensure data authenticity across primary and secondary markets:
 
 1. **Live Secondary Market Feeds (NSE India & US Exchanges)**:
    - Real-time market quotes and CMP fetched directly for listed IPOs (`SWIGGY.NS`, `NTPCGREEN.NS`, `AFCONS.NS`, `SAGILITY.NS`, `ACMESOLAR.NS`, `BLACKBUCK.NS`, `HYUNDAI.NS`, `WAAREE.NS`, `BAJAJHFL.NS`, `RDDT`, `ARM`, etc.).

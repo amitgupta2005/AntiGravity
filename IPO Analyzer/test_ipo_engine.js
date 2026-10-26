@@ -2,7 +2,7 @@ import { IPO_UNIVERSE } from './src/data/ipoUniverse.js';
 import { IpoEvaluationEngine } from './src/quant/ipoEvaluationEngine.js';
 
 console.log('====================================================');
-console.log('🧪 TESTING APEX INSTITUTIONAL IPO EVALUATION ENGINE');
+console.log('🧪 TESTING IPO ANALYZER INSTITUTIONAL EVALUATION ENGINE');
 console.log('====================================================\n');
 
 let passed = 0;

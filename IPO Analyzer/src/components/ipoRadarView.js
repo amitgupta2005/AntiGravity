@@ -1,5 +1,5 @@
 /**
- * Apex Institutional IPO Radar View Component
+ * IPO Analyzer Institutional IPO Radar View Component
  * Provides high-density institutional table (default) and card grid view
  * with real-time filtering, search, live sync, and dedicated Ongoing/Upcoming IPO tracking.
  */
@@ -299,7 +299,7 @@ export class IpoRadarView {
                         <span class="cmp-gain ${item.listingGainPct >= 0 ? 'text-success' : 'text-danger'}">
                           (${item.listingGainPct >= 0 ? '+' : ''}${item.listingGainPct}%)
                         </span>
-                        <div class="cmp-source-tag">⚡ ${escapeHtml(item.liveDataSource || 'NSE Live Feed')}</div>
+                        <div class="cmp-source-tag">⚡ ${escapeHtml(item.liveDataSource || 'Yahoo Finance (Real-Time)')}</div>
                       </div>
                     ` : ''}
                   </td>
@@ -421,6 +421,7 @@ export class IpoRadarView {
                     <span class="cmp-gain ${item.listingGainPct >= 0 ? 'text-success' : 'text-danger'}" style="font-size:0.75rem; font-weight:700;">
                       (${item.listingGainPct >= 0 ? '+' : ''}${item.listingGainPct}%)
                     </span>
+                    <div class="cmp-source-tag" style="font-size:0.65rem; color:#38bdf8; margin-top:2px;">⚡ ${escapeHtml(item.liveDataSource || 'Yahoo Finance (Real-Time)')}</div>
                   ` : ''}
                 </div>
                 <div class="card-metric">

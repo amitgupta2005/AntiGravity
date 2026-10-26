@@ -1,5 +1,5 @@
 /**
- * Apex Forensic Red Flag Scanner Component
+ * IPO Analyzer Forensic Red Flag Scanner Component
  * Real-time forensic screening for pre-IPO margin window-dressing, predatory OFS exits,
  * low float illiquidity, and macro volatility shifts.
  */

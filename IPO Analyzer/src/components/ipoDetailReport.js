@@ -1,5 +1,5 @@
 /**
- * Apex Institutional IPO Dossier Modal & Component
+ * IPO Analyzer Institutional IPO Dossier Modal & Component
  * Renders the exact 5-part institutional analysis format.
  */
 
@@ -103,12 +103,13 @@ export function openIpoDetailModal(ipo) {
           </div>
           ${ipo.currentMarketPrice ? `
             <div class="metric-box">
-              <span class="m-label">Live CMP (NSE)</span>
+              <span class="m-label">Live CMP (Yahoo Finance)</span>
               <span class="m-value text-accent">${issue.currencySymbol || '₹'}${ipo.currentMarketPrice} 
                 <span class="cmp-gain ${ipo.listingGainPct >= 0 ? 'text-success' : 'text-danger'}" style="font-size:0.75rem;">
                   (${ipo.listingGainPct >= 0 ? '+' : ''}${ipo.listingGainPct}%)
                 </span>
               </span>
+              <span style="font-size:0.65rem; color:#38bdf8; display:block; margin-top:2px;">⚡ ${escapeHtml(ipo.liveDataSource || 'Yahoo Finance (Real-Time)')}</span>
             </div>
           ` : ''}
           <div class="metric-box">

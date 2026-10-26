@@ -1,5 +1,5 @@
 /**
- * Apex GMP & Subscription Tracker Component
+ * IPO Analyzer GMP & Subscription Tracker Component
  * Tracks real-time Grey Market Premium progression, expected listing pop, and live institutional book building.
  */
 
