@@ -41,6 +41,52 @@ WATCHLISTS = {
             {"ticker": "TATASTEEL.NS", "name": "Tata Steel Ltd"}
         ]
     },
+    "NSE_MIDCAP": {
+        "name": "India Nifty Midcap Movers",
+        "description": "High beta, liquid Indian midcap growth leaders & F&O movers",
+        "currency": "₹",
+        "stocks": [
+            {"ticker": "DIXON.NS", "name": "Dixon Technologies"},
+            {"ticker": "POLYCAB.NS", "name": "Polycab India Ltd"},
+            {"ticker": "PERSISTENT.NS", "name": "Persistent Systems"},
+            {"ticker": "COFORGE.NS", "name": "Coforge Ltd"},
+            {"ticker": "TRENT.NS", "name": "Trent Ltd"},
+            {"ticker": "VOLTAS.NS", "name": "Voltas Ltd"},
+            {"ticker": "ASTRAL.NS", "name": "Astral Ltd"},
+            {"ticker": "FEDERALBNK.NS", "name": "Federal Bank Ltd"},
+            {"ticker": "IDFCFIRSTB.NS", "name": "IDFC First Bank Ltd"},
+            {"ticker": "ASHOKLEY.NS", "name": "Ashok Leyland Ltd"},
+            {"ticker": "CUMMINSIND.NS", "name": "Cummins India Ltd"},
+            {"ticker": "BHARATFORG.NS", "name": "Bharat Forge Ltd"},
+            {"ticker": "JUBLFOOD.NS", "name": "Jubilant FoodWorks"},
+            {"ticker": "MAXHEALTH.NS", "name": "Max Healthcare"},
+            {"ticker": "ABCAPITAL.NS", "name": "Aditya Birla Capital"},
+            {"ticker": "PAGEIND.NS", "name": "Page Industries Ltd"}
+        ]
+    },
+    "NSE_SMALLCAP": {
+        "name": "India Nifty Smallcap Breakouts",
+        "description": "High volatility, momentum smallcap intraday movers",
+        "currency": "₹",
+        "stocks": [
+            {"ticker": "SUZLON.NS", "name": "Suzlon Energy Ltd"},
+            {"ticker": "RVNL.NS", "name": "Rail Vikas Nigam Ltd"},
+            {"ticker": "IRCON.NS", "name": "Ircon International Ltd"},
+            {"ticker": "HUDCO.NS", "name": "Housing & Urban Dev Corp"},
+            {"ticker": "NBCC.NS", "name": "NBCC India Ltd"},
+            {"ticker": "CDSL.NS", "name": "Central Depository Services"},
+            {"ticker": "ANGELONE.NS", "name": "Angel One Ltd"},
+            {"ticker": "KAYNES.NS", "name": "Kaynes Technology Ltd"},
+            {"ticker": "BSOFT.NS", "name": "Birlasoft Ltd"},
+            {"ticker": "RBLBANK.NS", "name": "RBL Bank Ltd"},
+            {"ticker": "MANAPPURAM.NS", "name": "Manappuram Finance"},
+            {"ticker": "RADICO.NS", "name": "Radico Khaitan Ltd"},
+            {"ticker": "CENTURYPLY.NS", "name": "Century Plyboards Ltd"},
+            {"ticker": "CASTROLIND.NS", "name": "Castrol India Ltd"},
+            {"ticker": "HFCL.NS", "name": "HFCL Ltd"},
+            {"ticker": "EXIDEIND.NS", "name": "Exide Industries Ltd"}
+        ]
+    },
     "NSE_BANK": {
         "name": "India Bank Nifty Leaders",
         "description": "High beta Indian banking & financial intraday movers",
