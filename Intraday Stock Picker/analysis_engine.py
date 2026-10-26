@@ -116,6 +116,7 @@ def analyze_stock_setup(
     ticker: str,
     df: pd.DataFrame,
     company_name: str = "",
+    cap: str = "LARGE",
     min_liquidity_vol_ma: float = DEFAULT_MIN_LIQUIDITY_VOL_MA,
     max_atr_pct: float = DEFAULT_MAX_ATR_PCT
 ) -> Dict[str, Any]:
@@ -126,6 +127,8 @@ def analyze_stock_setup(
     if df.empty or len(df) < 3:
         return {
             "ticker": ticker,
+            "company_name": company_name or ticker,
+            "cap": cap,
             "status": "INSUFFICIENT_DATA",
             "message": "Not enough 1-minute bars available for analysis"
         }
@@ -160,27 +163,38 @@ def analyze_stock_setup(
     orb_low = float(curr['ORB_Low']) if ('ORB_Low' in curr and not pd.isna(curr['ORB_Low'])) else day_low
 
     # 1. Hard Liquidity Floor (Pre-Scoring Filter)
-    if vol_ma20 < min_liquidity_vol_ma:
+    # Check share volume and turnover (to accommodate high-priced midcaps like DIXON, POLYCAB, etc.)
+    is_inr = (".NS" in ticker or ".BO" in ticker)
+    curr_sym = "₹" if is_inr else "$"
+    min_turnover = 250000.0 if is_inr else 20000.0  # ₹2.5 Lakhs/min or $20k/min
+    turnover_ma = vol_ma20 * close
+    has_sufficient_liquidity = (vol_ma20 >= min_liquidity_vol_ma) or (turnover_ma >= min_turnover and vol_ma20 >= 200.0)
+
+    if not has_sufficient_liquidity:
         return {
             "ticker": ticker,
             "company_name": company_name or ticker,
+            "cap": cap,
             "status": "REJECTED_ILLIQUID",
             "vol_ma20": vol_ma20,
+            "turnover_ma": turnover_ma,
             "min_liquidity_vol_ma": min_liquidity_vol_ma,
-            "message": f"Average 1-minute volume ({vol_ma20:,.0f} shares) is below the minimum liquidity floor ({min_liquidity_vol_ma:,.0f} shares)."
+            "message": f"Average 1-minute volume ({vol_ma20:,.0f} shares / {curr_sym}{turnover_ma:,.0f} turnover) is below the minimum liquidity floor ({min_liquidity_vol_ma:,.0f} shares or {curr_sym}{min_turnover:,.0f} turnover)."
         }
 
     # 2. Volatility Cap (Pre-Scoring Filter)
     atr_pct = (atr / close) * 100.0 if close > 0 else 0.0
-    if atr_pct > max_atr_pct:
+    effective_max_atr = 2.5 if cap == "SMALL" else max(max_atr_pct, 1.8)
+    if atr_pct > effective_max_atr:
         return {
             "ticker": ticker,
             "company_name": company_name or ticker,
+            "cap": cap,
             "status": "REJECTED_HIGH_VOLATILITY",
             "atr": atr,
             "atr_pct": round(atr_pct, 2),
-            "max_atr_pct": max_atr_pct,
-            "message": f"1-minute ATR volatility ({atr_pct:.2f}%) exceeds maximum volatility cap ({max_atr_pct:.2f}%). Stock is too erratic for safe intraday stops."
+            "max_atr_pct": effective_max_atr,
+            "message": f"1-minute ATR volatility ({atr_pct:.2f}%) exceeds maximum volatility cap ({effective_max_atr:.2f}%). Stock is too erratic for safe intraday stops."
         }
 
     # 4. Factor MTF Alignment - Precompute MTF alignment before scoring section
@@ -683,6 +697,7 @@ def analyze_stock_setup(
     return {
         "ticker": ticker,
         "company_name": company_name or ticker,
+        "cap": cap,
         "status": "OK",
         "currency_symbol": currency_symbol,
         "timestamp": int(curr.name.timestamp()) if hasattr(curr.name, 'timestamp') else 0,

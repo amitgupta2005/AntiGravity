@@ -23,22 +23,22 @@ WATCHLISTS = {
         "description": "High liquidity Indian intraday stocks (Nifty 50 leaders)",
         "currency": "₹",
         "stocks": [
-            {"ticker": "RELIANCE.NS", "name": "Reliance Industries"},
-            {"ticker": "TCS.NS", "name": "Tata Consultancy Services"},
-            {"ticker": "HDFCBANK.NS", "name": "HDFC Bank Ltd"},
-            {"ticker": "INFY.NS", "name": "Infosys Ltd"},
-            {"ticker": "ICICIBANK.NS", "name": "ICICI Bank Ltd"},
-            {"ticker": "HCLTECH.NS", "name": "HCL Technologies Ltd"},
-            {"ticker": "WIPRO.NS", "name": "Wipro Ltd"},
-            {"ticker": "SBIN.NS", "name": "State Bank of India"},
-            {"ticker": "BHARTIARTL.NS", "name": "Bharti Airtel Ltd"},
-            {"ticker": "AXISBANK.NS", "name": "Axis Bank Ltd"},
-            {"ticker": "LT.NS", "name": "Larsen & Toubro"},
-            {"ticker": "MARUTI.NS", "name": "Maruti Suzuki Ltd"},
-            {"ticker": "BAJFINANCE.NS", "name": "Bajaj Finance Ltd"},
-            {"ticker": "SUNPHARMA.NS", "name": "Sun Pharma Industries"},
-            {"ticker": "TITAN.NS", "name": "Titan Company Ltd"},
-            {"ticker": "TATASTEEL.NS", "name": "Tata Steel Ltd"}
+            {"ticker": "RELIANCE.NS", "name": "Reliance Industries", "cap": "LARGE"},
+            {"ticker": "TCS.NS", "name": "Tata Consultancy Services", "cap": "LARGE"},
+            {"ticker": "HDFCBANK.NS", "name": "HDFC Bank Ltd", "cap": "LARGE"},
+            {"ticker": "INFY.NS", "name": "Infosys Ltd", "cap": "LARGE"},
+            {"ticker": "ICICIBANK.NS", "name": "ICICI Bank Ltd", "cap": "LARGE"},
+            {"ticker": "HCLTECH.NS", "name": "HCL Technologies Ltd", "cap": "LARGE"},
+            {"ticker": "WIPRO.NS", "name": "Wipro Ltd", "cap": "LARGE"},
+            {"ticker": "SBIN.NS", "name": "State Bank of India", "cap": "LARGE"},
+            {"ticker": "BHARTIARTL.NS", "name": "Bharti Airtel Ltd", "cap": "LARGE"},
+            {"ticker": "AXISBANK.NS", "name": "Axis Bank Ltd", "cap": "LARGE"},
+            {"ticker": "LT.NS", "name": "Larsen & Toubro", "cap": "LARGE"},
+            {"ticker": "MARUTI.NS", "name": "Maruti Suzuki Ltd", "cap": "LARGE"},
+            {"ticker": "BAJFINANCE.NS", "name": "Bajaj Finance Ltd", "cap": "LARGE"},
+            {"ticker": "SUNPHARMA.NS", "name": "Sun Pharma Industries", "cap": "LARGE"},
+            {"ticker": "TITAN.NS", "name": "Titan Company Ltd", "cap": "LARGE"},
+            {"ticker": "TATASTEEL.NS", "name": "Tata Steel Ltd", "cap": "LARGE"}
         ]
     },
     "NSE_MIDCAP": {
@@ -46,22 +46,22 @@ WATCHLISTS = {
         "description": "High beta, liquid Indian midcap growth leaders & F&O movers",
         "currency": "₹",
         "stocks": [
-            {"ticker": "DIXON.NS", "name": "Dixon Technologies"},
-            {"ticker": "POLYCAB.NS", "name": "Polycab India Ltd"},
-            {"ticker": "PERSISTENT.NS", "name": "Persistent Systems"},
-            {"ticker": "COFORGE.NS", "name": "Coforge Ltd"},
-            {"ticker": "TRENT.NS", "name": "Trent Ltd"},
-            {"ticker": "VOLTAS.NS", "name": "Voltas Ltd"},
-            {"ticker": "ASTRAL.NS", "name": "Astral Ltd"},
-            {"ticker": "FEDERALBNK.NS", "name": "Federal Bank Ltd"},
-            {"ticker": "IDFCFIRSTB.NS", "name": "IDFC First Bank Ltd"},
-            {"ticker": "ASHOKLEY.NS", "name": "Ashok Leyland Ltd"},
-            {"ticker": "CUMMINSIND.NS", "name": "Cummins India Ltd"},
-            {"ticker": "BHARATFORG.NS", "name": "Bharat Forge Ltd"},
-            {"ticker": "JUBLFOOD.NS", "name": "Jubilant FoodWorks"},
-            {"ticker": "MAXHEALTH.NS", "name": "Max Healthcare"},
-            {"ticker": "ABCAPITAL.NS", "name": "Aditya Birla Capital"},
-            {"ticker": "PAGEIND.NS", "name": "Page Industries Ltd"}
+            {"ticker": "DIXON.NS", "name": "Dixon Technologies", "cap": "MID"},
+            {"ticker": "POLYCAB.NS", "name": "Polycab India Ltd", "cap": "MID"},
+            {"ticker": "PERSISTENT.NS", "name": "Persistent Systems", "cap": "MID"},
+            {"ticker": "COFORGE.NS", "name": "Coforge Ltd", "cap": "MID"},
+            {"ticker": "TRENT.NS", "name": "Trent Ltd", "cap": "MID"},
+            {"ticker": "VOLTAS.NS", "name": "Voltas Ltd", "cap": "MID"},
+            {"ticker": "ASTRAL.NS", "name": "Astral Ltd", "cap": "MID"},
+            {"ticker": "FEDERALBNK.NS", "name": "Federal Bank Ltd", "cap": "MID"},
+            {"ticker": "IDFCFIRSTB.NS", "name": "IDFC First Bank Ltd", "cap": "MID"},
+            {"ticker": "ASHOKLEY.NS", "name": "Ashok Leyland Ltd", "cap": "MID"},
+            {"ticker": "CUMMINSIND.NS", "name": "Cummins India Ltd", "cap": "MID"},
+            {"ticker": "BHARATFORG.NS", "name": "Bharat Forge Ltd", "cap": "MID"},
+            {"ticker": "JUBLFOOD.NS", "name": "Jubilant FoodWorks", "cap": "MID"},
+            {"ticker": "MAXHEALTH.NS", "name": "Max Healthcare", "cap": "MID"},
+            {"ticker": "ABCAPITAL.NS", "name": "Aditya Birla Capital", "cap": "MID"},
+            {"ticker": "PAGEIND.NS", "name": "Page Industries Ltd", "cap": "MID"}
         ]
     },
     "NSE_SMALLCAP": {
@@ -69,22 +69,22 @@ WATCHLISTS = {
         "description": "High volatility, momentum smallcap intraday movers",
         "currency": "₹",
         "stocks": [
-            {"ticker": "SUZLON.NS", "name": "Suzlon Energy Ltd"},
-            {"ticker": "RVNL.NS", "name": "Rail Vikas Nigam Ltd"},
-            {"ticker": "IRCON.NS", "name": "Ircon International Ltd"},
-            {"ticker": "HUDCO.NS", "name": "Housing & Urban Dev Corp"},
-            {"ticker": "NBCC.NS", "name": "NBCC India Ltd"},
-            {"ticker": "CDSL.NS", "name": "Central Depository Services"},
-            {"ticker": "ANGELONE.NS", "name": "Angel One Ltd"},
-            {"ticker": "KAYNES.NS", "name": "Kaynes Technology Ltd"},
-            {"ticker": "BSOFT.NS", "name": "Birlasoft Ltd"},
-            {"ticker": "RBLBANK.NS", "name": "RBL Bank Ltd"},
-            {"ticker": "MANAPPURAM.NS", "name": "Manappuram Finance"},
-            {"ticker": "RADICO.NS", "name": "Radico Khaitan Ltd"},
-            {"ticker": "CENTURYPLY.NS", "name": "Century Plyboards Ltd"},
-            {"ticker": "CASTROLIND.NS", "name": "Castrol India Ltd"},
-            {"ticker": "HFCL.NS", "name": "HFCL Ltd"},
-            {"ticker": "EXIDEIND.NS", "name": "Exide Industries Ltd"}
+            {"ticker": "SUZLON.NS", "name": "Suzlon Energy Ltd", "cap": "SMALL"},
+            {"ticker": "RVNL.NS", "name": "Rail Vikas Nigam Ltd", "cap": "SMALL"},
+            {"ticker": "IRCON.NS", "name": "Ircon International Ltd", "cap": "SMALL"},
+            {"ticker": "HUDCO.NS", "name": "Housing & Urban Dev Corp", "cap": "SMALL"},
+            {"ticker": "NBCC.NS", "name": "NBCC India Ltd", "cap": "SMALL"},
+            {"ticker": "CDSL.NS", "name": "Central Depository Services", "cap": "SMALL"},
+            {"ticker": "ANGELONE.NS", "name": "Angel One Ltd", "cap": "SMALL"},
+            {"ticker": "KAYNES.NS", "name": "Kaynes Technology Ltd", "cap": "SMALL"},
+            {"ticker": "BSOFT.NS", "name": "Birlasoft Ltd", "cap": "SMALL"},
+            {"ticker": "RBLBANK.NS", "name": "RBL Bank Ltd", "cap": "SMALL"},
+            {"ticker": "MANAPPURAM.NS", "name": "Manappuram Finance", "cap": "SMALL"},
+            {"ticker": "RADICO.NS", "name": "Radico Khaitan Ltd", "cap": "SMALL"},
+            {"ticker": "CENTURYPLY.NS", "name": "Century Plyboards Ltd", "cap": "SMALL"},
+            {"ticker": "CASTROLIND.NS", "name": "Castrol India Ltd", "cap": "SMALL"},
+            {"ticker": "HFCL.NS", "name": "HFCL Ltd", "cap": "SMALL"},
+            {"ticker": "EXIDEIND.NS", "name": "Exide Industries Ltd", "cap": "SMALL"}
         ]
     },
     "NSE_BANK": {
@@ -92,14 +92,14 @@ WATCHLISTS = {
         "description": "High beta Indian banking & financial intraday movers",
         "currency": "₹",
         "stocks": [
-            {"ticker": "HDFCBANK.NS", "name": "HDFC Bank Ltd"},
-            {"ticker": "ICICIBANK.NS", "name": "ICICI Bank Ltd"},
-            {"ticker": "SBIN.NS", "name": "State Bank of India"},
-            {"ticker": "AXISBANK.NS", "name": "Axis Bank Ltd"},
-            {"ticker": "KOTAKBANK.NS", "name": "Kotak Mahindra Bank"},
-            {"ticker": "INDUSINDBK.NS", "name": "IndusInd Bank Ltd"},
-            {"ticker": "BANKBARODA.NS", "name": "Bank of Baroda"},
-            {"ticker": "PNB.NS", "name": "Punjab National Bank"}
+            {"ticker": "HDFCBANK.NS", "name": "HDFC Bank Ltd", "cap": "LARGE"},
+            {"ticker": "ICICIBANK.NS", "name": "ICICI Bank Ltd", "cap": "LARGE"},
+            {"ticker": "SBIN.NS", "name": "State Bank of India", "cap": "LARGE"},
+            {"ticker": "AXISBANK.NS", "name": "Axis Bank Ltd", "cap": "LARGE"},
+            {"ticker": "KOTAKBANK.NS", "name": "Kotak Mahindra Bank", "cap": "LARGE"},
+            {"ticker": "INDUSINDBK.NS", "name": "IndusInd Bank Ltd", "cap": "LARGE"},
+            {"ticker": "BANKBARODA.NS", "name": "Bank of Baroda", "cap": "LARGE"},
+            {"ticker": "PNB.NS", "name": "Punjab National Bank", "cap": "LARGE"}
         ]
     },
     "NSE_IT": {
@@ -107,12 +107,12 @@ WATCHLISTS = {
         "description": "Indian tech giants with high intraday volume",
         "currency": "₹",
         "stocks": [
-            {"ticker": "TCS.NS", "name": "Tata Consultancy Services"},
-            {"ticker": "INFY.NS", "name": "Infosys Ltd"},
-            {"ticker": "HCLTECH.NS", "name": "HCL Technologies Ltd"},
-            {"ticker": "WIPRO.NS", "name": "Wipro Ltd"},
-            {"ticker": "TECHM.NS", "name": "Tech Mahindra Ltd"},
-            {"ticker": "LTIM.NS", "name": "LTIMindtree Ltd"}
+            {"ticker": "TCS.NS", "name": "Tata Consultancy Services", "cap": "LARGE"},
+            {"ticker": "INFY.NS", "name": "Infosys Ltd", "cap": "LARGE"},
+            {"ticker": "HCLTECH.NS", "name": "HCL Technologies Ltd", "cap": "LARGE"},
+            {"ticker": "WIPRO.NS", "name": "Wipro Ltd", "cap": "LARGE"},
+            {"ticker": "TECHM.NS", "name": "Tech Mahindra Ltd", "cap": "LARGE"},
+            {"ticker": "LTIM.NS", "name": "LTIMindtree Ltd", "cap": "LARGE"}
         ]
     },
     "US_MAG7": {
@@ -120,34 +120,80 @@ WATCHLISTS = {
         "description": "Top liquid US tech leaders driving market direction",
         "currency": "$",
         "stocks": [
-            {"ticker": "NVDA", "name": "NVIDIA Corporation"},
-            {"ticker": "TSLA", "name": "Tesla Inc"},
-            {"ticker": "AAPL", "name": "Apple Inc"},
-            {"ticker": "MSFT", "name": "Microsoft Corporation"},
-            {"ticker": "AMZN", "name": "Amazon.com Inc"},
-            {"ticker": "META", "name": "Meta Platforms Inc"},
-            {"ticker": "GOOGL", "name": "Alphabet Inc"}
+            {"ticker": "NVDA", "name": "NVIDIA Corporation", "cap": "LARGE"},
+            {"ticker": "TSLA", "name": "Tesla Inc", "cap": "LARGE"},
+            {"ticker": "AAPL", "name": "Apple Inc", "cap": "LARGE"},
+            {"ticker": "MSFT", "name": "Microsoft Corporation", "cap": "LARGE"},
+            {"ticker": "AMZN", "name": "Amazon.com Inc", "cap": "LARGE"},
+            {"ticker": "META", "name": "Meta Platforms Inc", "cap": "LARGE"},
+            {"ticker": "GOOGL", "name": "Alphabet Inc", "cap": "LARGE"}
         ]
     },
     "US_MOMENTUM": {
-        "name": "US High-Beta Movers",
-        "description": "Top liquid US intraday momentum and breakout stocks",
+        "name": "US Large-Cap Movers",
+        "description": "Top liquid US intraday momentum and breakout largecaps",
         "currency": "$",
         "stocks": [
-            {"ticker": "NVDA", "name": "NVIDIA Corporation"},
-            {"ticker": "TSLA", "name": "Tesla Inc"},
-            {"ticker": "AAPL", "name": "Apple Inc"},
-            {"ticker": "AMD", "name": "Advanced Micro Devices"},
-            {"ticker": "MSFT", "name": "Microsoft Corporation"},
-            {"ticker": "META", "name": "Meta Platforms Inc"},
-            {"ticker": "AMZN", "name": "Amazon.com Inc"},
-            {"ticker": "GOOGL", "name": "Alphabet Inc"},
-            {"ticker": "PLTR", "name": "Palantir Technologies"},
-            {"ticker": "COIN", "name": "Coinbase Global"},
-            {"ticker": "NFLX", "name": "Netflix Inc"},
-            {"ticker": "SMCI", "name": "Super Micro Computer"},
-            {"ticker": "ARM", "name": "Arm Holdings"},
-            {"ticker": "MARA", "name": "MARA Holdings"}
+            {"ticker": "NVDA", "name": "NVIDIA Corporation", "cap": "LARGE"},
+            {"ticker": "TSLA", "name": "Tesla Inc", "cap": "LARGE"},
+            {"ticker": "AAPL", "name": "Apple Inc", "cap": "LARGE"},
+            {"ticker": "AMD", "name": "Advanced Micro Devices", "cap": "LARGE"},
+            {"ticker": "MSFT", "name": "Microsoft Corporation", "cap": "LARGE"},
+            {"ticker": "META", "name": "Meta Platforms Inc", "cap": "LARGE"},
+            {"ticker": "AMZN", "name": "Amazon.com Inc", "cap": "LARGE"},
+            {"ticker": "GOOGL", "name": "Alphabet Inc", "cap": "LARGE"},
+            {"ticker": "PLTR", "name": "Palantir Technologies", "cap": "LARGE"},
+            {"ticker": "COIN", "name": "Coinbase Global", "cap": "LARGE"},
+            {"ticker": "NFLX", "name": "Netflix Inc", "cap": "LARGE"},
+            {"ticker": "SMCI", "name": "Super Micro Computer", "cap": "LARGE"},
+            {"ticker": "ARM", "name": "Arm Holdings", "cap": "LARGE"},
+            {"ticker": "MARA", "name": "MARA Holdings", "cap": "LARGE"}
+        ]
+    },
+    "US_MIDCAP": {
+        "name": "US Midcap High-Growth Movers",
+        "description": "High beta, liquid US midcap momentum and growth stocks",
+        "currency": "$",
+        "stocks": [
+            {"ticker": "SMCI", "name": "Super Micro Computer", "cap": "MID"},
+            {"ticker": "CRWD", "name": "CrowdStrike Holdings", "cap": "MID"},
+            {"ticker": "NET", "name": "Cloudflare Inc", "cap": "MID"},
+            {"ticker": "DKNG", "name": "DraftKings Inc", "cap": "MID"},
+            {"ticker": "APP", "name": "AppLovin Corporation", "cap": "MID"},
+            {"ticker": "HOOD", "name": "Robinhood Markets", "cap": "MID"},
+            {"ticker": "SOFI", "name": "SoFi Technologies", "cap": "MID"},
+            {"ticker": "COIN", "name": "Coinbase Global", "cap": "MID"},
+            {"ticker": "PLTR", "name": "Palantir Technologies", "cap": "MID"},
+            {"ticker": "MDB", "name": "MongoDB Inc", "cap": "MID"},
+            {"ticker": "DDOG", "name": "Datadog Inc", "cap": "MID"},
+            {"ticker": "AFRM", "name": "Affirm Holdings", "cap": "MID"},
+            {"ticker": "CELH", "name": "Celsius Holdings", "cap": "MID"},
+            {"ticker": "DASH", "name": "DoorDash Inc", "cap": "MID"},
+            {"ticker": "RBLX", "name": "Roblox Corporation", "cap": "MID"},
+            {"ticker": "SNAP", "name": "Snap Inc", "cap": "MID"}
+        ]
+    },
+    "US_SMALLCAP": {
+        "name": "US Smallcap High-Beta Breakouts",
+        "description": "High volatility, momentum smallcap intraday runners",
+        "currency": "$",
+        "stocks": [
+            {"ticker": "IREN", "name": "Iris Energy Ltd", "cap": "SMALL"},
+            {"ticker": "CLSK", "name": "CleanSpark Inc", "cap": "SMALL"},
+            {"ticker": "IONQ", "name": "IonQ Inc", "cap": "SMALL"},
+            {"ticker": "ASTS", "name": "AST SpaceMobile", "cap": "SMALL"},
+            {"ticker": "RKLB", "name": "Rocket Lab USA", "cap": "SMALL"},
+            {"ticker": "UPST", "name": "Upstart Holdings", "cap": "SMALL"},
+            {"ticker": "HIMS", "name": "Hims & Hers Health", "cap": "SMALL"},
+            {"ticker": "SOUN", "name": "SoundHound AI", "cap": "SMALL"},
+            {"ticker": "BBAI", "name": "BigBear.ai Holdings", "cap": "SMALL"},
+            {"ticker": "RGTI", "name": "Rigetti Computing", "cap": "SMALL"},
+            {"ticker": "MARA", "name": "MARA Holdings", "cap": "SMALL"},
+            {"ticker": "RIOT", "name": "Riot Platforms", "cap": "SMALL"},
+            {"ticker": "CIFR", "name": "Cipher Mining", "cap": "SMALL"},
+            {"ticker": "WULF", "name": "TeraWulf Inc", "cap": "SMALL"},
+            {"ticker": "OPEN", "name": "Opendoor Technologies", "cap": "SMALL"},
+            {"ticker": "ACHR", "name": "Archer Aviation", "cap": "SMALL"}
         ]
     }
 }
@@ -156,6 +202,16 @@ WATCHLISTS = {
 # Key: ticker, Value: {"timestamp": float, "df": DataFrame, "setup": dict}
 _CACHE: Dict[str, Dict[str, Any]] = {}
 CACHE_TTL_SECONDS = 20  # 20 seconds cache for rapid scans
+
+
+def get_ticker_cap(ticker: str) -> str:
+    """Helper to find market cap category for a ticker from predefined universe."""
+    clean = ticker.strip().upper()
+    for w in WATCHLISTS.values():
+        for s in w.get("stocks", []):
+            if s.get("ticker", "").upper() == clean:
+                return s.get("cap", "LARGE")
+    return "LARGE"
 
 
 def get_stock_raw_intraday(ticker: str, interval: str = "1m") -> pd.DataFrame:
@@ -201,12 +257,14 @@ def get_stock_raw_intraday(ticker: str, interval: str = "1m") -> pd.DataFrame:
         return pd.DataFrame()
 
 
-def fetch_and_analyze_ticker(ticker: str, company_name: str = "", force_refresh: bool = False) -> Dict[str, Any]:
+def fetch_and_analyze_ticker(ticker: str, company_name: str = "", force_refresh: bool = False, cap: Optional[str] = None) -> Dict[str, Any]:
     """
     Fetches real-time 1m data, calculates indicators, and analyzes technical setup.
     Utilizes short TTL caching for fast UI interactions.
     """
     ticker = ticker.strip().upper()
+    if not cap:
+        cap = get_ticker_cap(ticker)
     now = time.time()
 
     if not force_refresh and ticker in _CACHE:
@@ -219,6 +277,8 @@ def fetch_and_analyze_ticker(ticker: str, company_name: str = "", force_refresh:
     if df.empty:
         return {
             "ticker": ticker,
+            "company_name": company_name or ticker,
+            "cap": cap,
             "status": "ERROR",
             "message": f"Unable to fetch intraday data for '{ticker}'. Verify the symbol on Yahoo Finance."
         }
@@ -227,9 +287,11 @@ def fetch_and_analyze_ticker(ticker: str, company_name: str = "", force_refresh:
     df_indicators = calculate_intraday_indicators(df)
 
     # Perform expert intraday analysis
-    analysis = analyze_stock_setup(ticker, df_indicators, company_name)
+    analysis = analyze_stock_setup(ticker, df_indicators, company_name, cap=cap)
     if "status" not in analysis:
         analysis["status"] = "OK"
+    if "cap" not in analysis:
+        analysis["cap"] = cap
 
     # Save to cache
     _CACHE[ticker] = {
@@ -384,7 +446,7 @@ def scan_watchlist(watchlist_key: str = "NSE_MOMENTUM", custom_tickers: Optional
 
     def _worker(item):
         try:
-            return fetch_and_analyze_ticker(item["ticker"], item.get("name", ""))
+            return fetch_and_analyze_ticker(item["ticker"], item.get("name", ""), cap=item.get("cap"))
         except Exception as err:
             logger.error(f"Scan worker failed for {item['ticker']}: {err}")
             return None

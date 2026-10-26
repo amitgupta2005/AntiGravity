@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Antigravity | Institutional IPO Intelligence & Valuation Terminal</title>
+    <meta name="description" content="Elite, institutional-grade IPO analysis platform cutting through marketing hype across Indian Mainboard, SME, and US markets with data-backed Apply, Avoid, or Watch verdicts." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <!-- INSTITUTIONAL HEADER -->
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="brand-section">
+          <div class="brand-logo-icon">▲</div>
+          <div class="brand-text">
+            <h1>ANTIGRAVITY</h1>
+            <span class="brand-tagline">Institutional IPO Intelligence & Valuation Terminal</span>
+          </div>
+        </div>
+
+        <!-- NAVIGATION TABS -->
+        <nav class="app-nav-tabs" id="app-navigation" aria-label="Terminal Navigation">
+          <button class="nav-tab-btn active" data-tab="radar" id="nav-btn-radar">
+            <span class="tab-icon">📡</span> IPO Radar
+          </button>
+          <button class="nav-tab-btn" data-tab="gmp" id="nav-btn-gmp">
+            <span class="tab-icon">📈</span> GMP & Book Tracker
+          </button>
+          <button class="nav-tab-btn" data-tab="scanner" id="nav-btn-scanner">
+            <span class="tab-icon">🚨</span> Forensic Red Flags
+          </button>
+          <button class="nav-tab-btn" data-tab="analyzer" id="nav-btn-analyzer">
+            <span class="tab-icon">⚡</span> Custom IPO Underwriter
+          </button>
+        </nav>
+
+        <!-- LIVE TERMINAL REAL-TIME FEED & CONTROLS -->
+        <div class="header-meta">
+          <div class="header-live-vix-strip">
+            <div class="header-vix-chip" id="chip-india-vix" title="Real-Time India VIX">
+              <span class="vix-name">IN VIX:</span>
+              <strong class="vix-val" id="header-india-vix-val">14.35</strong>
+            </div>
+            <div class="header-vix-chip" id="chip-us-vix" title="Real-Time US VIX">
+              <span class="vix-name">US VIX:</span>
+              <strong class="vix-val" id="header-us-vix-val">13.92</strong>
+            </div>
+          </div>
+
+          <div class="terminal-status-indicator">
+            <span class="status-dot"></span>
+            <span class="feed-status-text">LIVE REAL-TIME FEED</span>
+            <span class="header-sync-time" id="header-sync-timestamp">17:12:00</span>
+          </div>
+
+          <button class="btn btn-outline-terminal btn-sm" id="btn-global-live-sync" title="Sync live quotes, subscription counters and GMP">
+            🔄 Sync Live
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN TERMINAL VIEWS CONTAINER -->
+    <main class="main-content">
+      <!-- VIEW 1: IPO RADAR (DEFAULT) -->
+      <section id="tab-radar" class="terminal-tab-pane active" aria-labelledby="nav-btn-radar">
+        <!-- Injected by IpoRadarView -->
+      </section>
+
+      <!-- VIEW 2: GMP & SUBSCRIPTION TRACKER -->
+      <section id="tab-gmp" class="terminal-tab-pane" style="display: none;" aria-labelledby="nav-btn-gmp">
+        <!-- Injected by GmpTrackerView -->
+      </section>
+
+      <!-- VIEW 3: FORENSIC RED FLAG SCANNER -->
+      <section id="tab-scanner" class="terminal-tab-pane" style="display: none;" aria-labelledby="nav-btn-scanner">
+        <!-- Injected by RedFlagScanner -->
+      </section>
+
+      <!-- VIEW 4: CUSTOM IPO ANALYZER -->
+      <section id="tab-analyzer" class="terminal-tab-pane" style="display: none;" aria-labelledby="nav-btn-analyzer">
+        <!-- Injected by IpoCustomAnalyzer -->
+      </section>
+    </main>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

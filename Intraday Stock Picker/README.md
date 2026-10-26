@@ -21,11 +21,15 @@ Built specifically for active intraday traders to automatically identify high-pr
   - *EMA 9/21 Trend Continuation Bounce*
   - *High RVOL Volume Spikes (>1.5x - 3.0x)*
 - **Preconfigured Market Baskets**:
-  - 🇮🇳 **NSE Nifty 50 Momentum**: Top liquid Nifty leaders
+  - 🇮🇳 **NSE Nifty 50 Momentum**: Top liquid Nifty largecap leaders (`RELIANCE.NS`, `TCS.NS`, `HDFCBANK.NS`, `INFY.NS`, etc.)
+  - 🇮🇳 **India Nifty Midcap Movers**: High-beta, liquid Indian midcaps (`DIXON.NS`, `POLYCAB.NS`, `PERSISTENT.NS`, `COFORGE.NS`, `TRENT.NS`, `VOLTAS.NS`, `FEDERALBNK.NS`, `ASHOKLEY.NS`, etc.)
+  - 🇮🇳 **India Nifty Smallcap Breakouts**: High-momentum smallcap movers (`SUZLON.NS`, `RVNL.NS`, `HUDCO.NS`, `NBCC.NS`, `CDSL.NS`, `ANGELONE.NS`, `EXIDEIND.NS`, etc.)
   - 🏦 **NSE Bank Nifty Leaders**: High-beta banking stocks (`HDFCBANK.NS`, `ICICIBANK.NS`, `SBIN.NS`, `BANKBARODA.NS`, `AXISBANK.NS`, etc.)
   - 💻 **NSE Nifty IT Leaders**: Tech giants (`TCS.NS`, `INFY.NS`, `HCLTECH.NS`, `WIPRO.NS`, `TECHM.NS`, `LTIM.NS`)
-  - 🇺🇸 **US Magnificent 7**: `NVDA`, `TSLA`, `AAPL`, `MSFT`, `AMZN`, `META`, `GOOGL`
-  - 🇺🇸 **US High-Beta Movers**: `AMD`, `PLTR`, `COIN`, `NFLX`, `SMCI`, `ARM`, `MARA`
+  - 🇺🇸 **US Magnificent 7**: Mega-cap tech drivers (`NVDA`, `TSLA`, `AAPL`, `MSFT`, `AMZN`, `META`, `GOOGL`)
+  - 🇺🇸 **US Large-Cap Movers**: Liquid largecap intraday movers (`AMD`, `PLTR`, `COIN`, `NFLX`, `SMCI`, `ARM`, `MARA`)
+  - 🇺🇸 **US Midcap High-Growth Movers**: Fast-moving liquid US midcaps (`SMCI`, `CRWD`, `NET`, `DKNG`, `APP`, `HOOD`, `SOFI`, `MDB`, `DDOG`, `AFRM`, `CELH`, `DASH`, `RBLX`, `SNAP`)
+  - 🇺🇸 **US Smallcap High-Beta Breakouts**: Volatile smallcap intraday runners (`IREN`, `CLSK`, `IONQ`, `ASTS`, `RKLB`, `UPST`, `HIMS`, `SOUN`, `BBAI`, `RGTI`, `MARA`, `RIOT`, `CIFR`, `WULF`, `OPEN`, `ACHR`)
   - ⚡ **Custom Watchlist**: Real-time scan of any custom list of global tickers.
 
 ### 2. 📊 Interactive Candlestick Chart with Pattern Detection

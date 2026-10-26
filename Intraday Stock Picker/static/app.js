@@ -619,14 +619,18 @@ function renderStockCards() {
     if (searchQuery) {
       const sym = (stock.ticker || "").toUpperCase();
       const comp = (stock.company_name || "").toUpperCase();
-      if (!sym.includes(searchQuery) && !comp.includes(searchQuery)) {
+      const cap = (stock.cap || "").toUpperCase();
+      if (!sym.includes(searchQuery) && !comp.includes(searchQuery) && !cap.includes(searchQuery)) {
         return false;
       }
     }
 
     const setup = (stock.setup_name || "").toLowerCase();
+    const stockCap = (stock.cap || "").toLowerCase();
     if (currentFilter === "buy") return stock.score >= 35;
     if (currentFilter === "sell") return stock.score <= -35;
+    if (currentFilter === "midcap") return stockCap === "mid";
+    if (currentFilter === "smallcap") return stockCap === "small";
     if (currentFilter === "rvol") return stock.rvol >= 1.5;
     if (currentFilter === "breakout") return setup.includes("breakout") || setup.includes("orb");
     if (currentFilter === "vwap") return setup.includes("vwap");
@@ -723,6 +727,7 @@ function renderStockCards() {
 
       <div class="card-middle">
         <span class="badge-signal ${sigClass}">${stock.signal}</span>
+        <span class="badge-cap cap-${(stock.cap || 'large').toLowerCase()}">${stock.cap || 'LARGE'}</span>
         <span class="badge-roi" title="Projected Target 2 ROI">🎯 ROI: +${stockRoi.toFixed(1)}%</span>
         <span class="badge-rvol">${stock.rvol.toFixed(1)}x Vol</span>
         <span class="badge-setup">${stock.setup_name}</span>
@@ -813,8 +818,9 @@ async function loadChartData(ticker, tf = currentTimeframe, silent = false) {
 
     // Update Toolbar Meta
     const sym = data.analysis.currency_symbol || "₹";
+    const capTag = data.analysis.cap ? `<span class="badge-cap cap-${data.analysis.cap.toLowerCase()}" style="margin-left: 6px;">${data.analysis.cap}</span>` : "";
     activeSymbolTicker.textContent = data.ticker;
-    activeSymbolName.textContent = data.analysis.company_name;
+    activeSymbolName.innerHTML = `${data.analysis.company_name} ${capTag}`;
     activePricePill.textContent = `${sym}${data.analysis.price.toFixed(2)}`;
     const isUp = data.analysis.change_pct >= 0;
     activePricePill.style.color = isUp ? "#10b981" : "#ef4444";
