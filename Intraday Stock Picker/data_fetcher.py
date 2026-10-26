@@ -228,7 +228,8 @@ def fetch_and_analyze_ticker(ticker: str, company_name: str = "", force_refresh:
 
     # Perform expert intraday analysis
     analysis = analyze_stock_setup(ticker, df_indicators, company_name)
-    analysis["status"] = "OK"
+    if "status" not in analysis:
+        analysis["status"] = "OK"
 
     # Save to cache
     _CACHE[ticker] = {

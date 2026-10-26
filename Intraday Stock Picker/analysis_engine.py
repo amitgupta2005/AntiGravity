@@ -15,7 +15,12 @@ Calculates institutional intraday indicators on 1-minute Yahoo Finance data:
 import numpy as np
 import pandas as pd
 from typing import Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, time as dt_time
+import pytz
+
+# Risk-Management Guardrail Defaults
+DEFAULT_MIN_LIQUIDITY_VOL_MA = 15000.0  # Min 1-minute volume MA (shares)
+DEFAULT_MAX_ATR_PCT = 1.5               # Max 1-minute ATR as % of price
 
 
 def calculate_intraday_indicators(df: pd.DataFrame) -> pd.DataFrame:
@@ -107,7 +112,13 @@ def calculate_intraday_indicators(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def analyze_stock_setup(ticker: str, df: pd.DataFrame, company_name: str = "") -> Dict[str, Any]:
+def analyze_stock_setup(
+    ticker: str,
+    df: pd.DataFrame,
+    company_name: str = "",
+    min_liquidity_vol_ma: float = DEFAULT_MIN_LIQUIDITY_VOL_MA,
+    max_atr_pct: float = DEFAULT_MAX_ATR_PCT
+) -> Dict[str, Any]:
     """
     Evaluates intraday technical setup, generates trade rationale,
     calculates Stop Loss, Target 1, Target 2, Target 3, and scoring.
@@ -143,8 +154,40 @@ def analyze_stock_setup(ticker: str, df: pd.DataFrame, company_name: str = "") -
     rvol = float(curr.get('RVOL', 1.0))
     volume = float(curr.get('Volume', 0))
     vol_ma20 = float(curr.get('Vol_MA20', volume))
+    if pd.isna(vol_ma20) or vol_ma20 <= 0:
+        vol_ma20 = float(volume)
     orb_high = float(curr['ORB_High']) if ('ORB_High' in curr and not pd.isna(curr['ORB_High'])) else day_high
     orb_low = float(curr['ORB_Low']) if ('ORB_Low' in curr and not pd.isna(curr['ORB_Low'])) else day_low
+
+    # 1. Hard Liquidity Floor (Pre-Scoring Filter)
+    if vol_ma20 < min_liquidity_vol_ma:
+        return {
+            "ticker": ticker,
+            "company_name": company_name or ticker,
+            "status": "REJECTED_ILLIQUID",
+            "vol_ma20": vol_ma20,
+            "min_liquidity_vol_ma": min_liquidity_vol_ma,
+            "message": f"Average 1-minute volume ({vol_ma20:,.0f} shares) is below the minimum liquidity floor ({min_liquidity_vol_ma:,.0f} shares)."
+        }
+
+    # 2. Volatility Cap (Pre-Scoring Filter)
+    atr_pct = (atr / close) * 100.0 if close > 0 else 0.0
+    if atr_pct > max_atr_pct:
+        return {
+            "ticker": ticker,
+            "company_name": company_name or ticker,
+            "status": "REJECTED_HIGH_VOLATILITY",
+            "atr": atr,
+            "atr_pct": round(atr_pct, 2),
+            "max_atr_pct": max_atr_pct,
+            "message": f"1-minute ATR volatility ({atr_pct:.2f}%) exceeds maximum volatility cap ({max_atr_pct:.2f}%). Stock is too erratic for safe intraday stops."
+        }
+
+    # 4. Factor MTF Alignment - Precompute MTF alignment before scoring section
+    mtf_data = compute_mtf_alignment(df)
+    bull_tfs = sum(1 for tf in mtf_data.get("timeframes", {}).values() if tf.get("bias") == "BULLISH")
+    bear_tfs = sum(1 for tf in mtf_data.get("timeframes", {}).values() if tf.get("bias") == "BEARISH")
+    tf_count = len(mtf_data.get("timeframes", {}))
 
     # 10-bar recent swing low and swing high
     recent_len = min(10, len(df))
@@ -281,7 +324,15 @@ def analyze_stock_setup(ticker: str, df: pd.DataFrame, company_name: str = "") -
         })
 
     # 4. Momentum Oscillators (RSI 14)
-    if 55.0 <= rsi <= 72.0:
+    if rsi > 80.0:
+        score -= 10
+        checks.append({
+            "factor": "RSI Momentum",
+            "status": "Extreme Overbought / Climax Risk",
+            "score": "-10",
+            "detail": f"Extreme Overbought / Climax Risk (RSI {rsi:.1f} > 80.0); high risk of exhaustion. Advise waiting for a pullback to the 9 EMA."
+        })
+    elif 55.0 <= rsi <= 72.0:
         score += 15
         checks.append({
             "factor": "RSI Momentum",
@@ -289,13 +340,21 @@ def analyze_stock_setup(ticker: str, df: pd.DataFrame, company_name: str = "") -
             "score": "+15",
             "detail": f"RSI is {rsi:.1f} in prime intraday expansion zone (55–72) without being overextended."
         })
-    elif rsi > 72.0:
-        score += 8  # Still bullish but risk of pullback
+    elif 72.0 < rsi <= 80.0:
+        score += 8  # Still bullish momentum but approaching overbought territory
         checks.append({
             "factor": "RSI Momentum",
             "status": "Overbought Caution",
             "score": "+8",
             "detail": f"RSI is {rsi:.1f} (Overbought > 72); strong momentum but wait for pullback to 9 EMA for entry."
+        })
+    elif rsi < 20.0:
+        score -= 10
+        checks.append({
+            "factor": "RSI Momentum",
+            "status": "Extreme Oversold Risk",
+            "score": "-10",
+            "detail": f"Extreme Oversold Risk (RSI {rsi:.1f} < 20.0); extreme selling exhaustion with potential bounce/whipsaw risk."
         })
     elif 28.0 <= rsi <= 45.0:
         score -= 15
@@ -305,7 +364,7 @@ def analyze_stock_setup(ticker: str, df: pd.DataFrame, company_name: str = "") -
             "score": "-15",
             "detail": f"RSI is {rsi:.1f} in strong bearish continuation zone (28–45)."
         })
-    elif rsi < 28.0:
+    elif 20.0 <= rsi < 28.0:
         score -= 8
         checks.append({
             "factor": "RSI Momentum",
@@ -366,6 +425,88 @@ def analyze_stock_setup(ticker: str, df: pd.DataFrame, company_name: str = "") -
             "score": "0",
             "detail": f"Trading inside Opening Range (ORB Low ₹{orb_low:,.2f} - ORB High ₹{orb_high:,.2f})."
         })
+
+    # 5. Time-of-Day Whipsaw Penalty
+    # Extract local time from the most recent candle's timestamp.
+    # If time falls within mid-day doldrums (12:00 PM to 13:30 PM local market time), subtract 15 points.
+    candle_ts = curr.name
+    local_time = None
+    if hasattr(candle_ts, 'time'):
+        if hasattr(candle_ts, 'tzinfo') and candle_ts.tzinfo is not None:
+            tz_str = str(candle_ts.tz).upper()
+            if "UTC" in tz_str:
+                market_tz = pytz.timezone("Asia/Kolkata") if (".NS" in ticker or ".BO" in ticker) else pytz.timezone("America/New_York")
+                local_time = candle_ts.astimezone(market_tz).time()
+            else:
+                local_time = candle_ts.time()
+        else:
+            local_time = candle_ts.time()
+
+    if local_time is not None:
+        if dt_time(12, 0) <= local_time <= dt_time(13, 30):
+            score -= 15
+            checks.append({
+                "factor": "Time of Day",
+                "status": "Mid-day Chop Zone",
+                "score": "-15",
+                "detail": "Mid-day Chop Zone: Volume traditionally dries up; requiring perfect structure to trigger."
+            })
+
+    # 4. Factor MTF Alignment into the Score
+    # Extract confluence:
+    # If action == "LONG" and 3/3 timeframes are bullish, add +15 to score. If 0/3 are bullish (fighting trend), subtract -30.
+    # Apply inverse logic for action == "SHORT".
+    direction_bias = "LONG" if (score > 0 or (score == 0 and close >= vwap)) else "SHORT"
+    if tf_count >= 3:
+        if direction_bias == "LONG":
+            if bull_tfs == 3:
+                score += 15
+                checks.append({
+                    "factor": "MTF Confluence",
+                    "status": "Full Bullish Alignment",
+                    "score": "+15",
+                    "detail": "All 3 Timeframes (1m, 5m, 15m) are in Bullish Trend alignment above VWAP."
+                })
+            elif bull_tfs == 0:
+                score -= 30
+                checks.append({
+                    "factor": "MTF Confluence",
+                    "status": "Fighting MTF Trend",
+                    "score": "-30",
+                    "detail": "0 of 3 Timeframes are Bullish; fighting prevailing higher timeframe trend."
+                })
+            else:
+                checks.append({
+                    "factor": "MTF Confluence",
+                    "status": f"{bull_tfs}/3 Bullish Timeframes",
+                    "score": "0",
+                    "detail": f"{bull_tfs} of 3 timeframes show bullish momentum."
+                })
+        else:
+            # action == "SHORT" inverse logic:
+            if bear_tfs == 3:
+                score -= 15
+                checks.append({
+                    "factor": "MTF Confluence",
+                    "status": "Full Bearish Alignment",
+                    "score": "-15",
+                    "detail": "All 3 Timeframes (1m, 5m, 15m) are in Bearish Trend alignment below VWAP."
+                })
+            elif bear_tfs == 0:
+                score += 30
+                checks.append({
+                    "factor": "MTF Confluence",
+                    "status": "Fighting MTF Trend",
+                    "score": "+30",
+                    "detail": "0 of 3 Timeframes are Bearish; shorting against prevailing higher timeframe trend."
+                })
+            else:
+                checks.append({
+                    "factor": "MTF Confluence",
+                    "status": f"{bear_tfs}/3 Bearish Timeframes",
+                    "score": "0",
+                    "detail": f"{bear_tfs} of 3 timeframes show bearish momentum."
+                })
 
     # Normalize score between -100 and +100
     score = max(-100, min(100, score))
@@ -536,15 +677,13 @@ def analyze_stock_setup(ticker: str, df: pd.DataFrame, company_name: str = "") -
         "execution_strategy": f"Book 50% position at Target 1 ({currency_symbol}{t1_price:,.2f}), trail Stop Loss to Cost/Entry ({currency_symbol}{entry_price:,.2f}), and ride remaining 50% towards Target 2 ({currency_symbol}{t2_price:,.2f})."
     }
 
-    # Compute Multi-Timeframe Alignment
-    mtf_data = compute_mtf_alignment(df)
-
     # Detect visual chart markers for patterns & triggers
     markers = detect_candlestick_patterns_and_markers(df, action=action)
 
     return {
         "ticker": ticker,
         "company_name": company_name or ticker,
+        "status": "OK",
         "currency_symbol": currency_symbol,
         "timestamp": int(curr.name.timestamp()) if hasattr(curr.name, 'timestamp') else 0,
         "time_str": curr.name.strftime('%Y-%m-%d %H:%M:%S') if hasattr(curr.name, 'strftime') else str(curr.name),
@@ -723,6 +862,8 @@ def compute_mtf_alignment(df_1m: pd.DataFrame) -> Dict[str, Any]:
             "confluence_score": "1/3",
             "badge_color": "#94a3b8",
             "verdict": "Awaiting sufficient intraday bars to compute MTF alignment.",
+            "bull_count": 0,
+            "bear_count": 0,
             "timeframes": {}
         }
 
@@ -801,6 +942,8 @@ def compute_mtf_alignment(df_1m: pd.DataFrame) -> Dict[str, Any]:
         "confluence_score": confluence_score,
         "badge_color": badge_color,
         "verdict": verdict,
+        "bull_count": bulls,
+        "bear_count": bears,
         "timeframes": {
             "1m": { "bias": bias_1m, "vwap": round(vwap_1m, 2), "rsi": round(rsi_1m, 1) },
             "5m": { "bias": bias_5m, "vwap": round(vwap_5m, 2), "rsi": round(rsi_5m, 1) },
