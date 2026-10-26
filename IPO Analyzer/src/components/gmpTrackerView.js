@@ -1,5 +1,5 @@
 /**
- * Antigravity GMP & Subscription Tracker Component
+ * Apex GMP & Subscription Tracker Component
  * Tracks real-time Grey Market Premium progression, expected listing pop, and live institutional book building.
  */
 
@@ -28,6 +28,12 @@ export class GmpTrackerView {
     let items = [...this.universe];
     if (this.filterStatus === 'ONGOING') {
       items = items.filter(i => i.status === 'ONGOING');
+    } else if (this.filterStatus === 'UPCOMING') {
+      items = items.filter(i => i.status === 'UPCOMING');
+    } else if (this.filterStatus === 'CLOSED') {
+      items = items.filter(i => i.status === 'CLOSED');
+    } else if (this.filterStatus === 'LISTED') {
+      items = items.filter(i => i.status === 'LISTED');
     } else if (this.filterStatus === 'MAINBOARD') {
       items = items.filter(i => i.tier === 'MAINBOARD');
     } else if (this.filterStatus === 'SME') {
@@ -48,10 +54,11 @@ export class GmpTrackerView {
         <div class="realtime-header-toolbar">
           <div class="rt-status-left">
             <span class="live-pulse-dot"></span>
-            <span class="rt-feed-title">REAL-TIME GMP & BOOK BUILDING FEED</span>
+            <span class="rt-feed-title">REAL-TIME GMP & BOOK BUILDING ENGINE</span>
             <span class="rt-feed-divider">•</span>
-            <span class="rt-sync-time">Last Ticked: <strong>${this.lastSync}</strong></span>
-            <span class="rt-feed-badge">Grey Market Dealer Quotes & Exchange Order Books</span>
+            <span class="rt-sync-time">Last Synced: <strong>${this.lastSync}</strong></span>
+            <span class="rt-feed-badge" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4); color: #34d399; font-weight: 700;">📅 Current Financial Year (FY 2026–27 Only)</span>
+            <span class="rt-feed-badge">BSE India • NSE Emerge • Chittorgarh • Groww Grey Market Desk</span>
           </div>
           <div class="rt-status-right">
             <button class="btn btn-outline-terminal btn-sm" id="btn-gmp-refresh-now">
@@ -76,7 +83,16 @@ export class GmpTrackerView {
         <div class="gmp-filter-bar mt-3">
           <button class="filter-pill ${this.filterStatus === 'ALL' ? 'active' : ''}" data-filter="ALL">All Issues (${this.universe.length})</button>
           <button class="filter-pill pill-ongoing ${this.filterStatus === 'ONGOING' ? 'active' : ''}" data-filter="ONGOING">
-            🔴 Live Ongoing Only (${this.universe.filter(i => i.status === 'ONGOING').length})
+            🔴 Live Ongoing (${this.universe.filter(i => i.status === 'ONGOING').length})
+          </button>
+          <button class="filter-pill pill-upcoming ${this.filterStatus === 'UPCOMING' ? 'active' : ''}" data-filter="UPCOMING">
+            🟡 Upcoming Pipeline (${this.universe.filter(i => i.status === 'UPCOMING').length})
+          </button>
+          <button class="filter-pill pill-closed ${this.filterStatus === 'CLOSED' ? 'active' : ''}" data-filter="CLOSED">
+            🔵 Closed / Allotment (${this.universe.filter(i => i.status === 'CLOSED').length})
+          </button>
+          <button class="filter-pill ${this.filterStatus === 'LISTED' ? 'active' : ''}" data-filter="LISTED">
+            ⚪ Recently Listed (${this.universe.filter(i => i.status === 'LISTED').length})
           </button>
           <button class="filter-pill ${this.filterStatus === 'MAINBOARD' ? 'active' : ''}" data-filter="MAINBOARD">India Mainboard</button>
           <button class="filter-pill ${this.filterStatus === 'SME' ? 'active' : ''}" data-filter="SME">India SME</button>
@@ -112,15 +128,17 @@ export class GmpTrackerView {
                 const estListingPrice = basePrice ? (basePrice + gmpPrice).toFixed(1) : 'N/A';
                 const trend = sent.gmpTrend || [gmpPct, gmpPct, gmpPct];
                 const isOngoing = ipo.status === 'ONGOING';
+                const isUpcoming = ipo.status === 'UPCOMING';
+                const isClosed = ipo.status === 'CLOSED';
 
                 const isRising = trend[trend.length - 1] > trend[trend.length - 2];
                 const isFalling = trend[trend.length - 1] < trend[trend.length - 2];
 
                 return `
-                  <tr class="gmp-table-row ${isOngoing ? 'row-ongoing' : ''}">
+                  <tr class="gmp-table-row ${isOngoing ? 'row-ongoing' : isUpcoming ? 'row-upcoming' : isClosed ? 'row-closed' : ''}">
                     <td>
-                      <span class="status-badge ${isOngoing ? 'status-badge-ongoing' : 'status-badge-listed'}">
-                        ${isOngoing ? '🟢 BID OPEN' : '⚪ LISTED'}
+                      <span class="status-badge ${isOngoing ? 'status-badge-ongoing' : isUpcoming ? 'status-badge-upcoming' : isClosed ? 'status-badge-closed' : 'status-badge-listed'}">
+                        ${isOngoing ? '🟢 BID OPEN' : isUpcoming ? '🟡 UPCOMING' : isClosed ? '🔵 CLOSED' : '⚪ LISTED'}
                       </span>
                     </td>
                     <td>

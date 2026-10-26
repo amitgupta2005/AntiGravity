@@ -1,6 +1,6 @@
 /**
- * Antigravity IPO Evaluation Engine
- * Institutional-grade multi-pillar underwriting & decision framework
+ * Institutional IPO Evaluation Engine
+ * Multi-pillar underwriting & quantitative valuation framework
  * Evaluates Indian Mainboard, Indian SME, and US Market IPOs.
  */
 
@@ -63,7 +63,7 @@ export class IpoEvaluationEngine {
     // If an explicit score was curated for canonical benchmark IPOs, harmonize
     const finalScore = ipo.score || rawScore;
 
-    // Generate the Antigravity 5-Part Institutional Dossier
+    // Generate the 5-Part Institutional Dossier
     const dossier = this.generateDossier(ipo, verdict, finalScore, {
       fundamentalResult,
       quantitativeResult,
@@ -498,7 +498,7 @@ export class IpoEvaluationEngine {
   }
 
   // =========================================================================
-  // ANTIGRAVITY 5-PART INSTITUTIONAL DOSSIER GENERATOR
+  // 5-PART INSTITUTIONAL DOSSIER GENERATOR
   // =========================================================================
   static generateDossier(ipo, verdict, score, details) {
     const { fundamentalResult, quantitativeResult, sentimentResult, redFlags } = details;
@@ -598,7 +598,7 @@ export class IpoEvaluationEngine {
   }
 
   /**
-   * Helper to export the 5-part Antigravity dossier as an institutional Markdown Memo
+   * Helper to export the 5-part institutional dossier as an institutional Markdown Memo
    */
   static formatAsMarkdownMemo(evaluationResult) {
     const { name, ticker, market, tier, verdictLabel, score, dossier } = evaluationResult;
@@ -611,8 +611,8 @@ export class IpoEvaluationEngine {
     } = dossier;
 
     return `
-# ANTIGRAVITY INSTITUTIONAL IPO MEMORANDUM
-**Asset:** ${name} (${ticker}) | **Market:** ${market} (${tier}) | **Antigravity Score:** ${score}/100
+# INSTITUTIONAL IPO MEMORANDUM
+**Asset:** ${name} (${ticker}) | **Market:** ${market} (${tier}) | **Institutional Score:** ${score}/100
 **Date:** ${new Date().toISOString().slice(0, 10)} | **Status:** Institutional Rating Completed
 
 ---
@@ -653,7 +653,7 @@ ${part4_marketSentiment.isIndia
 
 ---
 
-### 5. Antigravity Tactical Note
+### 5. Tactical Listing Note
 > 💡 **Strategic Listing Guidance:** ${part5_tacticalNote}
 `.trim();
   }

@@ -1,7 +1,7 @@
 /**
- * Antigravity IPO Radar View Component
+ * Apex Institutional IPO Radar View Component
  * Provides high-density institutional table (default) and card grid view
- * with real-time filtering, search, live sync, and dedicated Ongoing IPO tracking.
+ * with real-time filtering, search, live sync, and dedicated Ongoing/Upcoming IPO tracking.
  */
 
 import { IpoEvaluationEngine } from '../quant/ipoEvaluationEngine.js';
@@ -18,7 +18,7 @@ export class IpoRadarView {
     this.viewMode = 'table';
     this.marketFilter = 'ALL';
     this.verdictFilter = 'ALL';
-    this.statusFilter = 'ALL'; // 'ALL', 'ONGOING', 'LISTED'
+    this.statusFilter = 'ALL'; // 'ALL', 'ONGOING', 'UPCOMING', 'LISTED'
     this.searchQuery = '';
     this.sortBy = 'score';
     this.lastSynced = new Date().toLocaleTimeString();
@@ -31,11 +31,23 @@ export class IpoRadarView {
   recalculateEvaluations() {
     this.evaluatedList = this.universe.map(ipo => {
       const evaluation = IpoEvaluationEngine.evaluate(ipo);
+      const isListed = ipo.status === 'LISTED';
+      const isClosed = ipo.status === 'CLOSED';
+      
+      const biddingDates = ipo.biddingDates || '';
+      const dateDetail = ipo.dateDetail || (isListed ? `Trading on ${ipo.exchange || 'NSE / BSE'}` : isClosed ? 'Allotment in progress' : '');
+
       return {
         ...evaluation,
         status: ipo.status || 'LISTED',
-        statusLabel: ipo.statusLabel || (ipo.status === 'ONGOING' ? '🟢 BID OPEN NOW' : '⚪ RECENTLY LISTED'),
-        biddingDates: ipo.biddingDates || ''
+        statusLabel: ipo.statusLabel || (ipo.status === 'ONGOING' ? '🟢 BID OPEN NOW' : ipo.status === 'UPCOMING' ? '🟡 UPCOMING' : ipo.status === 'CLOSED' ? '🔵 BIDDING CLOSED' : '⚪ RECENTLY LISTED'),
+        biddingDates: biddingDates,
+        dateDetail: dateDetail,
+        currentMarketPrice: ipo.currentMarketPrice,
+        listingGainPct: ipo.listingGainPct,
+        dayChange: ipo.dayChange,
+        dayChangePct: ipo.dayChangePct,
+        liveDataSource: ipo.liveDataSource
       };
     });
   }
@@ -52,17 +64,18 @@ export class IpoRadarView {
         <div class="realtime-header-toolbar">
           <div class="rt-status-left">
             <span class="live-pulse-dot"></span>
-            <span class="rt-feed-title">REAL-TIME DATA FEED ACTIVE</span>
+            <span class="rt-feed-title">REAL-TIME DATA ENGINE ACTIVE</span>
             <span class="rt-feed-divider">•</span>
             <span class="rt-sync-time">Last Synced: <strong id="rt-sync-timestamp">${this.lastSynced}</strong></span>
-            <span class="rt-feed-badge">Authentic NSE / BSE / NYSE Live Comps</span>
+            <span class="rt-feed-badge" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4); color: #34d399; font-weight: 700;">📅 Current Financial Year (FY 2026–27 Only)</span>
+            <span class="rt-feed-badge">NSE & BSE India Live Quotes • Chittorgarh / BSE / Groww Primary IPO Desk</span>
           </div>
           <div class="rt-status-right">
             <button class="btn btn-outline-terminal btn-sm" id="btn-refresh-realtime">
-              🔄 Sync Live Quotes & GMP
+              🔄 Sync Live Quotes & Primary Book
             </button>
             <button class="btn btn-secondary btn-sm ${this.autoSyncActive ? 'btn-active-sync' : ''}" id="btn-toggle-autosync">
-              ⚡ ${this.autoSyncActive ? 'Auto-Sync ON (15s)' : 'Auto-Sync OFF'}
+              ⚡ ${this.autoSyncActive ? 'Auto-Sync ON (12s)' : 'Auto-Sync OFF'}
             </button>
           </div>
         </div>
@@ -74,6 +87,20 @@ export class IpoRadarView {
             <div class="kpi-main">
               <span class="kpi-value text-accent">${stats.ongoingCount}</span>
               <span class="kpi-detail">Active Issues Now</span>
+            </div>
+          </div>
+          <div class="kpi-card kpi-upcoming">
+            <span class="kpi-title">Upcoming Pipeline</span>
+            <div class="kpi-main">
+              <span class="kpi-value text-warning">${stats.upcomingCount}</span>
+              <span class="kpi-detail">Scheduled Primary</span>
+            </div>
+          </div>
+          <div class="kpi-card kpi-closed">
+            <span class="kpi-title">Closed / Allotment</span>
+            <div class="kpi-main">
+              <span class="kpi-value text-info" style="color: #38bdf8;">${stats.closedCount}</span>
+              <span class="kpi-detail">Awaiting Listing</span>
             </div>
           </div>
           <div class="kpi-card kpi-apply">
@@ -88,13 +115,6 @@ export class IpoRadarView {
             <div class="kpi-main">
               <span class="kpi-value text-avoid">${stats.avoidCount}</span>
               <span class="kpi-detail">${stats.totalRedFlags} Critical Red Flags</span>
-            </div>
-          </div>
-          <div class="kpi-card kpi-watch">
-            <span class="kpi-title">Watch After Listing</span>
-            <div class="kpi-main">
-              <span class="kpi-value text-watch">${stats.watchCount}</span>
-              <span class="kpi-detail">Priced to Perfection</span>
             </div>
           </div>
           <div class="kpi-card kpi-macro">
@@ -126,13 +146,19 @@ export class IpoRadarView {
               ${this.searchQuery ? '<button class="clear-search-btn" id="radar-clear-search">✕</button>' : ''}
             </div>
 
-            <!-- Status Filter Pills (ONGOING vs ALL vs LISTED) -->
+            <!-- Status Filter Pills (ONGOING vs UPCOMING vs CLOSED vs LISTED vs ALL) -->
             <div class="status-filter-group" id="status-filter-group">
-              <button class="status-pill ${this.statusFilter === 'ALL' ? 'active' : ''}" data-status="ALL">All IPOs (${this.universe.length})</button>
+              <button class="status-pill ${this.statusFilter === 'ALL' ? 'active' : ''}" data-status="ALL">All FY 2026–27 IPOs (${this.universe.length})</button>
               <button class="status-pill pill-ongoing ${this.statusFilter === 'ONGOING' ? 'active' : ''}" data-status="ONGOING">
                 🔴 LIVE / ONGOING (${stats.ongoingCount})
               </button>
-              <button class="status-pill ${this.statusFilter === 'LISTED' ? 'active' : ''}" data-status="LISTED">Recently Listed</button>
+              <button class="status-pill pill-upcoming ${this.statusFilter === 'UPCOMING' ? 'active' : ''}" data-status="UPCOMING">
+                🟡 UPCOMING (${stats.upcomingCount})
+              </button>
+              <button class="status-pill pill-closed ${this.statusFilter === 'CLOSED' ? 'active' : ''}" data-status="CLOSED">
+                🔵 CLOSED / ALLOTMENT (${stats.closedCount})
+              </button>
+              <button class="status-pill ${this.statusFilter === 'LISTED' ? 'active' : ''}" data-status="LISTED">FY27 Listed (${stats.listedCount})</button>
             </div>
 
             <!-- Market Filter Pills -->
@@ -157,7 +183,7 @@ export class IpoRadarView {
             <div class="sort-select-box">
               <label for="radar-sort-select">Sort:</label>
               <select id="radar-sort-select" class="terminal-select">
-                <option value="score" ${this.sortBy === 'score' ? 'selected' : ''}>Antigravity Score (High ➔ Low)</option>
+                <option value="score" ${this.sortBy === 'score' ? 'selected' : ''}>Institutional Score (High ➔ Low)</option>
                 <option value="gmp" ${this.sortBy === 'gmp' ? 'selected' : ''}>Grey Market Premium (GMP %)</option>
                 <option value="size" ${this.sortBy === 'size' ? 'selected' : ''}>Issue Size</option>
                 <option value="cagr" ${this.sortBy === 'cagr' ? 'selected' : ''}>3Y PAT CAGR</option>
@@ -219,7 +245,7 @@ export class IpoRadarView {
               <th>P/E vs Comps</th>
               <th>GMP / Sentiment</th>
               <th>Sub Total</th>
-              <th>Antigravity Score</th>
+              <th>Institutional Score</th>
               <th>Verdict</th>
               <th class="text-right">Institutional Dossier</th>
             </tr>
@@ -232,15 +258,21 @@ export class IpoRadarView {
               const sent = orig.sentiment || {};
               const gmpPct = sent.gmpPct ?? 0;
               const isOngoing = orig.status === 'ONGOING';
+              const isUpcoming = orig.status === 'UPCOMING';
+              const isClosed = orig.status === 'CLOSED';
+              const badgeClass = isOngoing ? 'status-badge-ongoing' : isUpcoming ? 'status-badge-upcoming' : isClosed ? 'status-badge-closed' : 'status-badge-listed';
 
               return `
-                <tr class="radar-table-row row-verdict-${item.verdict.toLowerCase()} ${isOngoing ? 'row-ongoing' : ''}" data-ticker="${item.ticker}">
+                <tr class="radar-table-row row-verdict-${item.verdict.toLowerCase()} ${isOngoing ? 'row-ongoing' : isUpcoming ? 'row-upcoming' : isClosed ? 'row-closed' : ''}" data-ticker="${item.ticker}">
                   <td class="cell-status">
                     <div class="status-cell-flex">
-                      <span class="status-badge ${isOngoing ? 'status-badge-ongoing' : 'status-badge-listed'}">
+                      <span class="status-badge ${badgeClass}">
                         ${escapeHtml(item.statusLabel)}
                       </span>
-                      <span class="bidding-dates-text">${escapeHtml(item.biddingDates || issue.openDate || '')}</span>
+                      <span class="bidding-dates-text">📅 ${escapeHtml(item.biddingDates || issue.openDate || '')}</span>
+                      <span class="date-detail-subtext ${isOngoing ? 'text-accent' : isUpcoming ? 'text-warning' : isClosed ? 'text-info' : 'text-muted'}">
+                        ${isOngoing ? '🟢 Bidding Open Today' : isUpcoming ? '🟡 Primary Book Opening' : isClosed ? '🔵 Bidding Closed • Allotment Finalized' : '🏛️ Trading on ' + (orig.exchange || 'NSE / BSE')}
+                      </span>
                     </div>
                   </td>
                   <td class="cell-company">
@@ -256,7 +288,21 @@ export class IpoRadarView {
                     </div>
                   </td>
                   <td class="cell-sector"><span class="sector-text">${escapeHtml(orig.sector || 'N/A')}</span></td>
-                  <td class="cell-price"><strong>${escapeHtml(issue.priceBand || (issue.currencySymbol + issue.issuePrice))}</strong></td>
+                  <td class="cell-price">
+                    <div>
+                      <span class="price-sub-label">${isOngoing || isUpcoming ? 'Band:' : isClosed ? 'Price Band / Issue:' : 'Issue:'}</span>
+                      <strong>${escapeHtml(issue.priceBand || (issue.currencySymbol + issue.issuePrice))}</strong>
+                    </div>
+                    ${item.currentMarketPrice ? `
+                      <div class="live-cmp-container">
+                        <span class="cmp-tag">Live CMP:</span> <strong>${issue.currencySymbol}${item.currentMarketPrice}</strong>
+                        <span class="cmp-gain ${item.listingGainPct >= 0 ? 'text-success' : 'text-danger'}">
+                          (${item.listingGainPct >= 0 ? '+' : ''}${item.listingGainPct}%)
+                        </span>
+                        <div class="cmp-source-tag">⚡ ${escapeHtml(item.liveDataSource || 'NSE Live Feed')}</div>
+                      </div>
+                    ` : ''}
+                  </td>
                   <td class="cell-size">
                     <div><strong>${escapeHtml(issue.issueSize || 'N/A')}</strong></div>
                     <div class="ofs-subtext ${issue.ofsPct > 60 ? 'text-danger' : 'text-muted'}">
@@ -322,14 +368,22 @@ export class IpoRadarView {
           const fin = orig.financials || {};
           const gmpPct = sent.gmpPct ?? 0;
           const isOngoing = orig.status === 'ONGOING';
+          const isUpcoming = orig.status === 'UPCOMING';
+          const isClosed = orig.status === 'CLOSED';
+          const badgeClass = isOngoing ? 'status-badge-ongoing' : isUpcoming ? 'status-badge-upcoming' : isClosed ? 'status-badge-closed' : 'status-badge-listed';
 
           return `
-            <div class="ipo-card card-verdict-${item.verdict.toLowerCase()} ${isOngoing ? 'card-ongoing' : ''}" data-ticker="${item.ticker}">
+            <div class="ipo-card card-verdict-${item.verdict.toLowerCase()} ${isOngoing ? 'card-ongoing' : isUpcoming ? 'card-upcoming' : isClosed ? 'card-closed' : ''}" data-ticker="${item.ticker}">
               <div class="card-status-bar">
-                <span class="status-badge ${isOngoing ? 'status-badge-ongoing' : 'status-badge-listed'}">
+                <span class="status-badge ${badgeClass}">
                   ${escapeHtml(item.statusLabel)}
                 </span>
-                <span class="card-dates-text">${escapeHtml(item.biddingDates || '')}</span>
+                <div class="card-date-meta">
+                  <span class="card-dates-text">📅 ${escapeHtml(item.biddingDates || '')}</span>
+                  <span class="date-detail-subtext ${isOngoing ? 'text-accent' : isUpcoming ? 'text-warning' : isClosed ? 'text-info' : 'text-muted'}">
+                    ${isOngoing ? '🟢 Active Book' : isUpcoming ? '🟡 Opening Soon' : isClosed ? '🔵 Bidding Closed • Allotment Done' : '🏛️ Trading on ' + (orig.exchange || 'NSE / BSE')}
+                  </span>
+                </div>
               </div>
 
               <div class="card-header">
@@ -357,8 +411,17 @@ export class IpoRadarView {
 
               <div class="card-metrics-grid">
                 <div class="card-metric">
-                  <span class="cm-lbl">Price Band</span>
-                  <span class="cm-val">${escapeHtml(issue.priceBand || 'N/A')}</span>
+                  <span class="cm-lbl">${isOngoing || isUpcoming ? 'Price Band' : isClosed ? 'Price Band / Issue' : 'Issue / Live CMP'}</span>
+                  <span class="cm-val">
+                    ${isOngoing || isUpcoming || isClosed 
+                      ? escapeHtml(issue.priceBand || 'N/A') 
+                      : `${issue.currencySymbol}${issue.issuePrice || 'N/A'} ${item.currentMarketPrice ? `➔ <strong>${issue.currencySymbol}${item.currentMarketPrice}</strong>` : ''}`}
+                  </span>
+                  ${!isOngoing && !isUpcoming && !isClosed && item.listingGainPct != null ? `
+                    <span class="cmp-gain ${item.listingGainPct >= 0 ? 'text-success' : 'text-danger'}" style="font-size:0.75rem; font-weight:700;">
+                      (${item.listingGainPct >= 0 ? '+' : ''}${item.listingGainPct}%)
+                    </span>
+                  ` : ''}
                 </div>
                 <div class="card-metric">
                   <span class="cm-lbl">Issue Size</span>
@@ -402,9 +465,13 @@ export class IpoRadarView {
   getFilteredData() {
     let list = [...this.evaluatedList];
 
-    // Status filter (ONGOING vs LISTED vs ALL)
+    // Status filter (ONGOING vs UPCOMING vs CLOSED vs LISTED vs ALL)
     if (this.statusFilter === 'ONGOING') {
       list = list.filter(item => item.status === 'ONGOING');
+    } else if (this.statusFilter === 'UPCOMING') {
+      list = list.filter(item => item.status === 'UPCOMING');
+    } else if (this.statusFilter === 'CLOSED') {
+      list = list.filter(item => item.status === 'CLOSED');
     } else if (this.statusFilter === 'LISTED') {
       list = list.filter(item => item.status === 'LISTED');
     }
@@ -466,12 +533,15 @@ export class IpoRadarView {
   computeStats() {
     const total = this.evaluatedList.length;
     const ongoingCount = this.evaluatedList.filter(i => i.status === 'ONGOING').length;
+    const upcomingCount = this.evaluatedList.filter(i => i.status === 'UPCOMING').length;
+    const closedCount = this.evaluatedList.filter(i => i.status === 'CLOSED').length;
+    const listedCount = this.evaluatedList.filter(i => i.status === 'LISTED').length;
     const applyCount = this.evaluatedList.filter(i => i.verdict === 'APPLY').length;
     const avoidCount = this.evaluatedList.filter(i => i.verdict === 'AVOID').length;
     const watchCount = this.evaluatedList.filter(i => i.verdict === 'WATCH').length;
     const totalRedFlags = this.evaluatedList.reduce((acc, i) => acc + (i.redFlags ? i.redFlags.length : 0), 0);
 
-    return { total, ongoingCount, applyCount, avoidCount, watchCount, totalRedFlags };
+    return { total, ongoingCount, upcomingCount, closedCount, listedCount, applyCount, avoidCount, watchCount, totalRedFlags };
   }
 
   attachEventListeners() {

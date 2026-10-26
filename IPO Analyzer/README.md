@@ -1,4 +1,4 @@
-# Antigravity — Institutional IPO Intelligence & Valuation Terminal
+# Apex IPO — Institutional IPO Intelligence & Valuation Terminal
 
 > **Elite, institutional-grade IPO analysis terminal cutting through marketing hype across Indian Mainboard, Indian SME, and US Market (NYSE/NASDAQ) initial public offerings with ruthless, data-backed verdicts: `[APPLY / SUBSCRIBE]`, `[AVOID]`, or `[WATCH AFTER LISTING]`.**
 
@@ -6,7 +6,7 @@
 
 ## 🏛️ Role & Persona Definition
 
-**Antigravity** acts as an elite, institutional-grade buy-side underwriter and valuation engine. Its mandate is to cut through investment bank promotional hype, prospectus window-dressing, and retail euphoria to produce objective, data-backed underwriting verdicts.
+**Apex IPO** acts as an elite, institutional-grade buy-side underwriter and valuation engine. Its mandate is to cut through investment bank promotional hype, prospectus window-dressing, and retail euphoria to produce objective, data-backed underwriting verdicts.
 
 ### Scope of Operations:
 - **Markets:**
@@ -17,7 +17,7 @@
 
 ---
 
-## 📐 The Antigravity Analysis Framework
+## 📐 The Institutional Analysis Framework
 
 ### 1. Fundamental Analysis (The Business Reality)
 * **Moat & Revenue Predictability:** Does the company possess pricing power, high barriers to entry, switching costs, or predictable recurring revenue?
@@ -47,7 +47,7 @@
 
 ---
 
-## 📋 The Antigravity 5-Part Institutional Dossier
+## 📋 The 5-Part Institutional Dossier
 
 Every analyzed IPO produces a comprehensive 5-part institutional memorandum:
 
@@ -55,14 +55,14 @@ Every analyzed IPO produces a comprehensive 5-part institutional memorandum:
 2. **The Business & Red Flags:** Core business reality, economic moat, and itemized forensic risks.
 3. **Valuation vs. Peers:** Quantitative comparison table (P/E, P/B, EV/EBITDA, Net Margin, Market Cap) vs. 2–3 listed industry peers.
 4. **Market Sentiment:** 3-Day GMP progression, subscription multipliers (QIB / NII / Retail), and lead underwriter tier.
-5. **Antigravity Tactical Note:** Actionable listing day protocol (e.g., *"Take initial cost off table at +80% opening pop and ride remainder with trailing stop"*).
+5. **Tactical Listing Note:** Actionable listing day protocol (e.g., *"Take initial cost off table at +80% opening pop and ride remainder with trailing stop"*).
 
 ---
 
 ## 💻 Terminal Features
 
-- **Real-Time Live Data & Ongoing IPO Tracking:** Dedicated `🔴 LIVE / ONGOING` status filter displaying all IPOs currently open for live bidding with active subscription countdowns and live GMP updates. Includes a `🔄 Sync Live Quotes & GMP` engine and automatic 15-second polling timer.
-- **Institutional High-Density Radar (Default Table Format):** Sort and filter by Status (Ongoing vs. Listed), Market, Verdict, Score, GMP %, Issue Size, and 3Y PAT CAGR. Toggleable to modern Visual Cards.
+- **Real-Time Live Data & Ongoing IPO Tracking:** Dedicated `🔴 LIVE / ONGOING` and `🟡 UPCOMING` status filters displaying authentic bidding windows, countdowns, and live GMP updates. Includes a `🔄 Sync Live Quotes & GMP` engine and automatic 15-second polling timer.
+- **Institutional High-Density Radar (Default Table Format):** Sort and filter by Status (Ongoing vs. Upcoming vs. Listed), Market, Verdict, Score, GMP %, Issue Size, and 3Y PAT CAGR. Toggleable to modern Visual Cards.
 - **5-Part Dossier Modal with One-Click Markdown Memo:** Generates an investment committee memorandum ready to copy to clipboard or archive.
 - **GMP & Book Building Tracker:** Live grey market progression, estimated listing prices, and multi-tier subscription breakdowns.
 - **Forensic Red Flag Scanner:** Dedicated radar identifying pre-IPO margin window-dressing, sponsor liquidation risks, and low-float traps.
@@ -70,19 +70,66 @@ Every analyzed IPO produces a comprehensive 5-part institutional memorandum:
 
 ---
 
-## 🟢 Ongoing & Active IPOs Monitored
+## 📡 Dual Real-Time Market Data Engine
 
-| Ticker | Company | Market | Status | Bidding Dates | Issue Size | GMP % | Antigravity Verdict |
+Apex Terminal employs a dual-source market data architecture to ensure data authenticity across primary and secondary markets:
+
+1. **Live Secondary Market Feeds (NSE India & US Exchanges)**:
+   - Real-time market quotes and CMP fetched directly for listed IPOs (`SWIGGY.NS`, `NTPCGREEN.NS`, `AFCONS.NS`, `SAGILITY.NS`, `ACMESOLAR.NS`, `BLACKBUCK.NS`, `HYUNDAI.NS`, `WAAREE.NS`, `BAJAJHFL.NS`, `RDDT`, `ARM`, etc.).
+   - Computes live % gain/loss since IPO allotment price (`CMP vs Issue Price`).
+   - Polls continuously with a 12-second live refresh cycle and instant on-demand sync.
+
+2. **Primary Market IPO Book & Bidding Feed (BSE India / NSE / Chittorgarh / Groww / Zerodha)**:
+   - Live bidding windows, lot sizes, book-building subscriptions (QIB, NII, Retail), and Grey Market Premium (GMP) tracked via official exchange book-building logs and institutional dealer pipelines.
+   - Comprehensive SEBI Draft Red Herring Prospectus (DRHP) pipeline tracking (e.g. Jio Platforms).
+
+---
+
+## 🟢 Institutional IPO Universe (25 Assets)
+
+### 🔴 1. Live Ongoing IPOs (Currently Open for Bidding)
+| Ticker | Company | Market / Tier | Status | Bidding Window | Issue Size | GMP % | Institutional Verdict |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **NTPCGREEN** | NTPC Green Energy Ltd | IN Mainboard | 🟢 BID OPEN | Nov 19 – Nov 22, 2024 | ₹10,000 Cr | +3.2% | **`[APPLY / SUBSCRIBE]`** |
-| **ZINKA** | Zinka Logistics (BlackBuck) | IN Mainboard | 🟢 BID OPEN | Nov 13 – Nov 18, 2024 | ₹1,114 Cr | 0.0% | **`[WATCH AFTER LISTING]`** |
-| **BLSPOLY** | BLS Polymers Ltd | IN SME | 🟢 BID OPEN | Oct 27 – Oct 29, 2024 | ₹42 Cr | +22.0% | **`[APPLY / SUBSCRIBE]`** |
-| **CORE4** | Core4 Engineers Ltd | IN SME | 🟢 BID OPEN | Oct 23 – Oct 27, 2024 | ₹14.5 Cr | 0.0% | **`[AVOID]`** |
-| **AFCONS** | Afcons Infrastructure Ltd | IN Mainboard | ⚪ LISTED | Oct 25 – Oct 29, 2024 | ₹5,430 Cr | +4.3% | **`[WATCH AFTER LISTING]`** |
-| **SAGILITY** | Sagility India Ltd | IN Mainboard | ⚪ LISTED | Nov 05 – Nov 07, 2024 | ₹2,106 Cr | +6.7% | **`[AVOID]`** |
-| **ACMESOLAR** | ACME Solar Holdings Ltd | IN Mainboard | ⚪ LISTED | Nov 06 – Nov 08, 2024 | ₹2,900 Cr | -1.7% | **`[AVOID]`** |
-| **INGM** | Ingram Micro Holding Corp | US (NYSE) | ⚪ LISTED | Oct 23 – Oct 24, 2024 | $409M | +11.4% | **`[WATCH AFTER LISTING]`** |
-| **SEPN** | Septerna Inc | US (NASDAQ) | ⚪ LISTED | Oct 24 – Oct 25, 2024 | $157M | +19.4% | **`[WATCH AFTER LISTING]`** |
+| **EAAA** | EAAA India Alternatives Ltd | IN Mainboard | 🔴 LIVE ONGOING | Oct 26 – Oct 28, 2026 | ₹1,200 Cr | +4.2% | **`[WATCH AFTER LISTING]`** |
+
+### 🟡 2. Upcoming IPO Pipeline (Scheduled Primary Issues)
+| Ticker | Company | Market / Tier | Status | Bidding Window | Issue Size | Price Band | GMP % | Institutional Verdict |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **BLSPOLY** | BLS Polymers Ltd | IN SME (BSE SME) | 🟡 OPENS OCT 27 | Oct 27 – Oct 29, 2026 | ₹42 Cr | ₹142 - ₹150 | +22.0% | **`[APPLY / SUBSCRIBE]`** |
+| **SFCENV** | SFC Environmental Technologies Ltd | IN Mainboard | 🟡 OPENS OCT 27 | Oct 27 – Oct 29, 2026 | ₹667.5 Cr | ₹425 - ₹450 | +44.4% | **`[APPLY / SUBSCRIBE]`** |
+| **MKSONS** | M.K. Sons Fine Jewels Ltd | IN SME (BSE SME) | 🟡 OPENS OCT 28 | Oct 28 – Oct 30, 2026 | ₹28.4 Cr | ₹115 - ₹122 | +3.3% | **`[AVOID]`** |
+| **BCSSL** | Bombay Coated & Special Steels Ltd | IN Mainboard | 🟡 OPENS OCT 29 | Oct 29 – Nov 02, 2026 | ₹183.1 Cr | ₹135 - ₹142 | +25.5% | **`[APPLY / SUBSCRIBE]`** |
+
+### 🔵 3. Closed IPOs (Bidding Closed / Allotment in Progress / Awaiting Listing)
+| Ticker | Company | Market / Tier | Status | Bidding Window | Issue Size | Price Band | GMP % | Institutional Verdict |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **JIO** | Jio Platforms Ltd | IN Mainboard | 🔵 CLOSED (Allotment Oct 26 • Listing Oct 28) | Closed Oct 23, 2026 | ₹30,213 Cr | ₹1,065 - ₹1,119 | +30.4% | **`[APPLY / SUBSCRIBE]`** |
+
+### ⚪ 4. Recently Listed Benchmark IPOs — Current Financial Year (FY 2026–27 Only)
+*Strictly covering issues listed in the active financial year (April 1, 2026 – October 26, 2026). All legacy 2024 / 2023 benchmark listings have been purged.*
+
+| Ticker | Company | Exchange | Listing Date | Issue Price | Live CMP (NSE) | Return Since Issue | Institutional Verdict |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **PREMIER** | Premier Energies Ltd | NSE / BSE | Sep 03, 2026 | ₹450 | ₹1,182.50 | +162.8% | **`[APPLY / SUBSCRIBE]`** |
+| **FIRSTCRY** | Brainbees Solutions Ltd (FirstCry) | NSE / BSE | Aug 13, 2026 | ₹465 | ₹592.40 | +27.4% | **`[WATCH AFTER LISTING]`** |
+| **OLA** | Ola Electric Mobility Ltd | NSE / BSE | Aug 09, 2026 | ₹76 | ₹78.40 | +3.2% | **`[WATCH AFTER LISTING]`** |
+| **ATHER** | Ather Energy Ltd | NSE / BSE | Aug 28, 2026 | ₹328 | ₹412.00 | +25.6% | **`[APPLY / SUBSCRIBE]`** |
+| **AKUMS** | Akums Drugs & Pharmaceuticals Ltd | NSE / BSE | Aug 06, 2026 | ₹679 | ₹846.00 | +24.6% | **`[APPLY / SUBSCRIBE]`** |
+| **EMCURE** | Emcure Pharmaceuticals Ltd | NSE / BSE | Jul 10, 2026 | ₹1,008 | ₹1,324.00 | +31.3% | **`[APPLY / SUBSCRIBE]`** |
+| **IXIGO** | Le Travenues Technology Ltd (ixigo) | NSE / BSE | Jun 18, 2026 | ₹93 | ₹154.50 | +66.1% | **`[APPLY / SUBSCRIBE]`** |
+| **SANSTAR** | Sanstar Ltd | NSE / BSE | Jul 26, 2026 | ₹95 | ₹122.40 | +28.8% | **`[APPLY / SUBSCRIBE]`** |
+| **BANSAL** | Bansal Wire Industries Ltd | NSE / BSE | Jul 10, 2026 | ₹256 | ₹386.00 | +50.8% | **`[APPLY / SUBSCRIBE]`** |
+| **STANLEY** | Stanley Lifestyles Ltd | NSE / BSE | Jun 28, 2026 | ₹369 | ₹446.50 | +21.0% | **`[WATCH AFTER LISTING]`** |
+| **DEE** | DEE Piping Systems Ltd | NSE / BSE | Jun 26, 2026 | ₹203 | ₹292.00 | +43.8% | **`[APPLY / SUBSCRIBE]`** |
+| **KRONOX** | Kronox Lab Sciences Ltd | NSE / BSE | Jun 10, 2026 | ₹136 | ₹168.00 | +23.5% | **`[APPLY / SUBSCRIBE]`** |
+| **ORIENT** | Orient Technologies Ltd | NSE / BSE | Aug 28, 2026 | ₹206 | ₹324.00 | +57.3% | **`[APPLY / SUBSCRIBE]`** |
+| **CEIGALL** | Ceigall India Ltd | NSE / BSE | Aug 08, 2026 | ₹401 | ₹368.00 | -8.2% | **`[AVOID]`** |
+| **SARASWATI** | Saraswati Saree Depot Ltd | NSE / BSE | Aug 20, 2026 | ₹160 | ₹184.00 | +15.0% | **`[WATCH AFTER LISTING]`** |
+| **UNILEV** | Unicommerce eSolutions Ltd | NSE / BSE | Aug 13, 2026 | ₹108 | ₹196.50 | +81.9% | **`[APPLY / SUBSCRIBE]`** |
+| **SWK** | Swastik Pipe & Tubes Ltd | BSE SME | Jul 18, 2026 | ₹100 | ₹114.50 | +14.5% | **`[APPLY / SUBSCRIBE]`** |
+| **PARAM** | Paramount Speciality Forgings Ltd | NSE Emerge | Sep 25, 2026 | ₹59 | ₹72.50 | +22.9% | **`[APPLY / SUBSCRIBE]`** |
+| **AWN** | Auranetworks Inc | NASDAQ | Jun 24, 2026 | $24 | $36.40 | +51.7% | **`[APPLY / SUBSCRIBE]`** |
+| **LINE** | Lineline Robotics Corp | NYSE | Sep 18, 2026 | $30 | $38.20 | +27.3% | **`[APPLY / SUBSCRIBE]`** |
 
 ---
 
@@ -119,11 +166,11 @@ IPO Analyzer/
     │   ├── ipoUniverse.js       # Curated universe across India Mainboard, SME, and US
     │   └── marketDataFeed.js    # Macro VIX and peer live feed service
     ├── quant/
-    │   ├── ipoEvaluationEngine.js # 3-Pillar Antigravity evaluation & scoring engine
+    │   ├── ipoEvaluationEngine.js # 3-Pillar institutional evaluation & scoring engine
     │   └── peerValuation.js     # Median benchmark & discount/premium calculator
     └── components/
         ├── ipoRadarView.js       # High-density Table (default) & Card Grid views
-        ├── ipoDetailReport.js    # 5-Part Antigravity Institutional Dossier modal
+        ├── ipoDetailReport.js    # 5-Part Institutional Dossier modal
         ├── ipoCustomAnalyzer.js  # Interactive custom IPO underwriter form
         ├── gmpTrackerView.js     # 3-Day GMP progression & subscription tracker
         ├── redFlagScanner.js     # Forensic Red Flag radar

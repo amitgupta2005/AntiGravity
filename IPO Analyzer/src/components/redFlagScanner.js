@@ -1,5 +1,5 @@
 /**
- * Antigravity Forensic Red Flag Scanner Component
+ * Apex Forensic Red Flag Scanner Component
  * Real-time forensic screening for pre-IPO margin window-dressing, predatory OFS exits,
  * low float illiquidity, and macro volatility shifts.
  */
@@ -49,6 +49,7 @@ export class RedFlagScanner {
             <span class="rt-feed-title">REAL-TIME FORENSIC SURVEILLANCE ACTIVE</span>
             <span class="rt-feed-divider">•</span>
             <span class="rt-sync-time">Last Ticked: <strong>${this.lastSync}</strong></span>
+            <span class="rt-feed-badge" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4); color: #34d399; font-weight: 700;">📅 Current Financial Year (FY 2026–27 Only)</span>
             <span class="rt-feed-badge">Continuous Accounting & Volatility Anomaly Detection</span>
           </div>
           <div class="rt-status-right">

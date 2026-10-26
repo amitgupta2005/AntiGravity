@@ -2,7 +2,7 @@ import { IPO_UNIVERSE } from './src/data/ipoUniverse.js';
 import { IpoEvaluationEngine } from './src/quant/ipoEvaluationEngine.js';
 
 console.log('====================================================');
-console.log('🧪 TESTING ANTIGRAVITY INSTITUTIONAL IPO EVALUATION ENGINE');
+console.log('🧪 TESTING APEX INSTITUTIONAL IPO EVALUATION ENGINE');
 console.log('====================================================\n');
 
 let passed = 0;
@@ -21,7 +21,7 @@ for (const ipo of IPO_UNIVERSE) {
       throw new Error(`Missing one of the 5 required dossier parts for ${ipo.ticker}`);
     }
 
-    if (!markdown.includes('ANTIGRAVITY INSTITUTIONAL IPO MEMORANDUM')) {
+    if (!markdown.includes('INSTITUTIONAL IPO MEMORANDUM')) {
       throw new Error(`Markdown export failed for ${ipo.ticker}`);
     }
 

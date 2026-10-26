@@ -1,5 +1,5 @@
 /**
- * Antigravity Institutional IPO Dossier Modal & Component
+ * Apex Institutional IPO Dossier Modal & Component
  * Renders the exact 5-part institutional analysis format.
  */
 
@@ -30,8 +30,11 @@ export function openIpoDetailModal(ipo) {
             <span class="ticker-badge">${escapeHtml(ipo.ticker)}</span>
             <span class="market-badge market-${ipo.market.toLowerCase()}">${escapeHtml(ipo.market)}</span>
             <span class="tier-badge tier-${ipo.tier.toLowerCase()}">${escapeHtml(ipo.tier)}</span>
+            <span class="status-badge ${ipo.status === 'ONGOING' ? 'status-badge-ongoing' : ipo.status === 'UPCOMING' ? 'status-badge-upcoming' : ipo.status === 'CLOSED' ? 'status-badge-closed' : 'status-badge-listed'}">
+              ${escapeHtml(ipo.statusLabel || (ipo.status === 'ONGOING' ? '🟢 BID OPEN NOW' : ipo.status === 'UPCOMING' ? '🟡 UPCOMING' : ipo.status === 'CLOSED' ? '🔵 BIDDING CLOSED' : '⚪ RECENTLY LISTED'))}
+            </span>
           </div>
-          <p class="asset-subtitle">${escapeHtml(ipo.sector || 'Equities')} • ${escapeHtml(ipo.exchange || '')}</p>
+          <p class="asset-subtitle">${escapeHtml(ipo.sector || 'Equities')} • ${escapeHtml(ipo.exchange || '')} • 📅 ${escapeHtml(ipo.biddingDates || '')}</p>
         </div>
         <div class="header-actions">
           <button class="btn btn-secondary btn-sm copy-memo-btn" id="btn-copy-memo">
@@ -52,7 +55,7 @@ export function openIpoDetailModal(ipo) {
             <div class="overall-score-dial">
               <span class="dial-number">${score}</span>
               <span class="dial-total">/100</span>
-              <span class="dial-label">Antigravity Score</span>
+              <span class="dial-label">Institutional Score</span>
             </div>
             <div class="pillar-mini-gauges">
               <div class="gauge-item">
@@ -74,9 +77,19 @@ export function openIpoDetailModal(ipo) {
         <!-- QUICK ISSUE KEY METRICS BAR -->
         <div class="issue-metrics-strip">
           <div class="metric-box">
-            <span class="m-label">Issue Price / Band</span>
+            <span class="m-label">${ipo.status === 'LISTED' ? 'Issue Price' : 'Issue Price / Band'}</span>
             <span class="m-value">${escapeHtml(issue.priceBand || (issue.currencySymbol + issue.issuePrice))}</span>
           </div>
+          ${ipo.currentMarketPrice ? `
+            <div class="metric-box">
+              <span class="m-label">Live CMP (NSE)</span>
+              <span class="m-value text-accent">${issue.currencySymbol || '₹'}${ipo.currentMarketPrice} 
+                <span class="cmp-gain ${ipo.listingGainPct >= 0 ? 'text-success' : 'text-danger'}" style="font-size:0.75rem;">
+                  (${ipo.listingGainPct >= 0 ? '+' : ''}${ipo.listingGainPct}%)
+                </span>
+              </span>
+            </div>
+          ` : ''}
           <div class="metric-box">
             <span class="m-label">Issue Size</span>
             <span class="m-value">${escapeHtml(issue.issueSize || 'N/A')}</span>
@@ -244,10 +257,10 @@ export function openIpoDetailModal(ipo) {
           </div>
         </section>
 
-        <!-- PART 5: ANTIGRAVITY TACTICAL NOTE -->
+        <!-- PART 5: TACTICAL LISTING NOTE -->
         <section class="dossier-section part-5-tactical">
           <div class="section-badge">Part 5</div>
-          <h3 class="section-title">Antigravity Tactical Note</h3>
+          <h3 class="section-title">Tactical Listing Note</h3>
           <div class="tactical-guidance-box">
             <div class="tactical-icon">🎯</div>
             <div class="tactical-body">
@@ -259,7 +272,7 @@ export function openIpoDetailModal(ipo) {
       </div>
 
       <div class="modal-footer">
-        <span class="compliance-note">Institutional Research • Quantitative Underwriting via Antigravity Engine</span>
+        <span class="compliance-note">Institutional Research • Quantitative Underwriting via Institutional Valuation Engine</span>
         <button class="btn btn-secondary" id="btn-close-dossier-footer">Close Dossier</button>
       </div>
     </div>
@@ -279,7 +292,7 @@ export function openIpoDetailModal(ipo) {
   modal.querySelector('#btn-copy-memo').addEventListener('click', () => {
     const memo = IpoEvaluationEngine.formatAsMarkdownMemo(evaluation);
     navigator.clipboard.writeText(memo).then(() => {
-      showToast(`Copied Antigravity Institutional Memo for ${ipo.ticker} to clipboard!`, 'success');
+      showToast(`Copied Institutional Memo for ${ipo.ticker} to clipboard!`, 'success');
     }).catch(() => {
       showToast('Clipboard access denied. Please copy manually.', 'error');
     });

@@ -1,7 +1,7 @@
 /**
- * Antigravity Custom IPO Analyzer Component
+ * Apex Custom IPO Analyzer Component
  * Allows users to input any custom IPO across India Mainboard, SME, or US Market
- * and generates the complete 5-part institutional Antigravity dossier instantly.
+ * and generates the complete 5-part institutional evaluation dossier instantly.
  */
 
 import { IpoEvaluationEngine } from '../quant/ipoEvaluationEngine.js';
@@ -24,11 +24,11 @@ export class IpoCustomAnalyzer {
         <div class="analyzer-header">
           <div class="analyzer-title-box">
             <h2>⚡ Custom IPO Institutional Underwriter</h2>
-            <p>Input issue parameters, 3-year financials, valuation multiples, and sentiment to generate an institutional-grade Antigravity dossier.</p>
+            <p>Input issue parameters, 3-year financials, valuation multiples, and sentiment to generate an institutional-grade underwriting dossier.</p>
           </div>
           <div class="analyzer-presets-box">
-            <span>Quick Presets:</span>
-            <button class="preset-btn" data-preset="ntpc-green">NTPC Green Energy (IN)</button>
+            <span>Quick Presets (FY 2026–27):</span>
+            <button class="preset-btn" data-preset="premier-energies">Premier Energies (IN)</button>
             <button class="preset-btn" data-preset="sme-flagged">High-Risk SME (Margin Spike)</button>
             <button class="preset-btn" data-preset="us-ai-cloud">US AI SaaS Unicorn</button>
             <button class="preset-btn" id="btn-clear-form">Clear Form</button>
@@ -45,11 +45,11 @@ export class IpoCustomAnalyzer {
             <div class="form-grid-3">
               <div class="form-group">
                 <label for="inp-name">Company Name *</label>
-                <input type="text" id="inp-name" required placeholder="e.g. NTPC Green Energy Ltd" value="NTPC Green Energy Ltd" />
+                <input type="text" id="inp-name" required placeholder="e.g. Premier Energies Ltd" value="Premier Energies Ltd" />
               </div>
               <div class="form-group">
                 <label for="inp-ticker">Ticker / Symbol *</label>
-                <input type="text" id="inp-ticker" required placeholder="e.g. NTPCGREEN" value="NTPCGREEN" />
+                <input type="text" id="inp-ticker" required placeholder="e.g. PREMIER" value="PREMIER" />
               </div>
               <div class="form-group">
                 <label for="inp-market">Market & Tier *</label>
@@ -61,36 +61,36 @@ export class IpoCustomAnalyzer {
               </div>
               <div class="form-group">
                 <label for="inp-sector">Sector / Industry</label>
-                <input type="text" id="inp-sector" placeholder="e.g. Renewable Energy Utilities" value="Renewable Energy Utilities" />
+                <input type="text" id="inp-sector" placeholder="e.g. Solar Cells & Renewable Clean Energy" value="Solar Cells & Renewable Clean Energy" />
               </div>
               <div class="form-group">
                 <label for="inp-issue-size">Total Issue Size</label>
-                <input type="text" id="inp-issue-size" placeholder="e.g. ₹10,000 Cr or $1,200M" value="₹10,000 Cr" />
+                <input type="text" id="inp-issue-size" placeholder="e.g. ₹2,830 Cr" value="₹2,830 Cr" />
               </div>
               <div class="form-group">
                 <label for="inp-price-band">Price Band</label>
-                <input type="text" id="inp-price-band" placeholder="e.g. ₹102 - ₹108" value="₹102 - ₹108" />
+                <input type="text" id="inp-price-band" placeholder="e.g. ₹427 - ₹450" value="₹427 - ₹450" />
               </div>
               <div class="form-group">
                 <label for="inp-fresh-pct">Fresh Issue % (Reinvested in Business) *</label>
-                <input type="number" id="inp-fresh-pct" min="0" max="100" required value="100" />
-                <span class="input-hint">100% Fresh Issue = Capital enters company</span>
+                <input type="number" id="inp-fresh-pct" min="0" max="100" required value="46" />
+                <span class="input-hint">Reinvested in business capex & solar capacity</span>
               </div>
               <div class="form-group">
                 <label for="inp-ofs-pct">Offer For Sale (OFS) % (Promoter/PE Exit) *</label>
-                <input type="number" id="inp-ofs-pct" min="0" max="100" required value="0" />
+                <input type="number" id="inp-ofs-pct" min="0" max="100" required value="54" />
                 <span class="input-hint">High OFS (>60%) triggers severe red flag</span>
               </div>
               <div class="form-group">
                 <label for="inp-float-pct">Post-Issue Public Float %</label>
-                <input type="number" id="inp-float-pct" min="1" max="100" value="25" />
+                <input type="number" id="inp-float-pct" min="1" max="100" value="19" />
                 <span class="input-hint">Low float (<20% in SME) = illiquidity risk</span>
               </div>
             </div>
 
             <div class="form-group mt-3">
               <label for="inp-business-desc">Business Reality & Moat Summary</label>
-              <textarea id="inp-business-desc" rows="2" placeholder="Describe core products/services, target addressable market, and sustainable competitive advantages...">Wholly-owned green energy subsidiary of PSU major NTPC with 3.5 GW operational solar/wind capacity, 12 GW contracted pipeline, and AAA sovereign-backed off-takers.</textarea>
+              <textarea id="inp-business-desc" rows="2" placeholder="Describe core products/services, target addressable market, and sustainable competitive advantages...">India’s second largest integrated manufacturer of solar cells and photovoltaic modules, operating advanced TOPCon manufacturing lines with domestic PLI accreditation.</textarea>
             </div>
           </div>
 
@@ -202,7 +202,7 @@ export class IpoCustomAnalyzer {
           <!-- SUBMIT ACTION -->
           <div class="analyzer-submit-strip">
             <button type="submit" class="btn btn-primary btn-lg" id="btn-run-analysis">
-              ⚡ Run Institutional Antigravity Evaluation
+              ⚡ Run Institutional Evaluation
             </button>
           </div>
         </form>
@@ -258,34 +258,34 @@ export class IpoCustomAnalyzer {
   }
 
   applyPreset(presetKey) {
-    if (presetKey === 'ntpc-green') {
+    if (presetKey === 'premier-energies') {
       this.populateForm({
-        name: 'NTPC Green Energy Ltd',
-        ticker: 'NTPCGREEN',
+        name: 'Premier Energies Ltd',
+        ticker: 'PREMIER',
         market: 'IN_MAINBOARD',
-        sector: 'Renewable Energy Utilities',
-        issueSize: '₹10,000 Cr',
-        priceBand: '₹102 - ₹108',
-        freshPct: 100,
-        ofsPct: 0,
-        floatPct: 20,
-        businessDesc: 'Wholly-owned renewable arm of state-run NTPC, operating 3.5 GW of solar & wind with an aggressive roadmap to hit 60 GW by 2032.',
-        revCagr: 46.8,
-        patCagr: 90.5,
-        patMargin: 17.4,
+        sector: 'Solar Cells & Renewable Clean Energy',
+        issueSize: '₹2,830 Cr',
+        priceBand: '₹427 - ₹450',
+        freshPct: 46,
+        ofsPct: 54,
+        floatPct: 19,
+        businessDesc: 'India’s second largest integrated manufacturer of solar cells and photovoltaic modules, operating advanced TOPCon manufacturing lines with domestic PLI accreditation.',
+        revCagr: 71.8,
+        patCagr: 266.3,
+        patMargin: 11.5,
         marginSpike: 'clean',
-        peRatio: 48.5,
-        pbRatio: 4.2,
-        evEbitda: 22.4,
-        peer1Name: 'Adani Green Energy',
-        peer1Pe: 142.0,
-        peer1Margin: 14.2,
-        peer2Name: 'Tata Power Solar',
-        peer2Pe: 38.5,
-        peer2Margin: 8.5,
-        gmpPct: 15.2,
+        peRatio: 26.5,
+        pbRatio: 5.2,
+        evEbitda: 14.8,
+        peer1Name: 'Websol Energy System',
+        peer1Pe: 38.6,
+        peer1Margin: 8.4,
+        peer2Name: 'Waaree Energies',
+        peer2Pe: 48.2,
+        peer2Margin: 12.8,
+        gmpPct: 108.9,
         gmpTrend: 'rising',
-        qibSub: 18.5,
+        qibSub: 216.4,
         underwriterTier: 'TIER_1'
       });
     } else if (presetKey === 'sme-flagged') {
@@ -498,7 +498,7 @@ export class IpoCustomAnalyzer {
       <div class="custom-results-card">
         <div class="results-header">
           <div>
-            <span class="results-tag">Antigravity Instant Evaluation</span>
+            <span class="results-tag">Institutional Instant Evaluation</span>
             <h3>${escapeHtml(ipo.name)} (${escapeHtml(ipo.ticker)})</h3>
           </div>
           <div class="results-actions">

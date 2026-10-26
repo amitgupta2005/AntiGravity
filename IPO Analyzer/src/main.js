@@ -1,5 +1,5 @@
 /**
- * Antigravity IPO Analyzer — Main Application Controller
+ * Apex IPO Analyzer — Main Application Controller
  * Orchestrates real-time data feeds, reactive tab views, and live market updates.
  */
 
@@ -11,7 +11,7 @@ import { RedFlagScanner } from './components/redFlagScanner.js';
 import { IpoCustomAnalyzer } from './components/ipoCustomAnalyzer.js';
 import { showToast } from './components/toast.js';
 
-class AntigravityTerminalApp {
+class ApexTerminalApp {
   constructor() {
     this.universe = [...IPO_UNIVERSE];
     this.marketFeed = MarketDataFeed;
@@ -24,7 +24,7 @@ class AntigravityTerminalApp {
   }
 
   async init() {
-    console.log('🚀 Initializing Antigravity Institutional IPO Terminal with Live Real-Time Feeds...');
+    console.log('🚀 Initializing Apex Institutional IPO Terminal with Live Real-Time Feeds...');
 
     // Initialize all views with marketFeed dependency
     this.radarView = new IpoRadarView({
@@ -180,7 +180,7 @@ class AntigravityTerminalApp {
 
 // Bootstrap app on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
-  const app = new AntigravityTerminalApp();
+  const app = new ApexTerminalApp();
   app.init().catch(err => {
     console.error('Fatal initialization error:', err);
     showToast('Error initializing terminal feeds', 'error');
