@@ -74,7 +74,49 @@ assert('Radar View initializes and renders default table', () => {
     marketFeed: MarketDataFeed
   });
   radar.render();
-  if (radar.evaluatedList.length !== 26) throw new Error('Evaluated count mismatch: ' + radar.evaluatedList.length);
+  if (radar.evaluatedList.length !== IPO_UNIVERSE.length) throw new Error('Evaluated count mismatch: ' + radar.evaluatedList.length);
+});
+
+assert('Jio Platforms listed status verification (Listed today Oct 28, 2026)', () => {
+  const radar = new IpoRadarView({ containerId: 'tab-radar', universe: IPO_UNIVERSE });
+  
+  // Verify in LISTED tab
+  radar.statusFilter = 'LISTED';
+  const listedItems = radar.getFilteredData();
+  const jioListed = listedItems.find(i => i.id === 'JIO-PLATFORMS' || i.ticker === 'JIO');
+  if (!jioListed) throw new Error('Jio Platforms not found in LISTED filter!');
+  if (jioListed.status !== 'LISTED') throw new Error('Jio status is not LISTED: ' + jioListed.status);
+
+  // Verify NOT in CLOSED tab
+  radar.statusFilter = 'CLOSED';
+  const closedItems = radar.getFilteredData();
+  const jioClosed = closedItems.find(i => i.id === 'JIO-PLATFORMS' || i.ticker === 'JIO');
+  if (jioClosed) throw new Error('Jio Platforms is still showing in CLOSED filter!');
+});
+
+assert('Radar View separate tabs: Mainboard vs SME segmentation', () => {
+  const radar = new IpoRadarView({ containerId: 'tab-radar', universe: IPO_UNIVERSE });
+  
+  // 1. Mainboard Segment
+  radar.marketFilter = 'IN_MAINBOARD';
+  radar.statusFilter = 'ALL';
+  const mainboardItems = radar.getFilteredData();
+  if (mainboardItems.length === 0) throw new Error('No Mainboard IPOs found');
+  if (mainboardItems.some(i => i.tier !== 'MAINBOARD')) throw new Error('Found non-mainboard item in Mainboard filter');
+
+  // 2. SME Segment
+  radar.marketFilter = 'IN_SME';
+  radar.statusFilter = 'ALL';
+  const smeItems = radar.getFilteredData();
+  if (smeItems.length === 0) throw new Error('No SME IPOs found');
+  if (smeItems.some(i => i.tier !== 'SME')) throw new Error('Found non-SME item in SME filter');
+
+  // 3. SME Open IPOs
+  radar.statusFilter = 'ONGOING';
+  const openSme = radar.getFilteredData();
+  if (openSme.length < 3) throw new Error('Expected at least 3 open SME IPOs, got ' + openSme.length);
+  const danish = openSme.find(i => i.id === 'DANISH-POWER' || i.ticker === 'DANISH');
+  if (!danish) throw new Error('Danish Power not found in open SME IPOs');
 });
 
 assert('Radar View filters: Status (ONGOING, UPCOMING, CLOSED, LISTED)', () => {
@@ -109,7 +151,7 @@ assert('Radar View sorting: score, gmp, size, cagr', () => {
   ['score', 'gmp', 'size', 'cagr'].forEach(sort => {
     radar.sortBy = sort;
     const items = radar.getFilteredData();
-    if (items.length !== 26) throw new Error('Sorting lost items: ' + sort);
+    if (items.length !== IPO_UNIVERSE.length) throw new Error('Sorting lost items: ' + sort);
   });
 });
 
@@ -134,7 +176,7 @@ assert('GMP View initializes, renders and filters', () => {
     marketFeed: MarketDataFeed
   });
   gmp.render();
-  ['ALL', 'ONGOING', 'UPCOMING', 'LISTED'].forEach(f => {
+  ['ALL', 'ONGOING', 'UPCOMING', 'LISTED', 'MAINBOARD', 'SME'].forEach(f => {
     gmp.filterStatus = f;
     gmp.render();
   });
@@ -169,8 +211,8 @@ assert('Custom Analyzer initializes, renders and evaluates presets', () => {
   analyzer.applyPreset('us-ai');
 });
 
-// 5. Open Dossier Modal for all 26 IPOs
-assert('Open Dossier Modal for all 26 IPOs in Universe', () => {
+// 5. Open Dossier Modal for all IPOs in Universe
+assert(`Open Dossier Modal for all ${IPO_UNIVERSE.length} IPOs in Universe`, () => {
   for (const ipo of IPO_UNIVERSE) {
     openIpoDetailModal(ipo);
   }

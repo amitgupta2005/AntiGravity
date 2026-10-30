@@ -30,3 +30,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Environment & Secret Credentials
+.env
+*.env
+.env.local
+!.env.example

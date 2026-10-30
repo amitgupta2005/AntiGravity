@@ -184,6 +184,7 @@ export class MarketDataFeed {
   static async fetchLivePeerQuotes() {
     // List of active symbols across NSE India and US exchanges strictly for FY 2026-27 listed universe
     const symbolsToQuery = [
+      'JIOPLAT.NS',
       'PREMIERENE.NS',
       'FIRSTCRY.NS',
       'OLAELEC.NS',
@@ -200,6 +201,10 @@ export class MarketDataFeed {
       'CEIGALL.NS',
       'SSDL.NS',
       'UNIECOM.NS',
+      'PARAMOUNT.NS',
+      'AIMTRON.NS',
+      'HOACFOODS.NS',
+      'MACOBS.NS',
       'SWASTIK-SM.NS',
       'KRN.NS',
       'ALAB',

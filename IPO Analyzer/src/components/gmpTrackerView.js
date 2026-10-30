@@ -122,7 +122,7 @@ export class GmpTrackerView {
                 const issue = ipo.issueDetails || {};
                 const sent = ipo.sentiment || {};
                 const gmpPct = sent.gmpPct ?? 0;
-                const gmpPrice = sent.gmpPrice ?? 0;
+                const gmpPrice = sent.gmpPrice ?? sent.gmp ?? 0;
                 const sym = issue.currencySymbol || '₹';
                 const basePrice = issue.issuePrice || 0;
                 const estListingPrice = basePrice ? (basePrice + gmpPrice).toFixed(1) : 'N/A';
@@ -141,6 +141,10 @@ export class GmpTrackerView {
                   ? trendArray[trendArray.length - 1] < trendArray[trendArray.length - 2] 
                   : (typeof sent.gmpTrend === 'string' && sent.gmpTrend === 'FALLING');
                 const trendText = trendArray.map(v => (typeof v === 'number' ? (v >= 0 ? '+' : '') + v + '%' : v)).join(' ➔ ');
+
+                const qibVal = sent.subscription?.qib ?? sent.qibSubscription;
+                const retailVal = sent.subscription?.retail ?? sent.retailSubscription;
+                const totalVal = sent.subscription?.total ?? sent.totalSubscription;
 
                 return `
                   <tr class="gmp-table-row ${isOngoing ? 'row-ongoing' : isUpcoming ? 'row-upcoming' : isClosed ? 'row-closed' : ''}">
@@ -177,11 +181,11 @@ export class GmpTrackerView {
                         <span class="trend-history-text">${trendText}</span>
                       </div>
                     </td>
-                    <td><strong>${sent.subscription?.qib ? sent.subscription.qib + 'x' : 'N/A'}</strong></td>
-                    <td>${sent.subscription?.retail ? sent.subscription.retail + 'x' : 'N/A'}</td>
+                    <td><strong>${qibVal != null ? qibVal + 'x' : 'N/A'}</strong></td>
+                    <td>${retailVal != null ? retailVal + 'x' : 'N/A'}</td>
                     <td>
-                      <span class="sub-total-badge ${sent.subscription?.total > 30 ? 'sub-oversubscribed' : ''}">
-                        ${sent.subscription?.total ? sent.subscription.total + 'x' : 'N/A'}
+                      <span class="sub-total-badge ${totalVal > 30 ? 'sub-oversubscribed' : ''}">
+                        ${totalVal != null ? totalVal + 'x' : 'N/A'}
                       </span>
                     </td>
                     <td class="text-right">

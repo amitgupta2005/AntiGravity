@@ -10,7 +10,7 @@ let currentMarket = "NSE_MOMENTUM";
 let currentTicker = null;
 let currentTimeframe = "1m";
 let currentFilter = "all";
-let currentSort = localStorage.getItem("apex_sort") || "roi-desc";
+let currentSort = localStorage.getItem("apex_sort") || "roi-rec";
 if (currentSort === "roi") currentSort = "roi-desc";
 if (currentSort === "score") currentSort = "score-desc";
 if (currentSort === "change") currentSort = "change-desc";
@@ -22,6 +22,8 @@ let displayedStocks = [];
 let activeStockAnalysis = null;
 let rawChartData = null;
 let currentTheme = localStorage.getItem("apex_theme") || "dark";
+window.currentFrameSizePreset = window.currentFrameSizePreset || localStorage.getItem("apex_frame_preset") || "auto";
+var currentFrameSizePreset = window.currentFrameSizePreset;
 
 // Lightweight Charts instances
 let mainChart = null;
@@ -149,6 +151,29 @@ const calcCurrSymbol = document.getElementById("calc-curr-symbol");
 const rationaleContainer = document.getElementById("rationale-container");
 const checklistContainer = document.getElementById("checklist-container");
 
+// Angel One SmartAPI Feed & Modal Controls
+const btnFeedStatus = document.getElementById("btn-feed-status");
+const feedStatusDot = document.getElementById("feed-status-dot");
+const feedStatusLabel = document.getElementById("feed-status-label");
+const activeFeedSourcePill = document.getElementById("active-feed-source-pill");
+
+const modalAngelConfig = document.getElementById("modal-angel-config");
+const btnCloseAngelModal = document.getElementById("btn-close-angel-modal");
+const formAngelConfig = document.getElementById("form-angel-config");
+const inputAngelApiKey = document.getElementById("input-angel-api-key");
+const inputAngelClientCode = document.getElementById("input-angel-client-code");
+const inputAngelPin = document.getElementById("input-angel-pin");
+const inputAngelTotp = document.getElementById("input-angel-totp");
+const checkAngelEnabled = document.getElementById("check-angel-enabled");
+const btnDisconnectAngel = document.getElementById("btn-disconnect-angel");
+const btnSaveConnectAngel = document.getElementById("btn-save-connect-angel");
+const modalFeedStatusBanner = document.getElementById("modal-feed-status-banner");
+const modalFeedStatusIcon = document.getElementById("modal-feed-status-icon");
+const modalFeedStatusTitle = document.getElementById("modal-feed-status-title");
+const modalFeedStatusDesc = document.getElementById("modal-feed-status-desc");
+const statScripCount = document.getElementById("stat-scrip-count");
+const statSessionStatus = document.getElementById("stat-session-status");
+
 
 // ============================================================================
 // Initialization & Theme Setup
@@ -160,6 +185,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupResizeObserver();
   setupEventListeners();
   updateMarketStatus();
+  checkAngelFeedStatus();
   fetchScreener(currentMarket);
   setupAutoRefresh();
 });
@@ -472,12 +498,16 @@ function calculateAndApplyDeviceFrame() {
   const totalDeductions = hHeader + hToolbar + hMobileNav + hReplay + 14;
   const fullAvailableHeight = Math.max(380, winH - totalDeductions);
 
+  const framePreset = (typeof currentFrameSizePreset !== "undefined" && currentFrameSizePreset)
+    ? currentFrameSizePreset
+    : (window.currentFrameSizePreset || localStorage.getItem("apex_frame_preset") || "auto");
+
   let targetHeight;
-  if (currentFrameSizePreset === "ultra" || isMaximized) {
+  if (framePreset === "ultra" || isMaximized) {
     targetHeight = fullAvailableHeight;
-  } else if (currentFrameSizePreset === "large") {
+  } else if (framePreset === "large") {
     targetHeight = Math.max(560, Math.min(950, Math.floor(fullAvailableHeight * 0.90)));
-  } else if (currentFrameSizePreset === "standard") {
+  } else if (framePreset === "standard") {
     targetHeight = Math.max(420, Math.min(620, Math.floor(fullAvailableHeight * 0.72)));
   } else {
     // "auto": Smart calculation as per device resolution & screen DPI
@@ -627,8 +657,10 @@ function renderStockCards() {
 
     const setup = (stock.setup_name || "").toLowerCase();
     const stockCap = (stock.cap || "").toLowerCase();
-    if (currentFilter === "buy") return stock.score >= 35;
-    if (currentFilter === "sell") return stock.score <= -35;
+    const isRecommended = Boolean(stock.is_recommended || (stock.mtf_alignment?.all_aligned === true && ((stock.signal || "").includes("BUY") || (stock.signal || "").includes("SELL"))));
+    if (currentFilter === "mtf") return isRecommended || stock.mtf_alignment?.bull_count === 4 || stock.mtf_alignment?.bear_count === 4 || stock.mtf_alignment?.all_aligned === true || stock.mtf_alignment?.confluence_score === "4/4";
+    if (currentFilter === "buy") return isRecommended && (stock.signal || "").includes("BUY");
+    if (currentFilter === "sell") return isRecommended && (stock.signal || "").includes("SELL");
     if (currentFilter === "midcap") return stockCap === "mid";
     if (currentFilter === "smallcap") return stockCap === "small";
     if (currentFilter === "rvol") return stock.rvol >= 1.5;
@@ -649,15 +681,21 @@ function renderStockCards() {
     const rvolA = Number(a.rvol || 0);
     const rvolB = Number(b.rvol || 0);
 
-    if (currentSort === "roi" || currentSort === "roi-desc") {
+    if (currentSort === "mtf" || currentSort === "mtf-desc") {
+      const mtfCountA = Math.max(a.mtf_alignment?.bull_count || 0, a.mtf_alignment?.bear_count || 0);
+      const mtfCountB = Math.max(b.mtf_alignment?.bull_count || 0, b.mtf_alignment?.bear_count || 0);
+      if (mtfCountB !== mtfCountA) return mtfCountB - mtfCountA;
+      if (roiB !== roiA) return roiB - roiA;
+      return scoreB - scoreA;
+    } else if (currentSort === "roi" || currentSort === "roi-desc") {
       if (roiB !== roiA) return roiB - roiA;
       return scoreB - scoreA;
     } else if (currentSort === "roi-asc") {
       if (roiA !== roiB) return roiA - roiB;
       return scoreA - scoreB;
     } else if (currentSort === "roi-rec") {
-      const isRecA = (a.signal || "").includes("BUY") || (a.signal || "").includes("SELL") ? 1 : 0;
-      const isRecB = (b.signal || "").includes("BUY") || (b.signal || "").includes("SELL") ? 1 : 0;
+      const isRecA = a.is_recommended || (a.mtf_alignment?.all_aligned && ((a.signal || "").includes("BUY") || (a.signal || "").includes("SELL"))) ? 1 : 0;
+      const isRecB = b.is_recommended || (b.mtf_alignment?.all_aligned && ((b.signal || "").includes("BUY") || (b.signal || "").includes("SELL"))) ? 1 : 0;
       if (isRecA !== isRecB) return isRecB - isRecA;
       if (roiB !== roiA) return roiB - roiA;
       return scoreB - scoreA;
@@ -710,8 +748,18 @@ function renderStockCards() {
 
     const scoreColor = stock.score >= 35 ? "#10b981" : stock.score <= -35 ? "#ef4444" : "#94a3b8";
     const scoreFillWidth = `${stock.display_score}%`;
-    const sigClass = stock.signal.toLowerCase().replace(" ", "-");
+    const sigClass = stock.signal.toLowerCase().replace(/[^a-z0-9]+/g, "-");
     const stockRoi = Number(stock.roi_pct != null ? stock.roi_pct : Math.abs(stock.trade_plan?.target_2_pct || 0));
+
+    const isRecommended = Boolean(stock.is_recommended || (stock.mtf_alignment?.all_aligned === true && ((stock.signal || "").includes("BUY") || (stock.signal || "").includes("SELL"))));
+    const recBadge = isRecommended ? `<span class="badge-rec" title="Satisfies All 4 Timeframes (1m, 5m, 10m, 15m)">⭐ 4/4 REC</span>` : "";
+
+    const mtfScore = stock.mtf_alignment?.confluence_score || "";
+    const mtfColor = stock.mtf_alignment?.badge_color || "#3b82f6";
+    const mtfVerdict = stock.mtf_alignment?.verdict || "";
+    const mtfBadge = mtfScore ? `<span class="badge-mtf" title="${mtfVerdict}" style="border: 1px solid ${mtfColor}; color: ${mtfColor}; background: ${stock.mtf_alignment?.all_aligned ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.1)'};">⚡ MTF: ${mtfScore}</span>` : "";
+    const isAngelFeed = stock.feed_source === 'ANGEL_ONE_SMART_API';
+    const feedBadge = isAngelFeed ? `<span class="badge-feed-angel" title="Live Angel One SmartAPI Feed (apiconnect.angelone.in)">⚡ ANGEL</span>` : "";
 
     card.innerHTML = `
       <div class="card-top">
@@ -727,7 +775,10 @@ function renderStockCards() {
 
       <div class="card-middle">
         <span class="badge-signal ${sigClass}">${stock.signal}</span>
+        ${recBadge}
         <span class="badge-cap cap-${(stock.cap || 'large').toLowerCase()}">${stock.cap || 'LARGE'}</span>
+        ${feedBadge}
+        ${mtfBadge}
         <span class="badge-roi" title="Projected Target 2 ROI">🎯 ROI: +${stockRoi.toFixed(1)}%</span>
         <span class="badge-rvol">${stock.rvol.toFixed(1)}x Vol</span>
         <span class="badge-setup">${stock.setup_name}</span>
@@ -738,10 +789,10 @@ function renderStockCards() {
       </div>
 
       <div class="card-targets-row">
-        <span>SL: <strong style="color:#ef4444;">${stock.currency_symbol}${stock.trade_plan.stop_loss}</strong></span>
-        <span>T2: <strong style="color:#10b981;">${stock.currency_symbol}${stock.trade_plan.target_2}</strong></span>
+        <span>SL: <strong style="color:#ef4444;">${stock.currency_symbol}${stock.trade_plan?.stop_loss != null ? stock.trade_plan.stop_loss : 'N/A'}</strong></span>
+        <span>T2: <strong style="color:#10b981;">${stock.currency_symbol}${stock.trade_plan?.target_2 != null ? stock.trade_plan.target_2 : 'N/A'}</strong></span>
         <span>ROI: <strong style="color:#38bdf8;">+${stockRoi.toFixed(2)}%</strong></span>
-        <span>R:R ${stock.trade_plan.risk_reward_ratio}</span>
+        <span>R:R ${stock.trade_plan?.risk_reward_ratio || '1 : 2'}</span>
       </div>
     `;
 
@@ -803,7 +854,9 @@ async function loadChartData(ticker, tf = currentTimeframe, silent = false) {
     const data = await res.json();
 
     if (data.status !== "OK") {
-      alert(`Could not load chart data: ${data.detail || data.message}`);
+      activeSymbolTicker.textContent = ticker;
+      activeSymbolName.innerHTML = `<span style="color:#ef4444;">${data.detail || data.message || "Data unavailable"}</span>`;
+      console.warn(`Could not load chart data for ${ticker}:`, data.detail || data.message);
       return;
     }
 
@@ -824,6 +877,16 @@ async function loadChartData(ticker, tf = currentTimeframe, silent = false) {
     activePricePill.textContent = `${sym}${data.analysis.price.toFixed(2)}`;
     const isUp = data.analysis.change_pct >= 0;
     activePricePill.style.color = isUp ? "#10b981" : "#ef4444";
+
+    // Update active feed source pill
+    if (activeFeedSourcePill) {
+      const isAngel = data.feed_source === "ANGEL_ONE_SMART_API" || (data.analysis && data.analysis.feed_source === "ANGEL_ONE_SMART_API");
+      activeFeedSourcePill.textContent = isAngel ? "⚡ Angel One Live" : "📡 Yahoo Finance";
+      activeFeedSourcePill.classList.toggle("angel", isAngel);
+      activeFeedSourcePill.title = isAngel
+        ? "Live Real-Time Market Feed from Angel One SmartAPI (https://apiconnect.angelone.in)"
+        : "Real-Time Market Data via Yahoo Finance (Fallback)";
+    }
 
   } catch (err) {
     console.error("Error loading chart data:", err);
@@ -972,8 +1035,11 @@ function renderAnalysisBlueprint(analysis) {
 
   // Signal Banner
   detailSignalBadge.textContent = analysis.signal;
-  detailSignalBadge.className = `signal-badge-lg badge-signal ${analysis.signal.toLowerCase().replace(" ", "-")}`;
-  detailSetupTitle.textContent = analysis.setup_name;
+  detailSignalBadge.className = `signal-badge-lg badge-signal ${analysis.signal.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  const recPrefix = analysis.is_recommended 
+    ? `<span style="color:#10b981; font-weight:800; margin-right:4px;">⭐ [ALL 4 TFs SATISFIED]</span> ` 
+    : `<span style="color:#94a3b8; font-weight:700; margin-right:4px;">[AWAITING 4-TF CONFLUENCE]</span> `;
+  detailSetupTitle.innerHTML = `${recPrefix}${analysis.setup_name}`;
   detailSetupDesc.textContent = analysis.setup_desc;
   
   detailScoreNum.textContent = analysis.display_score;
@@ -984,21 +1050,22 @@ function renderAnalysisBlueprint(analysis) {
   renderMtfMatrix(analysis.mtf_alignment);
 
   // Execution Levels
-  const plan = analysis.trade_plan;
-  planEntry.textContent = `${sym}${plan.entry_price.toFixed(2)}`;
-  planActionType.textContent = plan.action;
+  const plan = analysis.trade_plan || {};
+  const entryVal = plan.entry_price != null ? plan.entry_price : (analysis.price || 0);
+  planEntry.textContent = `${sym}${Number(entryVal).toFixed(2)}`;
+  planActionType.textContent = plan.action || "WATCH";
   planActionType.style.color = plan.action === "LONG" ? "#10b981" : (plan.action === "SHORT" ? "#ef4444" : "#f59e0b");
 
-  planSl.textContent = `${sym}${plan.stop_loss.toFixed(2)}`;
-  planSlDiff.textContent = `${plan.stop_loss_pct > 0 ? "+" : ""}${plan.stop_loss_pct.toFixed(2)}% Risk`;
+  planSl.textContent = plan.stop_loss != null ? `${sym}${Number(plan.stop_loss).toFixed(2)}` : "N/A";
+  planSlDiff.textContent = plan.stop_loss_pct != null ? `${plan.stop_loss_pct > 0 ? "+" : ""}${Number(plan.stop_loss_pct).toFixed(2)}% Risk` : "N/A";
 
-  planT1.textContent = `${sym}${plan.target_1.toFixed(2)}`;
-  planT1Diff.textContent = `+${plan.target_1_pct.toFixed(2)}% (1:1.5)`;
+  planT1.textContent = plan.target_1 != null ? `${sym}${Number(plan.target_1).toFixed(2)}` : "N/A";
+  planT1Diff.textContent = plan.target_1_pct != null ? `+${Number(plan.target_1_pct).toFixed(2)}% (1:1.5)` : "N/A";
 
-  planT2.textContent = `${sym}${plan.target_2.toFixed(2)}`;
-  planT2Diff.textContent = `+${plan.target_2_pct.toFixed(2)}% (1:2.5)`;
+  planT2.textContent = plan.target_2 != null ? `${sym}${Number(plan.target_2).toFixed(2)}` : "N/A";
+  planT2Diff.textContent = plan.target_2_pct != null ? `+${Number(plan.target_2_pct).toFixed(2)}% (1:2.5)` : "N/A";
 
-  planExecRule.textContent = plan.execution_strategy;
+  planExecRule.textContent = plan.execution_strategy || "Monitor price action relative to VWAP and key support/resistance.";
 
   // Update Position Sizing
   updatePositionSizeCalc();
@@ -1045,11 +1112,12 @@ function renderMtfMatrix(mtf) {
 
   const tf1 = mtf.timeframes["1m"] || {};
   const tf5 = mtf.timeframes["5m"] || {};
+  const tf10 = mtf.timeframes["10m"] || {};
   const tf15 = mtf.timeframes["15m"] || {};
 
   function getBadgeHtml(bias) {
     const b = (bias || "NEUTRAL").toLowerCase();
-    return `<span class="mtf-bias-pill ${b}">${bias}</span>`;
+    return `<span class="mtf-bias-pill ${b}">${bias || "NEUTRAL"}</span>`;
   }
 
   mtfMatrixContainer.innerHTML = `
@@ -1063,6 +1131,11 @@ function renderMtfMatrix(mtf) {
         <div class="mtf-tf-label">5-Min (Tactical)</div>
         <div>${getBadgeHtml(tf5.bias)}</div>
         <div class="mtf-stats">RSI ${tf5.rsi || '--'}</div>
+      </div>
+      <div class="mtf-card">
+        <div class="mtf-tf-label">10-Min (Intermed)</div>
+        <div>${getBadgeHtml(tf10.bias)}</div>
+        <div class="mtf-stats">RSI ${tf10.rsi || '--'}</div>
       </div>
       <div class="mtf-card">
         <div class="mtf-tf-label">15-Min (Macro)</div>
@@ -1462,7 +1535,10 @@ function setupEventListeners() {
   calcRiskPctInput.addEventListener("input", updatePositionSizeCalc);
 
   // Auto-Refresh Select
-  autoRefreshSelect.addEventListener("change", setupAutoRefresh);
+  autoRefreshSelect.addEventListener("change", () => {
+    localStorage.setItem("apex_auto_refresh", autoRefreshSelect.value);
+    setupAutoRefresh();
+  });
 
   // Replay Simulator Controls
   btnReplayToggle.addEventListener("click", toggleReplayMode);
@@ -1484,8 +1560,183 @@ function setupEventListeners() {
   });
   replayExitBtn.addEventListener("click", exitReplayMode);
 
+  // Angel One SmartAPI Modal & Controls
+  if (btnFeedStatus) {
+    btnFeedStatus.addEventListener("click", openAngelModal);
+  }
+  if (btnCloseAngelModal) {
+    btnCloseAngelModal.addEventListener("click", closeAngelModal);
+  }
+  if (modalAngelConfig) {
+    modalAngelConfig.addEventListener("click", (e) => {
+      if (e.target === modalAngelConfig) closeAngelModal();
+    });
+  }
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modalAngelConfig && modalAngelConfig.style.display !== "none") {
+      closeAngelModal();
+    }
+  });
+
+  if (formAngelConfig) {
+    formAngelConfig.addEventListener("submit", handleAngelConfigSubmit);
+  }
+
+  if (btnDisconnectAngel) {
+    btnDisconnectAngel.addEventListener("click", handleAngelDisconnect);
+  }
+
   // Global Keyboard Navigation (Arrow Keys for browsing & scrolling)
   window.addEventListener("keydown", handleGlobalKeyDown);
+}
+
+// ============================================================================
+// Angel One SmartAPI Feed State & Modal Operations
+// ============================================================================
+async function checkAngelFeedStatus() {
+  try {
+    const res = await fetch("/api/feed/status");
+    const data = await res.json();
+    if (data.status !== "OK") return;
+
+    const isConnected = Boolean(data.connected);
+    const isConfigured = Boolean(data.configured);
+    const isEnabled = data.enabled !== false;
+    const clientCode = (data.client_code_masked && data.client_code_masked !== "Not set") ? data.client_code_masked : "";
+    const apiKeyMasked = (data.api_key_masked && data.api_key_masked !== "Not set") ? data.api_key_masked : "";
+    const tokenCount = data.token_count || 54;
+
+    // Header Feed button state
+    if (btnFeedStatus) {
+      btnFeedStatus.classList.toggle("connected", isConnected);
+      btnFeedStatus.title = isConnected
+        ? `Angel One SmartAPI Live Feed Active (${clientCode || "Connected"}) - Click to configure`
+        : "Angel One SmartAPI: Disconnected (Fallback to Yahoo Finance) - Click to configure";
+    }
+    if (feedStatusDot) {
+      feedStatusDot.className = "feed-indicator-dot" + (isConnected ? " live" : "");
+    }
+    if (feedStatusLabel) {
+      feedStatusLabel.textContent = isConnected ? "⚡ Angel One Live" : "Angel One Feed";
+    }
+
+    // Modal state
+    if (modalFeedStatusBanner) {
+      modalFeedStatusBanner.className = "feed-status-banner" + (isConnected ? " connected" : "");
+    }
+    if (modalFeedStatusIcon) {
+      modalFeedStatusIcon.textContent = isConnected ? "⚡" : "📡";
+    }
+    if (modalFeedStatusTitle) {
+      modalFeedStatusTitle.textContent = isConnected
+        ? `Angel One SmartAPI Live (Connected: ${clientCode || "Active"})`
+        : (isConfigured ? "Angel One Configured (Disconnected)" : "Yahoo Finance Active (Real-Time Fallback)");
+    }
+    if (modalFeedStatusDesc) {
+      modalFeedStatusDesc.textContent = isConnected
+        ? "Sub-second NSE live market feed streaming from https://apiconnect.angelone.in"
+        : (isConfigured ? (data.last_error ? `Error: ${data.last_error}. Click 'Connect & Save' to re-authenticate.` : "Session idle or expired. Click 'Connect & Save' to re-authenticate.") : "Connect your Angel One SmartAPI account for direct sub-second NSE live market feed.");
+    }
+
+    if (inputAngelClientCode && clientCode && !inputAngelClientCode.value) {
+      inputAngelClientCode.value = clientCode;
+    }
+    if (inputAngelApiKey && apiKeyMasked && !inputAngelApiKey.value) {
+      inputAngelApiKey.placeholder = apiKeyMasked;
+    }
+    if (checkAngelEnabled) {
+      checkAngelEnabled.checked = isEnabled;
+    }
+    if (statScripCount) {
+      statScripCount.textContent = `${tokenCount} Mapped`;
+    }
+    if (statSessionStatus) {
+      statSessionStatus.textContent = isConnected ? "Active (Connected)" : (isConfigured ? "Idle / Expired" : "Disconnected");
+      statSessionStatus.style.color = isConnected ? "#10b981" : "#94a3b8";
+    }
+
+    return data;
+  } catch (err) {
+    console.error("Failed to check Angel One feed status:", err);
+  }
+}
+
+function openAngelModal() {
+  if (!modalAngelConfig) return;
+  modalAngelConfig.style.display = "flex";
+  checkAngelFeedStatus();
+}
+
+function closeAngelModal() {
+  if (!modalAngelConfig) return;
+  modalAngelConfig.style.display = "none";
+}
+
+async function handleAngelConfigSubmit(e) {
+  e.preventDefault();
+  if (!btnSaveConnectAngel) return;
+
+  const origHtml = btnSaveConnectAngel.innerHTML;
+  btnSaveConnectAngel.innerHTML = `<span>⏳ Authenticating...</span>`;
+  btnSaveConnectAngel.disabled = true;
+
+  try {
+    const payload = {
+      api_key: inputAngelApiKey.value.trim() || null,
+      client_code: inputAngelClientCode.value.trim() || null,
+      pin: inputAngelPin.value.trim() || null,
+      totp_secret: inputAngelTotp.value.trim() || null,
+      enabled: checkAngelEnabled.checked
+    };
+
+    const res = await fetch("/api/feed/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (data.status === "OK") {
+      if (data.connected) {
+        showToast("⚡ Angel One SmartAPI connected! Live feeds enabled.");
+        setTimeout(closeAngelModal, 800);
+      } else {
+        showToast(`Settings saved. Fallback: ${data.active_feed}`);
+      }
+      await checkAngelFeedStatus();
+      // Trigger fresh scan & chart refresh
+      fetchScreener(currentMarket);
+      if (currentTicker) {
+        loadChartData(currentTicker, currentTimeframe, true);
+      }
+    } else {
+      alert(`Connection Failed: ${data.detail || data.message || "Invalid credentials or TOTP"}`);
+    }
+  } catch (err) {
+    console.error("Error saving Angel One config:", err);
+    alert("Error contacting server. Please check your connection.");
+  } finally {
+    btnSaveConnectAngel.innerHTML = origHtml;
+    btnSaveConnectAngel.disabled = false;
+  }
+}
+
+async function handleAngelDisconnect() {
+  if (!confirm("Disconnect Angel One SmartAPI live feed and return to Yahoo Finance?")) return;
+  try {
+    const res = await fetch("/api/feed/disconnect", { method: "POST" });
+    const data = await res.json();
+    if (data.status === "OK") {
+      showToast("Angel One disconnected. Using Yahoo Finance.");
+      await checkAngelFeedStatus();
+      fetchScreener(currentMarket);
+      if (currentTicker) {
+        loadChartData(currentTicker, currentTimeframe, true);
+      }
+    }
+  } catch (err) {
+    console.error("Error disconnecting Angel One:", err);
+  }
 }
 
 function toggleSortDirection() {
@@ -1820,6 +2071,14 @@ function setupAutoRefresh() {
   if (autoRefreshTimer) {
     clearInterval(autoRefreshTimer);
     autoRefreshTimer = null;
+  }
+
+  // Check saved preference, defaulting to 5s if none or previously 30s
+  const savedSecs = localStorage.getItem("apex_auto_refresh");
+  if (savedSecs && autoRefreshSelect.querySelector(`option[value="${savedSecs}"]`)) {
+    autoRefreshSelect.value = savedSecs;
+  } else {
+    autoRefreshSelect.value = "5";
   }
 
   const secs = parseInt(autoRefreshSelect.value, 10);

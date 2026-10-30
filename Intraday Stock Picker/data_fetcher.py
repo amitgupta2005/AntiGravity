@@ -13,6 +13,7 @@ import yfinance as yf
 from concurrent.futures import ThreadPoolExecutor
 
 from analysis_engine import calculate_intraday_indicators, analyze_stock_setup
+from angel_one_client import angel_client, BUILTIN_NSE_TOKENS
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +82,7 @@ WATCHLISTS = {
             {"ticker": "RBLBANK.NS", "name": "RBL Bank Ltd", "cap": "SMALL"},
             {"ticker": "MANAPPURAM.NS", "name": "Manappuram Finance", "cap": "SMALL"},
             {"ticker": "RADICO.NS", "name": "Radico Khaitan Ltd", "cap": "SMALL"},
-            {"ticker": "CENTURYPLY.NS", "name": "Century Plyboards Ltd", "cap": "SMALL"},
+            {"ticker": "IRFC.NS", "name": "Indian Railway Finance Corp", "cap": "SMALL"},
             {"ticker": "CASTROLIND.NS", "name": "Castrol India Ltd", "cap": "SMALL"},
             {"ticker": "HFCL.NS", "name": "HFCL Ltd", "cap": "SMALL"},
             {"ticker": "EXIDEIND.NS", "name": "Exide Industries Ltd", "cap": "SMALL"}
@@ -112,7 +113,7 @@ WATCHLISTS = {
             {"ticker": "HCLTECH.NS", "name": "HCL Technologies Ltd", "cap": "LARGE"},
             {"ticker": "WIPRO.NS", "name": "Wipro Ltd", "cap": "LARGE"},
             {"ticker": "TECHM.NS", "name": "Tech Mahindra Ltd", "cap": "LARGE"},
-            {"ticker": "LTIM.NS", "name": "LTIMindtree Ltd", "cap": "LARGE"}
+            {"ticker": "OFSS.NS", "name": "Oracle Financial Services", "cap": "LARGE"}
         ]
     },
     "US_MAG7": {
@@ -214,52 +215,103 @@ def get_ticker_cap(ticker: str) -> str:
     return "LARGE"
 
 
-def get_stock_raw_intraday(ticker: str, interval: str = "1m") -> pd.DataFrame:
+def get_stock_raw_intraday(ticker: str, interval: str = "1m", live_quote: Optional[Dict[str, Any]] = None) -> Tuple[pd.DataFrame, str]:
     """
-    Fetches raw 1m intraday data from Yahoo Finance.
-    Falls back to period='5d' if 1d has few bars.
+    Fetches raw 1m intraday data using Angel One SmartAPI live feed for Indian NSE stocks,
+    combined with Yahoo Finance for full historical bars.
+    Returns: (df, feed_source)
     """
     clean_ticker = ticker.strip().upper()
-    try:
-        t = yf.Ticker(clean_ticker)
-        # First try 1d
-        df = t.history(period="1d", interval=interval)
-        
-        # If today is just starting or weekend, get last 5 days and slice to latest trading day
-        if df.empty or len(df) < 15:
-            df_5d = t.history(period="5d", interval=interval)
-            if not df_5d.empty:
-                # Find the most recent date in the index
-                latest_date = df_5d.index.date[-1]
-                df_latest = df_5d[df_5d.index.date == latest_date].copy()
-                if len(df_latest) >= 15:
-                    df = df_latest
-                else:
-                    # Session just started (e.g. first 15 mins of market):
-                    # Keep recent bars (up to 120) so EMAs & MTF have enough data to calculate
-                    df = df_5d.iloc[-120:].copy()
-        
-        if df.empty:
-            return pd.DataFrame()
+    feed_source = "YAHOO_FINANCE"
 
-        # Remove rows where volume is 0 or NaN prices
-        df = df.dropna(subset=['Open', 'High', 'Low', 'Close'])
-        df = df[df['Volume'] >= 0]
-        
-        # Ensure index is sorted and strictly increasing
-        df = df[~df.index.duplicated(keep='last')]
-        df = df.sort_index()
+    is_nse = (".NS" in clean_ticker or ".BO" in clean_ticker or clean_ticker in BUILTIN_NSE_TOKENS)
 
-        return df
+    # 1. If Indian stock and no live quote was passed, attempt to fetch live quote from Angel One
+    if is_nse and live_quote is None and angel_client.is_configured():
+        try:
+            live_quote = angel_client.get_live_quote(clean_ticker)
+        except Exception as e:
+            logger.debug(f"Angel One quote fetch skipped for {clean_ticker}: {e}")
 
-    except Exception as e:
-        logger.error(f"Error fetching intraday data for {ticker}: {e}")
-        return pd.DataFrame()
+    df = pd.DataFrame()
+
+    # 2. If Angel One session is authenticated, try fetching official exchange 1m candles
+    if is_nse and angel_client.is_authenticated():
+        try:
+            df_angel = angel_client.get_historical_candles(clean_ticker, interval="ONE_MINUTE", days=2)
+            if df_angel is not None and len(df_angel) >= 15:
+                df = df_angel
+                feed_source = "ANGEL_ONE_SMART_API"
+        except Exception as e:
+            logger.debug(f"Angel One candle fetch fallback to Yahoo Finance for {ticker}: {e}")
+
+    # 3. Yahoo Finance fetch (as primary historical provider or backup)
+    if df.empty:
+        try:
+            t = yf.Ticker(clean_ticker)
+            # First try 1d
+            df = t.history(period="1d", interval=interval)
+            
+            # If today is just starting or weekend, get last 5 days and slice to latest trading day
+            if df.empty or len(df) < 15:
+                df_5d = t.history(period="5d", interval=interval)
+                if not df_5d.empty:
+                    # Find the most recent date in the index
+                    latest_date = df_5d.index.date[-1]
+                    df_latest = df_5d[df_5d.index.date == latest_date].copy()
+                    if len(df_latest) >= 15:
+                        df = df_latest
+                    else:
+                        # Session just started (e.g. first 15 mins of market):
+                        # Keep recent bars (up to 240) so EMAs & MTF have enough data to calculate
+                        df = df_5d.iloc[-240:].copy()
+        except Exception as e:
+            logger.error(f"Error fetching Yahoo Finance data for {ticker}: {e}")
+            df = pd.DataFrame()
+
+    if df.empty:
+        return pd.DataFrame(), feed_source
+
+    # Remove rows where volume is 0 or NaN prices
+    df = df.dropna(subset=['Open', 'High', 'Low', 'Close'])
+    df = df[df['Volume'] >= 0]
+    
+    # Ensure index is sorted and strictly increasing
+    df = df[~df.index.duplicated(keep='last')]
+    df = df.sort_index()
+
+    # 4. Synthesize latest bar with live tick from Angel One SmartAPI if available
+    if live_quote and live_quote.get("price", 0) > 0:
+        feed_source = "ANGEL_ONE_SMART_API"
+        ltp = float(live_quote["price"])
+        q_high = float(live_quote.get("high") or ltp)
+        q_low = float(live_quote.get("low") or ltp)
+
+        # Update last bar's Close, High, Low with Angel One live exchange prices
+        try:
+            last_c = float(df.iloc[-1]['Close'])
+            last_h = max(float(df.iloc[-1]['High']), ltp, q_high if q_high > 0 else ltp)
+            last_l = min(float(df.iloc[-1]['Low']), ltp) if q_low <= 0 else min(float(df.iloc[-1]['Low']), ltp, q_low)
+
+            df.iloc[-1, df.columns.get_loc('Close')] = ltp
+            df.iloc[-1, df.columns.get_loc('High')] = last_h
+            df.iloc[-1, df.columns.get_loc('Low')] = last_l
+        except Exception as e:
+            logger.debug(f"Could not merge Angel One live tick: {e}")
+
+    return df, feed_source
 
 
-def fetch_and_analyze_ticker(ticker: str, company_name: str = "", force_refresh: bool = False, cap: Optional[str] = None) -> Dict[str, Any]:
+def fetch_and_analyze_ticker(
+    ticker: str,
+    company_name: str = "",
+    force_refresh: bool = False,
+    cap: Optional[str] = None,
+    live_quote: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """
-    Fetches real-time 1m data, calculates indicators, and analyzes technical setup.
+    Fetches real-time 1m data (hybrid Angel One SmartAPI + Yahoo Finance),
+    calculates indicators, and analyzes technical setup.
     Utilizes short TTL caching for fast UI interactions.
     """
     ticker = ticker.strip().upper()
@@ -272,22 +324,30 @@ def fetch_and_analyze_ticker(ticker: str, company_name: str = "", force_refresh:
         if now - cached_entry["timestamp"] < CACHE_TTL_SECONDS:
             return cached_entry["analysis"]
 
-    # Fetch fresh 1-minute data
-    df = get_stock_raw_intraday(ticker, interval="1m")
+    # Fetch fresh 1-minute data and feed source
+    df, feed_source = get_stock_raw_intraday(ticker, interval="1m", live_quote=live_quote)
     if df.empty:
         return {
             "ticker": ticker,
             "company_name": company_name or ticker,
             "cap": cap,
             "status": "ERROR",
-            "message": f"Unable to fetch intraday data for '{ticker}'. Verify the symbol on Yahoo Finance."
+            "feed_source": feed_source,
+            "message": f"Unable to fetch intraday data for '{ticker}'. Verify the symbol."
         }
 
     # Compute technical indicators
     df_indicators = calculate_intraday_indicators(df)
 
     # Perform expert intraday analysis
-    analysis = analyze_stock_setup(ticker, df_indicators, company_name, cap=cap)
+    analysis = analyze_stock_setup(
+        ticker,
+        df_indicators,
+        company_name,
+        cap=cap,
+        feed_source=feed_source,
+        live_quote=live_quote
+    )
     if "status" not in analysis:
         analysis["status"] = "OK"
     if "cap" not in analysis:
@@ -297,7 +357,8 @@ def fetch_and_analyze_ticker(ticker: str, company_name: str = "", force_refresh:
     _CACHE[ticker] = {
         "timestamp": now,
         "df": df_indicators,
-        "analysis": analysis
+        "analysis": analysis,
+        "feed_source": feed_source
     }
 
     return analysis
@@ -312,6 +373,7 @@ def get_chart_data(ticker: str, timeframe: str = "1m", force_refresh: bool = Fal
     - Volume: [{time, value, color}]
     - RSI: [{time, value}]
     - Overlay Price Lines: SL, T1, T2, Entry, Day High, Day Low
+    - Live Feed Source indicator (Angel One SmartAPI / Yahoo Finance)
     """
     ticker = ticker.strip().upper()
     analysis = fetch_and_analyze_ticker(ticker, force_refresh=force_refresh)
@@ -325,25 +387,21 @@ def get_chart_data(ticker: str, timeframe: str = "1m", force_refresh: bool = Fal
 
     df = cached["df"]
 
-    # If timeframe is 5m or 15m, resample if requested
+    # If timeframe is 5m, 10m, or 15m, resample if requested
+    agg_rules = {
+        'Open': 'first',
+        'High': 'max',
+        'Low': 'min',
+        'Close': 'last',
+        'Volume': 'sum'
+    }
     if timeframe == "5m" and len(df) >= 10:
-        agg_rules = {
-            'Open': 'first',
-            'High': 'max',
-            'Low': 'min',
-            'Close': 'last',
-            'Volume': 'sum'
-        }
         df_resampled = df.resample('5min').agg(agg_rules).dropna()
         df_chart = calculate_intraday_indicators(df_resampled)
+    elif timeframe == "10m" and len(df) >= 15:
+        df_resampled = df.resample('10min').agg(agg_rules).dropna()
+        df_chart = calculate_intraday_indicators(df_resampled)
     elif timeframe == "15m" and len(df) >= 20:
-        agg_rules = {
-            'Open': 'first',
-            'High': 'max',
-            'Low': 'min',
-            'Close': 'last',
-            'Volume': 'sum'
-        }
         df_resampled = df.resample('15min').agg(agg_rules).dropna()
         df_chart = calculate_intraday_indicators(df_resampled)
     else:
@@ -416,6 +474,10 @@ def get_chart_data(ticker: str, timeframe: str = "1m", force_refresh: bool = Fal
         "status": "OK",
         "ticker": ticker,
         "timeframe": timeframe,
+        "feed_source": analysis.get("feed_source", "YAHOO_FINANCE"),
+        "feed_source_label": analysis.get("feed_source_label", "Yahoo Finance"),
+        "circuit_limits": analysis.get("circuit_limits"),
+        "market_depth": analysis.get("market_depth"),
         "analysis": analysis,
         "candles": candles,
         "markers": analysis.get("chart_markers", []),
@@ -434,6 +496,7 @@ def get_chart_data(ticker: str, timeframe: str = "1m", force_refresh: bool = Fal
 def scan_watchlist(watchlist_key: str = "NSE_MOMENTUM", custom_tickers: Optional[List[str]] = None) -> List[Dict[str, Any]]:
     """
     Scans multiple stocks in parallel and sorts by Intraday Score & Momentum.
+    Utilizes Angel One SmartAPI live market feed for real-time Indian NSE quotes.
     """
     if custom_tickers and len(custom_tickers) > 0:
         targets = [{"ticker": t.strip().upper(), "name": t.strip().upper()} for t in custom_tickers if t.strip()]
@@ -442,11 +505,30 @@ def scan_watchlist(watchlist_key: str = "NSE_MOMENTUM", custom_tickers: Optional
     else:
         targets = WATCHLISTS["NSE_MOMENTUM"]["stocks"]
 
+    # Batch-fetch live Angel One quotes for Indian stocks up-front if configured
+    angel_quotes: Dict[str, Dict[str, Any]] = {}
+    is_indian_universe = any((".NS" in t["ticker"] or ".BO" in t["ticker"] or "NSE" in watchlist_key) for t in targets)
+    
+    if is_indian_universe and angel_client.is_configured():
+        try:
+            target_symbols = [t["ticker"] for t in targets]
+            angel_quotes = angel_client.get_live_quotes(target_symbols)
+            if angel_quotes:
+                logger.info(f"Retrieved {len(angel_quotes)} live quotes from Angel One SmartAPI (https://apiconnect.angelone.in)")
+        except Exception as e:
+            logger.warning(f"Angel One batch quote error; fallback to Yahoo Finance: {e}")
+
     results = []
 
     def _worker(item):
         try:
-            return fetch_and_analyze_ticker(item["ticker"], item.get("name", ""), cap=item.get("cap"))
+            l_quote = angel_quotes.get(item["ticker"])
+            return fetch_and_analyze_ticker(
+                item["ticker"],
+                item.get("name", ""),
+                cap=item.get("cap"),
+                live_quote=l_quote
+            )
         except Exception as err:
             logger.error(f"Scan worker failed for {item['ticker']}: {err}")
             return None
@@ -472,3 +554,4 @@ def scan_watchlist(watchlist_key: str = "NSE_MOMENTUM", custom_tickers: Optional
     results.sort(key=_rank_key, reverse=True)
 
     return results
+

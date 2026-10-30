@@ -145,7 +145,12 @@ class IpoAnalyzerApp {
     navButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         const targetTab = btn.getAttribute('data-tab');
-        if (targetTab === this.activeTab) return;
+        const targetMarket = btn.getAttribute('data-market');
+
+        // If clicking radar tab, apply market segment filter if provided
+        if (targetTab === 'radar' && targetMarket && this.radarView) {
+          this.radarView.marketFilter = targetMarket;
+        }
 
         // Switch active button class
         navButtons.forEach(b => b.classList.remove('active'));

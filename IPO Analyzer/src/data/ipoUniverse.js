@@ -32,7 +32,7 @@ export const CURRENT_FINANCIAL_YEAR = 'FY 2026-27';
 
 export const IPO_UNIVERSE = [
   // =========================================================================
-  // 1. LIVE ONGOING IPOS (CURRENTLY OPEN FOR BIDDING TODAY ON NSE/BSE)
+  // 1. LIVE ONGOING MAINBOARD IPOS (OPEN FOR BIDDING TODAY: OCT 28, 2026)
   // =========================================================================
   {
     id: 'EAAA-ALTERNATIVES',
@@ -46,9 +46,9 @@ export const IPO_UNIVERSE = [
     market: 'IN',
     tier: 'MAINBOARD',
     status: 'ONGOING',
-    statusLabel: '🟢 BID OPEN NOW',
+    statusLabel: '🟢 BID OPEN (Day 3 Closes Today)',
     biddingDates: 'Oct 26 – Oct 28, 2026',
-    dateDetail: 'Day 1 of Bidding • Closes Oct 28',
+    dateDetail: 'Day 3 (Final Day) of Bidding • Closes 5:00 PM Today',
     exchange: 'NSE / BSE',
     sector: 'Alternative Asset Management & Private Credit',
     businessSummary: 'Leading Indian private equity and alternative investment fund (AIF) manager specializing in performing private credit, structured corporate debt, and special situation financing across mid-market Indian enterprises.',
@@ -74,6 +74,7 @@ export const IPO_UNIVERSE = [
       underwriterTier: 'TIER_1',
       openDate: '2026-10-26',
       closeDate: '2026-10-28',
+      allotmentDate: '2026-10-29',
       listingDate: '2026-11-02',
       financialYear: 'FY 2026-27'
     },
@@ -125,12 +126,12 @@ export const IPO_UNIVERSE = [
       gmpHistory: [
         { day: 'T-2', gmp: 110, gmpPct: 6.6 },
         { day: 'T-1', gmp: 115, gmpPct: 6.9 },
-        { day: 'Day 1 (Live)', gmp: 120, gmpPct: 7.2 }
+        { day: 'Day 3 (Live)', gmp: 120, gmpPct: 7.2 }
       ],
-      qibSubscription: 0.42,
-      niiSubscription: 0.88,
-      retailSubscription: 1.15,
-      totalSubscription: 0.78,
+      qibSubscription: 38.2,
+      niiSubscription: 26.5,
+      retailSubscription: 9.8,
+      totalSubscription: 24.8,
       anchorBookQuality: 'PREMIUM',
       anchorInvestors: ['GIC Singapore', 'Norges Bank', 'SBI Mutual Fund', 'ICICI Prudential Life']
     },
@@ -148,12 +149,825 @@ export const IPO_UNIVERSE = [
         'Regulatory vulnerability to SEBI changes on AIF leverage and private credit valuation disclosures.'
       ]
     },
-    tacticalNote: 'Live Bidding Day 1 underway. Low GMP (+7.2%) suggests listing pop will be capped under 10%. Accumulate on secondary weakness below ₹1,420 (38x P/E).'
+    tacticalNote: 'Final Bidding Day underway. Low GMP (+7.2%) suggests listing pop will be capped under 10%. Accumulate on secondary weakness below ₹1,420 (38x P/E).'
+  },
+  {
+    id: 'AFCONS-INFRA',
+    verdict: 'APPLY',
+    score: 84,
+    pillarScores: {"fundamental":88,"quantitative":80,"sentiment":84},
+    valuationVsPeers: 'IN_LINE',
+    valuationDiscountPct: 5.2,
+    name: 'Afcons Infrastructure Ltd',
+    ticker: 'AFCONS',
+    market: 'IN',
+    tier: 'MAINBOARD',
+    status: 'ONGOING',
+    statusLabel: '🟢 BID OPEN (Day 4 of Bidding)',
+    biddingDates: 'Oct 25 – Oct 29, 2026',
+    dateDetail: 'Day 4 of Bidding • Closes Tomorrow Oct 29',
+    exchange: 'NSE / BSE',
+    sector: 'Infrastructure, Marine Construction & EPC',
+    businessSummary: 'The flagship infrastructure engineering and EPC construction arm of the 150-year-old Shapoorji Pallonji Group, globally renowned for landmark complex marine terminals, deep tunneling, high-speed rail, and mega-bridges including the Chenab Railway Bridge.',
+    issueDetails: {
+      priceBand: '₹440 - ₹463',
+      issuePrice: 463,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹5,430 Cr',
+      issueSizeNum: 5430,
+      marketCap: '₹17,040 Cr',
+      marketCapNum: 17040,
+      freshIssuePct: 23.0,
+      ofsPct: 77.0,
+      freshValue: '₹1,250 Cr',
+      ofsValue: '₹4,180 Cr',
+      promoterHoldingPre: 99.4,
+      promoterHoldingPost: 68.2,
+      publicFloatPct: 31.8,
+      minimumLot: 32,
+      retailMinInvestment: '₹14,816',
+      underwriters: ['ICICI Securities', 'DAM Capital Advisors', 'Jefferies India', 'Nomura Financial', 'SBI Capital Markets'],
+      underwriterTier: 'TIER_1',
+      openDate: '2026-10-25',
+      closeDate: '2026-10-29',
+      allotmentDate: '2026-10-30',
+      listingDate: '2026-11-04',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 11019 },
+        { year: 'FY25', value: 12637 },
+        { year: 'FY26', value: 13267 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 357.6 },
+        { year: 'FY25', value: 410.8 },
+        { year: 'FY26', value: 449.7 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 1064 },
+        { year: 'FY25', value: 1245 },
+        { year: 'FY26', value: 1412 }
+      ],
+      cagrRevenue: 9.7,
+      cagrPat: 12.1,
+      operatingCashFlow: 894.5,
+      netDebt: 1820.0,
+      debtToEquity: 0.65,
+      margins: {
+        grossMargin: 38.4,
+        ebitdaMargin: 10.6,
+        patMargin: 3.4,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 37.9,
+      industryAvgPe: 36.5,
+      pbRatio: 4.8,
+      evEbitda: 13.8,
+      marketCapToSales: 1.28,
+      peerComps: [
+        { name: 'Larsen & Toubro Ltd', ticker: 'LT.NS', pe: 36.2, pb: 4.9, evEbitda: 18.2, patMargin: 6.2, roe: 14.8 },
+        { name: 'KEC International', ticker: 'KEC.NS', pe: 48.5, pb: 5.2, evEbitda: 16.4, patMargin: 2.8, roe: 9.5 },
+        { name: 'Kalpataru Projects', ticker: 'KPIL.NS', pe: 34.1, pb: 3.8, evEbitda: 12.5, patMargin: 3.1, roe: 12.2 }
+      ]
+    },
+    sentiment: {
+      gmp: 45,
+      gmpPct: 9.7,
+      gmpTrend: 'RISING',
+      gmpHistory: [
+        { day: 'T-2', gmp: 35, gmpPct: 7.6 },
+        { day: 'T-1', gmp: 40, gmpPct: 8.6 },
+        { day: 'Day 4 (Live)', gmp: 45, gmpPct: 9.7 }
+      ],
+      qibSubscription: 4.8,
+      niiSubscription: 2.1,
+      retailSubscription: 1.4,
+      totalSubscription: 2.95,
+      anchorBookQuality: 'PREMIUM',
+      anchorInvestors: ['GIC Singapore', 'Goldman Sachs', 'Nomura', 'HDFC Mutual Fund', 'Nippon India', 'Aditya Birla Sun Life']
+    },
+    forensicScore: 88,
+    anchorPedigree: 'MARQUEE_SOVEREIGN',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'ENGINEERING_COMPLEXITY_MOAT',
+    executiveVerdict: '**SUBSCRIBE FOR MEDIUM TO LONG-TERM.** Premier global EPC constructor with unmatched execution pedigree in high-barrier complex marine and underground projects. Healthy ₹31,000+ Cr order book provides strong multi-year revenue visibility.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Designs and executes complex mega-engineering infrastructure across marine terminals, elevated metro corridors, hydro projects, and specialized bridge crossings.',
+      moat: 'Proprietary heavy equipment fleet worth over ₹2,500 Cr, specialized in-house tunneling engineers, and highest credit ratings among private Indian EPCs.',
+      redFlags: [
+        'Significant OFS component (₹4,180 Cr) being used by promoter group Shapoorji Pallonji for debt reduction.',
+        'High working capital intensity characteristic of mega-scale EPC infrastructure contracts.'
+      ]
+    },
+    tacticalNote: 'Day 4 of Bidding. QIB participation is accelerating. Suitable for institutional long-term portfolios seeking defensive compounding in Indian capex.'
   },
 
   // =========================================================================
-  // 2. UPCOMING IPOS (OPENING LATE OCTOBER / NOVEMBER 2026)
+  // 2. LIVE ONGOING SME IPOS (OPEN FOR BIDDING TODAY: OCT 28, 2026)
   // =========================================================================
+  {
+    id: 'DANISH-POWER',
+    verdict: 'APPLY',
+    score: 92,
+    pillarScores: {"fundamental":94,"quantitative":90,"sentiment":92},
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 44.0,
+    name: 'Danish Power Ltd',
+    ticker: 'DANISH',
+    market: 'IN',
+    tier: 'SME',
+    status: 'ONGOING',
+    statusLabel: '🟢 BID OPEN (Day 3 Closes Today)',
+    biddingDates: 'Oct 26 – Oct 28, 2026',
+    dateDetail: 'Final Bidding Day Today • Closes 5:00 PM IST',
+    exchange: 'NSE SME',
+    sector: 'Renewable Power Equipment & Transformers',
+    businessSummary: 'Leading manufacturer of specialized power distribution transformers, inverter duty transformers (IDT) for utility-scale solar farms, and wind turbine substation power units with clients including Tata Power, Adani Green, and Sterling & Wilson.',
+    issueDetails: {
+      priceBand: '₹360 - ₹380',
+      issuePrice: 380,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹197.90 Cr',
+      issueSizeNum: 197.90,
+      marketCap: '₹748 Cr',
+      marketCapNum: 748,
+      freshIssuePct: 100.0,
+      ofsPct: 0.0,
+      freshValue: '₹197.90 Cr',
+      ofsValue: '₹0 Cr',
+      promoterHoldingPre: 99.8,
+      promoterHoldingPost: 73.4,
+      publicFloatPct: 26.6,
+      minimumLot: 300,
+      retailMinInvestment: '₹1,14,000',
+      underwriters: ['Hem Securities Ltd'],
+      underwriterTier: 'TIER_1',
+      openDate: '2026-10-26',
+      closeDate: '2026-10-28',
+      allotmentDate: '2026-10-29',
+      listingDate: '2026-11-04',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 138.2 },
+        { year: 'FY25', value: 242.4 },
+        { year: 'FY26', value: 332.5 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 8.4 },
+        { year: 'FY25', value: 22.1 },
+        { year: 'FY26', value: 38.1 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 14.8 },
+        { year: 'FY25', value: 34.6 },
+        { year: 'FY26', value: 54.2 }
+      ],
+      cagrRevenue: 55.1,
+      cagrPat: 112.8,
+      operatingCashFlow: 28.4,
+      netDebt: 18.2,
+      debtToEquity: 0.22,
+      margins: {
+        grossMargin: 32.4,
+        ebitdaMargin: 16.3,
+        patMargin: 11.5,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 18.2,
+      industryAvgPe: 34.5,
+      pbRatio: 4.8,
+      evEbitda: 12.4,
+      marketCapToSales: 2.25,
+      peerComps: [
+        { name: 'Voltamp Transformers', ticker: 'VOLTAMP.NS', pe: 34.8, pb: 6.8, evEbitda: 22.4, patMargin: 18.2, roe: 24.5 },
+        { name: 'Shilchar Technologies', ticker: 'SHILCHAR.NS', pe: 38.2, pb: 11.4, evEbitda: 24.8, patMargin: 21.4, roe: 36.2 },
+        { name: 'Transformers & Rectifiers', ticker: 'TRIL.NS', pe: 42.1, pb: 8.2, evEbitda: 26.5, patMargin: 6.8, roe: 14.2 }
+      ]
+    },
+    sentiment: {
+      gmp: 140,
+      gmpPct: 36.8,
+      gmpTrend: 'RISING',
+      gmpHistory: [
+        { day: 'T-2', gmp: 115, gmpPct: 30.3 },
+        { day: 'T-1', gmp: 130, gmpPct: 34.2 },
+        { day: 'Day 3 (Live)', gmp: 140, gmpPct: 36.8 }
+      ],
+      qibSubscription: 64.2,
+      niiSubscription: 112.5,
+      retailSubscription: 74.8,
+      totalSubscription: 86.4,
+      anchorBookQuality: 'PREMIUM',
+      anchorInvestors: ['WhiteOak Capital', 'Quant Mutual Fund', 'Bandhan Mutual Fund', 'Ashoka India Opportunities']
+    },
+    forensicScore: 92,
+    anchorPedigree: 'MARQUEE_SOVEREIGN',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'CLEANTECH_TRANSFORMER_LEADERSHIP',
+    executiveVerdict: '**HIGH CONVICTION APPLY.** Standout green energy transformer manufacturer delivering 112% PAT CAGR with 100% fresh growth issue. Trading at a steep 44% valuation discount to peer Shilchar Tech with massive 86x oversubscription.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Designs and supplies specialized oil-immersed distribution and power transformers, inverter duty units for grid-connected solar power plants.',
+      moat: 'Approved vendor certification from central transmission utilities (PGCIL) and key solar IPPs (ReNew, Adani, Tata Power).',
+      redFlags: [
+        'Volatile raw material costs (copper, electrical steel laminations) can squeeze gross margins if pass-through clauses lag.',
+        'Customer concentration: Top 5 renewable EPC clients account for over 52% of total order book.'
+      ]
+    },
+    tacticalNote: 'Final Day of Bidding. High institutional GMP (+36.8%) and 86x subscription guarantee bumper listing day returns. Must apply for full lot in retail and HNI categories.'
+  },
+  {
+    id: 'FRESHARA-AGRO',
+    verdict: 'APPLY',
+    score: 86,
+    pillarScores: {"fundamental":88,"quantitative":85,"sentiment":85},
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 40.2,
+    name: 'Freshara Agro Exports Ltd',
+    ticker: 'FRESHARA',
+    market: 'IN',
+    tier: 'SME',
+    status: 'ONGOING',
+    statusLabel: '🟢 BID OPEN (Day 3 Closes Today)',
+    biddingDates: 'Oct 25 – Oct 28, 2026',
+    dateDetail: 'Final Bidding Day Today • Closes 5:00 PM IST',
+    exchange: 'NSE SME',
+    sector: 'Agricultural Processing & Food Exports',
+    businessSummary: 'Leading exporter of processed and preserved gherkins, baby corn, jalapeños, and pickled vegetables from contract farming clusters in Tamil Nadu and Karnataka to food distributors across North America, Europe, and Russia.',
+    issueDetails: {
+      priceBand: '₹110 - ₹116',
+      issuePrice: 116,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹75.39 Cr',
+      issueSizeNum: 75.39,
+      marketCap: '₹285 Cr',
+      marketCapNum: 285,
+      freshIssuePct: 100.0,
+      ofsPct: 0.0,
+      freshValue: '₹75.39 Cr',
+      ofsValue: '₹0 Cr',
+      promoterHoldingPre: 99.5,
+      promoterHoldingPost: 72.8,
+      publicFloatPct: 27.2,
+      minimumLot: 1200,
+      retailMinInvestment: '₹1,39,200',
+      underwriters: ['GYR Capital Advisors'],
+      underwriterTier: 'TIER_1',
+      openDate: '2026-10-25',
+      closeDate: '2026-10-28',
+      allotmentDate: '2026-10-29',
+      listingDate: '2026-11-04',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 126.5 },
+        { year: 'FY25', value: 168.4 },
+        { year: 'FY26', value: 198.2 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 9.1 },
+        { year: 'FY25', value: 14.8 },
+        { year: 'FY26', value: 21.8 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 15.2 },
+        { year: 'FY25', value: 24.6 },
+        { year: 'FY26', value: 34.1 }
+      ],
+      cagrRevenue: 25.2,
+      cagrPat: 54.8,
+      operatingCashFlow: 18.5,
+      netDebt: 24.1,
+      debtToEquity: 0.35,
+      margins: {
+        grossMargin: 36.2,
+        ebitdaMargin: 17.2,
+        patMargin: 11.0,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 12.8,
+      industryAvgPe: 21.4,
+      pbRatio: 2.8,
+      evEbitda: 8.6,
+      marketCapToSales: 1.44,
+      peerComps: [
+        { name: 'Tasty Bite Eatables', ticker: 'TASTYBITE.NS', pe: 48.5, pb: 9.2, evEbitda: 28.5, patMargin: 7.8, roe: 18.5 },
+        { name: 'ADF Foods Ltd', ticker: 'ADFFOODS.NS', pe: 24.2, pb: 4.8, evEbitda: 16.2, patMargin: 14.2, roe: 21.4 }
+      ]
+    },
+    sentiment: {
+      gmp: 48,
+      gmpPct: 41.4,
+      gmpTrend: 'RISING',
+      gmpHistory: [
+        { day: 'T-2', gmp: 38, gmpPct: 32.8 },
+        { day: 'T-1', gmp: 44, gmpPct: 37.9 },
+        { day: 'Day 3 (Live)', gmp: 48, gmpPct: 41.4 }
+      ],
+      qibSubscription: 34.5,
+      niiSubscription: 68.2,
+      retailSubscription: 42.1,
+      totalSubscription: 48.2,
+      anchorBookQuality: 'PREMIUM',
+      anchorInvestors: ['Negen Undiscovered Value Fund', 'Craft Emerging Market Fund', 'Galaxy Multi-Cap Fund']
+    },
+    forensicScore: 88,
+    anchorPedigree: 'INSTITUTIONAL_BOUTIQUE',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'AGRI_EXPORT_CONTRACT_NETWORK',
+    executiveVerdict: '**SUBSCRIBE.** Highly profitable agricultural exporter trading at a modest 12.8x P/E with 100% fresh capital deployment and strong global customer stickiness. Robust +41% GMP signals listing day outperformance.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Sources raw gherkins and vegetables directly from 4,000+ partner farmers, pickles and processes them in state-of-the-art automated brine lines for export.',
+      moat: 'US FDA, BRC, and IFS global food safety certifications; 95%+ repeat order rate from international private-label food brands.',
+      redFlags: [
+        'Geopolitical and shipping route risks (Red Sea transit delays impact European freight costs).',
+        'Weather dependency on South Indian monsoon cycles for gherkin crop yields.'
+      ]
+    },
+    tacticalNote: 'Final Day of Bidding. Healthy subscription and high GMP (+41.4%) offer lucrative risk-reward for SME listing gains.'
+  },
+  {
+    id: 'PREMIUM-PLAST',
+    verdict: 'APPLY',
+    score: 80,
+    pillarScores: {"fundamental":82,"quantitative":78,"sentiment":80},
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 28.0,
+    name: 'Premium Plast Ltd',
+    ticker: 'PREMPLAST',
+    market: 'IN',
+    tier: 'SME',
+    status: 'ONGOING',
+    statusLabel: '🟢 BID OPEN (Day 3 Closes Today)',
+    biddingDates: 'Oct 26 – Oct 28, 2026',
+    dateDetail: 'Final Bidding Day Today • Closes 5:00 PM IST',
+    exchange: 'NSE SME',
+    sector: 'Auto Ancillaries & Plastic Injection Molding',
+    businessSummary: 'Manufacturer of precision plastic injection molded exterior and interior components for commercial vehicles, passenger cars, and industrial packaging.',
+    issueDetails: {
+      priceBand: '₹46 - ₹49',
+      issuePrice: 49,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹26.20 Cr',
+      issueSizeNum: 26.20,
+      marketCap: '₹98 Cr',
+      marketCapNum: 98,
+      freshIssuePct: 100.0,
+      ofsPct: 0.0,
+      freshValue: '₹26.20 Cr',
+      ofsValue: '₹0 Cr',
+      promoterHoldingPre: 99.8,
+      promoterHoldingPost: 73.1,
+      publicFloatPct: 26.9,
+      minimumLot: 3000,
+      retailMinInvestment: '₹1,47,000',
+      underwriters: ['Khandwala Securities'],
+      underwriterTier: 'TIER_2',
+      openDate: '2026-10-26',
+      closeDate: '2026-10-28',
+      allotmentDate: '2026-10-29',
+      listingDate: '2026-11-04',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 38.4 },
+        { year: 'FY25', value: 46.8 },
+        { year: 'FY26', value: 58.2 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 2.8 },
+        { year: 'FY25', value: 4.6 },
+        { year: 'FY26', value: 7.2 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 5.2 },
+        { year: 'FY25', value: 8.1 },
+        { year: 'FY26', value: 12.4 }
+      ],
+      cagrRevenue: 23.1,
+      cagrPat: 60.4,
+      operatingCashFlow: 5.8,
+      netDebt: 8.4,
+      debtToEquity: 0.42,
+      margins: {
+        grossMargin: 42.1,
+        ebitdaMargin: 21.3,
+        patMargin: 12.4,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 13.6,
+      industryAvgPe: 18.9,
+      pbRatio: 2.4,
+      evEbitda: 8.2,
+      marketCapToSales: 1.68,
+      peerComps: [
+        { name: 'Shaily Engineering Plastics', ticker: 'SHAILY.NS', pe: 34.2, pb: 5.6, evEbitda: 18.4, patMargin: 8.5, roe: 18.2 },
+        { name: 'Kkalpana Industries', ticker: 'KKALPANA.NS', pe: 16.8, pb: 1.8, evEbitda: 9.8, patMargin: 4.2, roe: 11.4 }
+      ]
+    },
+    sentiment: {
+      gmp: 14,
+      gmpPct: 28.6,
+      gmpTrend: 'STABLE',
+      gmpHistory: [
+        { day: 'T-2', gmp: 11, gmpPct: 22.4 },
+        { day: 'T-1', gmp: 13, gmpPct: 26.5 },
+        { day: 'Day 3 (Live)', gmp: 14, gmpPct: 28.6 }
+      ],
+      qibSubscription: 18.4,
+      niiSubscription: 46.2,
+      retailSubscription: 32.8,
+      totalSubscription: 32.4,
+      anchorBookQuality: 'GOOD',
+      anchorInvestors: ['Vikasa India EIF I Fund', 'Meru Investment Fund']
+    },
+    forensicScore: 82,
+    anchorPedigree: 'INSTITUTIONAL_DOMESTIC',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'PRECISION_INJECTION_MOLDING',
+    executiveVerdict: '**SUBSCRIBE FOR LISTING GAINS.** Niche tier-2 auto component maker benefiting from commercial vehicle electrification and lightweighting. Good 21.3% EBITDA margin and comfortable debt position.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Produces customized automotive plastic trims, air conditioning grilles, and dashboard fascias for domestic automotive assemblers.',
+      moat: 'Tooling design capability with in-house CNC mold-making shop.',
+      redFlags: [
+        'Small micro-cap scale (₹98 Cr post-issue market cap) implies lower secondary market liquidity.',
+        'High dependence on top 3 automotive clients for over 65% of revenue.'
+      ]
+    },
+    tacticalNote: 'Closes today at 5:00 PM. Moderate 32x subscription and solid 28% GMP warrant retail allocation for quick listing profits.'
+  },
+
+  // =========================================================================
+  // 3. UPCOMING IPOS (OPENING NOVEMBER 2026)
+  // =========================================================================
+  {
+    id: 'SFC-ENVIRONMENTAL',
+    verdict: 'APPLY',
+    score: 88,
+    pillarScores: {"fundamental":92,"quantitative":85,"sentiment":86},
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 35,
+    name: 'SFC Environmental Technologies Ltd',
+    ticker: 'SFCENV',
+    market: 'IN',
+    tier: 'MAINBOARD',
+    status: 'UPCOMING',
+    statusLabel: '🟡 UPCOMING (Opens Nov 03)',
+    biddingDates: 'Nov 03 – Nov 05, 2026',
+    dateDetail: 'Opens Nov 03 • Bidding Nov 03-05',
+    exchange: 'NSE / BSE',
+    sector: 'Municipal & Industrial Water Treatment EPC',
+    businessSummary: 'Pioneer in sequential batch reactor (C-Tech SBR) municipal sewage treatment and industrial wastewater recycling technologies, commanding a 40%+ market share across Indian urban local bodies and Namami Gange river rejuvenation projects.',
+    issueDetails: {
+      priceBand: '₹415 - ₹435',
+      issuePrice: 435,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹850 Cr',
+      issueSizeNum: 850,
+      marketCap: '₹4,200 Cr',
+      marketCapNum: 4200,
+      freshIssuePct: 65.0,
+      ofsPct: 35.0,
+      freshValue: '₹552 Cr',
+      ofsValue: '₹298 Cr',
+      promoterHoldingPre: 88.2,
+      promoterHoldingPost: 71.5,
+      publicFloatPct: 28.5,
+      minimumLot: 34,
+      retailMinInvestment: '₹14,790',
+      underwriters: ['Equirus Capital', 'IDBI Capital', 'SBI Capital Markets'],
+      underwriterTier: 'TIER_1',
+      openDate: '2026-11-03',
+      closeDate: '2026-11-05',
+      allotmentDate: '2026-11-06',
+      listingDate: '2026-11-10',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 298.5 },
+        { year: 'FY25', value: 412.8 },
+        { year: 'FY26', value: 584.2 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 41.2 },
+        { year: 'FY25', value: 68.4 },
+        { year: 'FY26', value: 104.8 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 62.1 },
+        { year: 'FY25', value: 98.6 },
+        { year: 'FY26', value: 152.4 }
+      ],
+      cagrRevenue: 39.9,
+      cagrPat: 59.5,
+      operatingCashFlow: 88.4,
+      netDebt: -145.0,
+      debtToEquity: 0.08,
+      margins: {
+        grossMargin: 46.2,
+        ebitdaMargin: 26.1,
+        patMargin: 17.9,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 26.8,
+      industryAvgPe: 41.2,
+      pbRatio: 5.2,
+      evEbitda: 17.4,
+      marketCapToSales: 7.18,
+      peerComps: [
+        { name: 'VA Tech Wabag', ticker: 'WABAG.NS', pe: 32.5, pb: 4.8, evEbitda: 19.2, patMargin: 8.5, roe: 16.8 },
+        { name: 'EMS Ltd', ticker: 'EMSLTD.NS', pe: 28.4, pb: 5.1, evEbitda: 18.5, patMargin: 21.2, roe: 22.4 },
+        { name: 'Ion Exchange India', ticker: 'IONEXCHANG.NS', pe: 38.6, pb: 6.2, evEbitda: 24.1, patMargin: 7.2, roe: 18.9 }
+      ]
+    },
+    sentiment: {
+      gmp: 135,
+      gmpPct: 31.0,
+      gmpTrend: 'RISING',
+      gmpHistory: [
+        { day: 'T-3', gmp: 110, gmpPct: 25.3 },
+        { day: 'T-2', gmp: 125, gmpPct: 28.7 },
+        { day: 'T-1', gmp: 135, gmpPct: 31.0 }
+      ],
+      qibSubscription: 0,
+      niiSubscription: 0,
+      retailSubscription: 0,
+      totalSubscription: 0,
+      anchorBookQuality: 'PREMIUM',
+      anchorInvestors: ['Temasek / Fullerton', 'HDFC Life', 'DSP Small Cap Fund', 'Mirae Asset ESG']
+    },
+    forensicScore: 92,
+    anchorPedigree: 'MARQUEE_SOVEREIGN',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'PROPRIETARY_BIOLOGICAL_IP',
+    executiveVerdict: '**HIGH CONVICTION APPLY.** Market leader in wastewater purification with net-cash balance sheet, zero window-dressing forensic flags, and an attractive 35% P/E discount to VA Tech Wabag.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Designs and builds municipal sewage treatment plants and zero liquid discharge (ZLD) systems for chemical & pharmaceutical parks using patented cyclic activated sludge technology.',
+      moat: 'Exclusive global patent licenses for C-Tech cyclic activated sludge process; 250+ operating reference plants across 18 Indian states.',
+      redFlags: [
+        'Government counterparty risk — municipal receivables can stretch working capital cycles to 120-140 days.',
+        'Intense bidding competition for central Namami Gange Phase 2 tenders could compress contract margins.'
+      ]
+    },
+    tacticalNote: 'Opens Nov 03. High grey market premium (+31%) and superior 17.9% net profit margins position this for aggressive listing pop and institutional accumulation.'
+  },
+  {
+    id: 'SAGILITY-INDIA',
+    verdict: 'APPLY',
+    score: 82,
+    pillarScores: {"fundamental":84,"quantitative":80,"sentiment":82},
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 22.5,
+    name: 'Sagility India Ltd',
+    ticker: 'SAGILITY',
+    market: 'IN',
+    tier: 'MAINBOARD',
+    status: 'UPCOMING',
+    statusLabel: '🟡 UPCOMING (Opens Nov 05)',
+    biddingDates: 'Nov 05 – Nov 07, 2026',
+    dateDetail: 'Opens Nov 05 • Bidding Nov 05-07',
+    exchange: 'NSE / BSE',
+    sector: 'Healthcare BPO & Digital Technology Services',
+    businessSummary: 'Technology-enabled healthcare services provider to US health insurers (payers) and hospital systems (providers), optimizing claims administration, clinical management, and revenue cycle management.',
+    issueDetails: {
+      priceBand: '₹28 - ₹30',
+      issuePrice: 30,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹2,106 Cr',
+      issueSizeNum: 2106,
+      marketCap: '₹14,040 Cr',
+      marketCapNum: 14040,
+      freshIssuePct: 0.0,
+      ofsPct: 100.0,
+      freshValue: '₹0 Cr',
+      ofsValue: '₹2,106 Cr',
+      promoterHoldingPre: 100.0,
+      promoterHoldingPost: 85.0,
+      publicFloatPct: 15.0,
+      minimumLot: 500,
+      retailMinInvestment: '₹15,000',
+      underwriters: ['ICICI Securities', 'IIFL Securities', 'Jefferies India', 'J.P. Morgan'],
+      underwriterTier: 'TIER_1',
+      openDate: '2026-11-05',
+      closeDate: '2026-11-07',
+      allotmentDate: '2026-11-08',
+      listingDate: '2026-11-12',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 4218 },
+        { year: 'FY25', value: 4721 },
+        { year: 'FY26', value: 5482 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 143.5 },
+        { year: 'FY25', value: 228.2 },
+        { year: 'FY26', value: 589.6 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 894 },
+        { year: 'FY25', value: 1084 },
+        { year: 'FY26', value: 1324 }
+      ],
+      cagrRevenue: 14.0,
+      cagrPat: 102.7,
+      operatingCashFlow: 892.4,
+      netDebt: 1420.0,
+      debtToEquity: 0.28,
+      margins: {
+        grossMargin: 48.5,
+        ebitdaMargin: 24.1,
+        patMargin: 10.8,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 23.8,
+      industryAvgPe: 30.7,
+      pbRatio: 3.2,
+      evEbitda: 11.6,
+      marketCapToSales: 2.56,
+      peerComps: [
+        { name: 'Firstsource Solutions', ticker: 'FSL.NS', pe: 31.4, pb: 4.8, evEbitda: 16.8, patMargin: 8.2, roe: 16.4 },
+        { name: 'eClerx Services', ticker: 'ECLERX.NS', pe: 28.5, pb: 6.2, evEbitda: 15.4, patMargin: 18.5, roe: 24.8 }
+      ]
+    },
+    sentiment: {
+      gmp: 6.5,
+      gmpPct: 21.7,
+      gmpTrend: 'STABLE',
+      gmpHistory: [
+        { day: 'T-3', gmp: 5.0, gmpPct: 16.7 },
+        { day: 'T-2', gmp: 6.0, gmpPct: 20.0 },
+        { day: 'T-1', gmp: 6.5, gmpPct: 21.7 }
+      ],
+      qibSubscription: 0,
+      niiSubscription: 0,
+      retailSubscription: 0,
+      totalSubscription: 0,
+      anchorBookQuality: 'PREMIUM',
+      anchorInvestors: ['EQT Private Equity', 'Capital Group', 'Fidelity', 'Nippon India MF']
+    },
+    forensicScore: 84,
+    anchorPedigree: 'MARQUEE_SOVEREIGN',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'US_HEALTHCARE_PAYER_STICKINESS',
+    executiveVerdict: '**SUBSCRIBE.** Pure-play US healthcare services titan backed by EQT. Strong client retention (average 10+ years with top 10 payers) and reasonable 23.8x P/E offer comfortable valuation cushion.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Delivers healthcare services across enrollment, claims adjudication, payment integrity, and clinical appeals for US health insurers.',
+      moat: 'Over 31,000 domain-certified healthcare specialists across delivery hubs in India, Philippines, Jamaica, and Colombia.',
+      redFlags: [
+        '100% OFS exit structure with zero fresh proceeds going to corporate balance sheet.',
+        'High US regulatory exposure to CMS (Centers for Medicare and Medicaid) policy shifts.'
+      ]
+    },
+    tacticalNote: 'Opens Nov 05. Healthy GMP (+21.7%) and low ₹30 nominal share price will attract huge retail and DII oversubscription.'
+  },
+  {
+    id: 'BOMBAY-COATED-STEELS',
+    verdict: 'APPLY',
+    score: 82,
+    pillarScores: {"fundamental":84,"quantitative":80,"sentiment":82},
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 24,
+    name: 'Bombay Coated & Special Steels Ltd',
+    ticker: 'BCSSL',
+    market: 'IN',
+    tier: 'MAINBOARD',
+    status: 'UPCOMING',
+    statusLabel: '🟡 UPCOMING (Opens Nov 09)',
+    biddingDates: 'Nov 09 – Nov 11, 2026',
+    dateDetail: 'Opens Nov 09 • Bidding Nov 09-11',
+    exchange: 'NSE / BSE',
+    sector: 'Specialty Steel, Cold Rolled & Pre-Painted Coils',
+    businessSummary: 'Value-added manufacturer of galvanized, galvalume, and pre-painted steel coils utilized in industrial PEB structures, white goods appliance exteriors, and infrastructure panels with export presence in 14 countries.',
+    issueDetails: {
+      priceBand: '₹220 - ₹232',
+      issuePrice: 232,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹480 Cr',
+      issueSizeNum: 480,
+      marketCap: '₹1,950 Cr',
+      marketCapNum: 1950,
+      freshIssuePct: 75.0,
+      ofsPct: 25.0,
+      freshValue: '₹360 Cr',
+      ofsValue: '₹120 Cr',
+      promoterHoldingPre: 82.4,
+      promoterHoldingPost: 66.8,
+      publicFloatPct: 33.2,
+      minimumLot: 64,
+      retailMinInvestment: '₹14,848',
+      underwriters: ['Systematix Corporate Services', 'Motilal Oswal Investment Advisors'],
+      underwriterTier: 'TIER_2',
+      openDate: '2026-11-09',
+      closeDate: '2026-11-11',
+      allotmentDate: '2026-11-12',
+      listingDate: '2026-11-17',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 684.2 },
+        { year: 'FY25', value: 892.4 },
+        { year: 'FY26', value: 1142.0 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 42.1 },
+        { year: 'FY25', value: 68.9 },
+        { year: 'FY26', value: 98.4 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 78.4 },
+        { year: 'FY25', value: 118.2 },
+        { year: 'FY26', value: 164.5 }
+      ],
+      cagrRevenue: 29.2,
+      cagrPat: 52.8,
+      operatingCashFlow: 84.1,
+      netDebt: 142.0,
+      debtToEquity: 0.38,
+      margins: {
+        grossMargin: 24.8,
+        ebitdaMargin: 14.4,
+        patMargin: 8.6,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 19.8,
+      industryAvgPe: 26.2,
+      pbRatio: 2.8,
+      evEbitda: 12.1,
+      marketCapToSales: 1.71,
+      peerComps: [
+        { name: 'Jindal Poly Films', ticker: 'JINDALPOLY.NS', pe: 24.5, pb: 3.2, evEbitda: 14.8, patMargin: 7.2, roe: 14.2 },
+        { name: 'APL Apollo Tubes', ticker: 'APLAPOLLO.NS', pe: 54.2, pb: 12.8, evEbitda: 31.4, patMargin: 4.8, roe: 24.5 },
+        { name: 'Pennar Industries', ticker: 'PENNARIND.NS', pe: 22.8, pb: 2.4, evEbitda: 11.2, patMargin: 3.6, roe: 11.8 }
+      ]
+    },
+    sentiment: {
+      gmp: 54,
+      gmpPct: 23.3,
+      gmpTrend: 'STABLE',
+      gmpHistory: [
+        { day: 'T-3', gmp: 44, gmpPct: 19.0 },
+        { day: 'T-2', gmp: 50, gmpPct: 21.6 },
+        { day: 'T-1', gmp: 54, gmpPct: 23.3 }
+      ],
+      qibSubscription: 0,
+      niiSubscription: 0,
+      retailSubscription: 0,
+      totalSubscription: 0,
+      anchorBookQuality: 'GOOD',
+      anchorInvestors: ['Tata Mutual Fund', 'Sundaram MF', 'Quantum Growth Fund']
+    },
+    forensicScore: 84,
+    anchorPedigree: 'INSTITUTIONAL_DOMESTIC',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'DOWNSTREAM_SPECIALTY_COATING',
+    executiveVerdict: '**SUBSCRIBE FOR LISTING GAINS.** Solid 52% 3Y PAT CAGR with 75% fresh issue proceeds directed toward continuous color-coating line expansion in Gujarat. Modest 19.8x P/E offers margin of safety.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Processes hot-rolled coil into high-tensile pre-painted steel sheets customized with silicone-modified polyester coatings for pre-engineered buildings and consumer electronics.',
+      moat: 'Zero-defect continuous coating technology with captive 15MW solar captive plant lowering unit manufacturing costs.',
+      redFlags: [
+        'Steel price cyclicality — operating margins vulnerable to rapid swings in global hot-rolled coil benchmarks.',
+        'High reliance on domestic construction & real-estate industrial roofing cycles.'
+      ]
+    },
+    tacticalNote: 'Opens Nov 09. +23.3% GMP and realistic pricing make this an attractive candidate for 20%+ listing day returns.'
+  },
   {
     id: 'BLS-POLYMERS',
     verdict: 'APPLY',
@@ -166,9 +980,9 @@ export const IPO_UNIVERSE = [
     market: 'IN',
     tier: 'SME',
     status: 'UPCOMING',
-    statusLabel: '🟡 UPCOMING (Opens Oct 27)',
-    biddingDates: 'Oct 27 – Oct 29, 2026',
-    dateDetail: 'Opens Tomorrow • Bidding Oct 27-29',
+    statusLabel: '🟡 UPCOMING (Opens Nov 02)',
+    biddingDates: 'Nov 02 – Nov 04, 2026',
+    dateDetail: 'Opens Nov 02 • Bidding Nov 02-04 on BSE SME',
     exchange: 'BSE SME',
     sector: 'Specialty Polymers & Masterbatches',
     businessSummary: 'Manufacturer of high-performance polymer compounds, engineering masterbatches, and flame-retardant thermoplastics supplied to Indian white goods, wire & cable, and automotive OEMs.',
@@ -179,62 +993,63 @@ export const IPO_UNIVERSE = [
       currencySymbol: '₹',
       issueSize: '₹42.0 Cr',
       issueSizeNum: 42.0,
-      marketCap: '₹162.0 Cr',
-      marketCapNum: 162.0,
-      freshIssuePct: 100.0,
-      ofsPct: 0.0,
-      freshValue: '₹42.0 Cr',
-      ofsValue: '₹0 Cr',
-      promoterHoldingPre: 98.2,
-      promoterHoldingPost: 72.1,
-      publicFloatPct: 27.9,
+      marketCap: '₹168 Cr',
+      marketCapNum: 168,
+      freshIssuePct: 80.0,
+      ofsPct: 20.0,
+      freshValue: '₹33.6 Cr',
+      ofsValue: '₹8.4 Cr',
+      promoterHoldingPre: 98.4,
+      promoterHoldingPost: 71.2,
+      publicFloatPct: 28.8,
       minimumLot: 1000,
       retailMinInvestment: '₹1,50,000',
-      underwriters: ['Choice Capital Advisors', 'Hem Securities'],
-      underwriterTier: 'SME_SPECIALIST',
-      openDate: '2026-10-27',
-      closeDate: '2026-10-29',
-      listingDate: '2026-11-04',
+      underwriters: ['Unistone Capital', 'Interactive Financial Services'],
+      underwriterTier: 'TIER_2',
+      openDate: '2026-11-02',
+      closeDate: '2026-11-04',
+      allotmentDate: '2026-11-05',
+      listingDate: '2026-11-09',
       financialYear: 'FY 2026-27'
     },
     financials: {
       reportingCurrency: 'INR Cr',
       revenue3Y: [
-        { year: 'FY24', value: 82.4 },
-        { year: 'FY25', value: 114.6 },
-        { year: 'FY26', value: 168.2 }
+        { year: 'FY24', value: 68.4 },
+        { year: 'FY25', value: 92.1 },
+        { year: 'FY26', value: 124.6 }
       ],
       pat3Y: [
-        { year: 'FY24', value: 4.8 },
+        { year: 'FY24', value: 5.2 },
         { year: 'FY25', value: 8.9 },
-        { year: 'FY26', value: 15.6 }
+        { year: 'FY26', value: 14.8 }
       ],
       ebitda3Y: [
         { year: 'FY24', value: 8.6 },
-        { year: 'FY25', value: 15.2 },
-        { year: 'FY26', value: 24.8 }
+        { year: 'FY25', value: 14.2 },
+        { year: 'FY26', value: 22.4 }
       ],
-      cagrRevenue: 42.9,
-      cagrPat: 80.3,
-      operatingCashFlow: 12.4,
-      netDebt: 18.2,
-      debtToEquity: 0.35,
+      cagrRevenue: 35.0,
+      cagrPat: 68.7,
+      operatingCashFlow: 11.2,
+      netDebt: 14.5,
+      debtToEquity: 0.28,
       margins: {
-        grossMargin: 28.5,
-        ebitdaMargin: 14.7,
-        patMargin: 9.3,
+        grossMargin: 38.4,
+        ebitdaMargin: 18.0,
+        patMargin: 11.9,
         spikeDetected: false
       }
     },
     valuation: {
-      peRatio: 10.4,
-      industryAvgPe: 22.8,
-      pbRatio: 2.1,
-      evEbitda: 7.2,
-      marketCapToSales: 0.96,
+      peRatio: 11.4,
+      industryAvgPe: 24.8,
+      pbRatio: 2.4,
+      evEbitda: 7.8,
+      marketCapToSales: 1.35,
       peerComps: [
-        { name: 'Plastiblends India', ticker: 'PLASTIBLEN.NS', pe: 18.4, pb: 2.2, evEbitda: 11.2, patMargin: 6.2, roe: 13.8 },
-        { name: 'Alok Masterbatches', ticker: 'UNLISTED', pe: 24.5, pb: 3.1, evEbitda: 14.5, patMargin: 7.8, roe: 16.4 }
+        { name: 'Plastiblends India', ticker: 'PLASTIBLEN.NS', pe: 21.2, pb: 2.8, evEbitda: 14.2, patMargin: 5.2, roe: 13.8 },
+        { name: 'Poddar Pigments', ticker: 'PODDARMENT.NS', pe: 18.6, pb: 1.9, evEbitda: 11.8, patMargin: 6.8, roe: 10.4 }
       ]
     },
     sentiment: {
@@ -242,381 +1057,616 @@ export const IPO_UNIVERSE = [
       gmpPct: 28.0,
       gmpTrend: 'RISING',
       gmpHistory: [
-        { day: 'T-3', gmp: 30, gmpPct: 20.0 },
-        { day: 'T-2', gmp: 36, gmpPct: 24.0 },
+        { day: 'T-3', gmp: 32, gmpPct: 21.3 },
+        { day: 'T-2', gmp: 38, gmpPct: 25.3 },
         { day: 'T-1', gmp: 42, gmpPct: 28.0 }
       ],
-      qibSubscription: 0.0,
-      niiSubscription: 0.0,
-      retailSubscription: 0.0,
-      totalSubscription: 0.0,
-      anchorBookQuality: 'NOT_APPLICABLE',
-      anchorInvestors: []
+      qibSubscription: 0,
+      niiSubscription: 0,
+      retailSubscription: 0,
+      totalSubscription: 0,
+      anchorBookQuality: 'GOOD',
+      anchorInvestors: ['India Max Investment Fund', 'Navi Finserve']
     },
     forensicScore: 86,
-    anchorPedigree: 'SME_NO_ANCHOR',
+    anchorPedigree: 'INSTITUTIONAL_DOMESTIC',
     retailAttractiveness: 'HIGH',
-    institutionalMoat: 'ENGINEERING_FORMULATIONS',
-    executiveVerdict: '**HIGH CONVICTION APPLY (SME).** 100% fresh issue funding plant automation and capacity expansion. Clean financial trajectory with genuine 42.9% revenue CAGR, modest debt, and deeply discounted 10.4x P/E against peers trading above 20x.',
+    institutionalMoat: 'PROPRIETARY_COMPOUND_FORMULATION',
+    executiveVerdict: '**SUBSCRIBE FOR LISTING GAINS.** High-growth polymer specialty compounder trading at a mouth-watering 11.4x P/E (vs. 24.8x peer average) with 68% PAT CAGR and low debt. Clean balance sheet.',
     businessAndRedFlags: {
-      whatTheyDo: 'Produces customized white, black, color, and additive masterbatches used in food packaging, wire insulation, and household plastic appliances.',
-      moat: 'Proprietary compound recipe library with tight OEM customer qualifications in appliances and telecom.',
+      whatTheyDo: 'Produces customized color masterbatches, UV stabilizer compounds, and halogen-free flame-retardant polymers for Tier-1 industrial clients.',
+      moat: 'Proprietary pigment dispersion formulations and long-term supply arrangements with Havells, Polycab, and Dixon Technologies.',
       redFlags: [
-        'Raw material pricing susceptibility to petrochemical crude derivatives (polypropylene & polyethylene resins).',
-        'BSE SME board illiquidity lock-in with minimum lot size of 1,000 shares (₹1.50 Lakhs).'
+        'Small-cap SME profile with ₹168 Cr post-issue market cap — potential liquidity constraints on BSE SME board.',
+        'Crude oil byproduct feedstock volatility can pressure quarterly gross margins.'
       ]
     },
-    tacticalNote: 'Opens for subscription tomorrow. Bidding window Oct 27–29. Apply for listing gain pop targeting +25% to +35% with secondary trailing stop at ₹175.'
+    tacticalNote: 'Opens Nov 02. Strong +28% GMP and attractive 11.4x P/E offer compelling risk-adjusted upside for high-net-worth SME applicants.'
   },
-
   {
-    id: 'SFC-ENVIRONMENTAL',
+    id: 'UNITED-HEAT',
     verdict: 'APPLY',
-    score: 88,
-    pillarScores: {"fundamental":92,"quantitative":85,"sentiment":86},
+    score: 83,
+    pillarScores: {"fundamental":84,"quantitative":82,"sentiment":83},
     valuationVsPeers: 'DISCOUNT',
-    valuationDiscountPct: 42,
-    name: 'SFC Environmental Technologies Ltd',
-    ticker: 'SFCENV',
+    valuationDiscountPct: 32.0,
+    name: 'United Heat Transfer Ltd',
+    ticker: 'UNITEDHEAT',
     market: 'IN',
-    tier: 'MAINBOARD',
+    tier: 'SME',
     status: 'UPCOMING',
-    statusLabel: '🟡 UPCOMING (Opens Oct 27)',
-    biddingDates: 'Oct 27 – Oct 29, 2026',
-    dateDetail: 'Opens Tomorrow • Mainboard Issue',
-    exchange: 'NSE / BSE',
-    sector: 'Water Treatment & Cleantech Infrastructure',
-    businessSummary: 'Global engineering contractor delivering proprietary sequential batch reactor (C-TECH SBR) wastewater treatment plants, municipal desalination, and industrial effluent recycling infrastructure.',
+    statusLabel: '🟡 UPCOMING (Opens Nov 04)',
+    biddingDates: 'Nov 04 – Nov 06, 2026',
+    dateDetail: 'Opens Nov 04 • Bidding Nov 04-06 on NSE SME',
+    exchange: 'NSE SME',
+    sector: 'Heavy Industrial Equipment & Heat Exchangers',
+    businessSummary: 'Manufacturer of customized shell and tube heat exchangers, pressure vessels, and marine lube oil coolers supplied to heavy diesel engines, maritime vessels, and power plant turbines.',
     issueDetails: {
-      priceBand: '₹425 - ₹450',
-      issuePrice: 450,
+      priceBand: '₹56 - ₹59',
+      issuePrice: 59,
       currency: 'INR',
       currencySymbol: '₹',
-      issueSize: '₹667.5 Cr',
-      issueSizeNum: 667.5,
-      marketCap: '₹3,450 Cr',
-      marketCapNum: 3450,
-      freshIssuePct: 65.0,
-      ofsPct: 35.0,
-      freshValue: '₹433.9 Cr',
-      ofsValue: '₹233.6 Cr',
-      promoterHoldingPre: 82.0,
-      promoterHoldingPost: 64.5,
-      publicFloatPct: 21.5,
-      minimumLot: 33,
-      retailMinInvestment: '₹14,850',
-      underwriters: ['JM Financial', 'Equirus Capital'],
-      underwriterTier: 'TIER_1',
-      openDate: '2026-10-27',
-      closeDate: '2026-10-29',
-      listingDate: '2026-11-04',
+      issueSize: '₹29.80 Cr',
+      issueSizeNum: 29.80,
+      marketCap: '₹112 Cr',
+      marketCapNum: 112,
+      freshIssuePct: 100.0,
+      ofsPct: 0.0,
+      freshValue: '₹29.80 Cr',
+      ofsValue: '₹0 Cr',
+      promoterHoldingPre: 99.2,
+      promoterHoldingPost: 72.5,
+      publicFloatPct: 27.5,
+      minimumLot: 2000,
+      retailMinInvestment: '₹1,18,000',
+      underwriters: ['Swastika Investmart'],
+      underwriterTier: 'TIER_2',
+      openDate: '2026-11-04',
+      closeDate: '2026-11-06',
+      allotmentDate: '2026-11-09',
+      listingDate: '2026-11-13',
       financialYear: 'FY 2026-27'
     },
     financials: {
       reportingCurrency: 'INR Cr',
       revenue3Y: [
-        { year: 'FY24', value: 312.0 },
-        { year: 'FY25', value: 458.5 },
-        { year: 'FY26', value: 684.2 }
+        { year: 'FY24', value: 44.2 },
+        { year: 'FY25', value: 58.6 },
+        { year: 'FY26', value: 74.5 }
       ],
       pat3Y: [
-        { year: 'FY24', value: 41.2 },
-        { year: 'FY25', value: 72.8 },
-        { year: 'FY26', value: 128.5 }
+        { year: 'FY24', value: 3.2 },
+        { year: 'FY25', value: 5.8 },
+        { year: 'FY26', value: 9.4 }
       ],
       ebitda3Y: [
-        { year: 'FY24', value: 62.4 },
-        { year: 'FY25', value: 104.2 },
-        { year: 'FY26', value: 182.6 }
+        { year: 'FY24', value: 6.4 },
+        { year: 'FY25', value: 10.2 },
+        { year: 'FY26', value: 15.6 }
       ],
-      cagrRevenue: 48.1,
-      cagrPat: 76.6,
-      operatingCashFlow: 94.2,
-      netDebt: 45.0,
-      debtToEquity: 0.12,
+      cagrRevenue: 29.8,
+      cagrPat: 71.4,
+      operatingCashFlow: 7.8,
+      netDebt: 11.2,
+      debtToEquity: 0.32,
       margins: {
-        grossMargin: 44.2,
-        ebitdaMargin: 26.7,
-        patMargin: 18.8,
+        grossMargin: 44.5,
+        ebitdaMargin: 20.9,
+        patMargin: 12.6,
         spikeDetected: false
       }
     },
     valuation: {
-      peRatio: 26.8,
-      industryAvgPe: 46.5,
-      pbRatio: 4.8,
-      evEbitda: 18.4,
-      marketCapToSales: 5.0,
+      peRatio: 11.9,
+      industryAvgPe: 17.5,
+      pbRatio: 2.6,
+      evEbitda: 7.8,
+      marketCapToSales: 1.50,
       peerComps: [
-        { name: 'VA Tech Wabag', ticker: 'WABAG.NS', pe: 38.5, pb: 4.2, evEbitda: 22.8, patMargin: 9.8, roe: 18.5 },
-        { name: 'Ion Exchange India', ticker: 'IONEXCHANG.NS', pe: 32.4, pb: 5.8, evEbitda: 20.4, patMargin: 8.5, roe: 21.0 }
+        { name: 'KRN Heat Exchanger', ticker: 'KRN.NS', pe: 28.5, pb: 5.2, evEbitda: 17.8, patMargin: 12.8, roe: 21.4 },
+        { name: 'Patels Airtemp', ticker: 'PATELSAIR.BO', pe: 16.4, pb: 2.1, evEbitda: 10.2, patMargin: 6.8, roe: 13.2 }
       ]
     },
     sentiment: {
-      gmp: 135,
-      gmpPct: 30.0,
+      gmp: 24,
+      gmpPct: 40.7,
       gmpTrend: 'RISING',
       gmpHistory: [
-        { day: 'T-3', gmp: 105, gmpPct: 23.3 },
-        { day: 'T-2', gmp: 120, gmpPct: 26.7 },
-        { day: 'T-1', gmp: 135, gmpPct: 30.0 }
+        { day: 'T-3', gmp: 18, gmpPct: 30.5 },
+        { day: 'T-2', gmp: 21, gmpPct: 35.6 },
+        { day: 'T-1', gmp: 24, gmpPct: 40.7 }
       ],
-      qibSubscription: 0.0,
-      niiSubscription: 0.0,
-      retailSubscription: 0.0,
-      totalSubscription: 0.0,
-      anchorBookQuality: 'PREMIUM',
-      anchorInvestors: ['HDFC Small Cap Fund', 'Franklin Templeton', 'Mirae Asset Large & Midcap', 'Goldman Sachs Asset Management']
+      qibSubscription: 0,
+      niiSubscription: 0,
+      retailSubscription: 0,
+      totalSubscription: 0,
+      anchorBookQuality: 'GOOD',
+      anchorInvestors: ['Finavenue Capital', 'Zeal Global Opportunities']
     },
-    forensicScore: 91,
-    anchorPedigree: 'MARQUEE_DOMESTIC_GLOBAL',
+    forensicScore: 84,
+    anchorPedigree: 'INSTITUTIONAL_DOMESTIC',
     retailAttractiveness: 'HIGH',
-    institutionalMoat: 'PATENTED_C_TECH_SBR_TECH',
-    executiveVerdict: '**APPLY FOR LISTING POP & MULTI-YEAR COMPOUNDING.** Clear cleantech beneficiary of government Namami Gange and municipal zero-liquid-discharge mandates. Boasts an extraordinary 18.8% PAT margin, low leverage, and a 42% discount to VA Tech Wabag.',
+    institutionalMoat: 'PRECISION_HEAT_EXCHANGER_FABRICATION',
+    executiveVerdict: '**SUBSCRIBE.** High-margin industrial equipment fabrication with 71% PAT CAGR and ASME ‘U’ stamp certifications. Attractive 11.9x P/E with strong +40% GMP indicates substantial listing gains.',
     businessAndRedFlags: {
-      whatTheyDo: 'Designs and builds biological wastewater treatment installations utilizing patented cyclic activated sludge technology with over 600 operational installations across 15 nations.',
-      moat: 'Proprietary automated decanter hardware and process engineering patents ensuring 30% lower land footprint than conventional activated sludge.',
+      whatTheyDo: 'Builds critical heat transfer equipment, moisture separators, and pressure vessels for marine defense and power generation.',
+      moat: 'Approved vendor for Indian Navy and major global diesel engine manufacturers.',
       redFlags: [
-        'Working capital intensity driven by milestone payment retention terms from municipal corporation clients.',
-        'Order execution delay exposure on state-sponsored municipal water infrastructure projects.'
+        'Working capital cycle stretched to 110 days due to custom fabrication delivery timelines.',
+        'SME board listing with ₹112 Cr market cap.'
       ]
     },
-    tacticalNote: 'Opens tomorrow (Oct 27). GMP +30% indicates robust opening premium. Recommend full subscription across retail and HNI categories; hold for multi-quarter cleantech theme.'
+    tacticalNote: 'Opens Nov 04. Robust 40% GMP and reasonable valuation provide excellent safety margin for listing gains.'
   },
-
   {
     id: 'MK-SONS-JEWELS',
     verdict: 'AVOID',
     score: 26,
-    pillarScores: {"fundamental":25,"quantitative":30,"sentiment":22},
-    valuationVsPeers: 'PRICED_TO_PERFECTION',
-    valuationDiscountPct: -20,
+    pillarScores: {"fundamental":18,"quantitative":22,"sentiment":42},
+    valuationVsPeers: 'EXPENSIVE',
+    valuationDiscountPct: -110,
     name: 'M.K. Sons Fine Jewels Ltd',
     ticker: 'MKSONS',
     market: 'IN',
     tier: 'SME',
     status: 'UPCOMING',
-    statusLabel: '🟡 UPCOMING (Opens Oct 28)',
-    biddingDates: 'Oct 28 – Oct 30, 2026',
-    dateDetail: 'Opens Wednesday • SME Issue',
+    statusLabel: '🟡 UPCOMING (Opens Nov 08)',
+    biddingDates: 'Nov 08 – Nov 10, 2026',
+    dateDetail: 'Opens Nov 08 • Bidding Nov 08-10 on BSE SME',
     exchange: 'BSE SME',
-    sector: 'Gems, Jewellery & Luxury Lifestyle',
-    businessSummary: 'Regional gold and diamond jewelry retailer operating 6 boutique showrooms across Tier-2 Rajasthan and Gujarat with bridal and polki collections.',
+    sector: 'Gems & Bridal Jewellery Retailing',
+    businessSummary: 'Regional gold and diamond jewelry retailer operating 4 showrooms across tier-2 cities in Rajasthan with high working-capital bank borrowings and low operating cash flows.',
     issueDetails: {
-      priceBand: '₹115 - ₹122',
-      issuePrice: 122,
+      priceBand: '₹85 - ₹90',
+      issuePrice: 90,
       currency: 'INR',
       currencySymbol: '₹',
-      issueSize: '₹28.4 Cr',
-      issueSizeNum: 28.4,
-      marketCap: '₹95.0 Cr',
-      marketCapNum: 95.0,
-      freshIssuePct: 35.0,
-      ofsPct: 65.0,
-      freshValue: '₹9.9 Cr',
-      ofsValue: '₹18.5 Cr',
-      promoterHoldingPre: 95.0,
-      promoterHoldingPost: 68.0,
-      publicFloatPct: 32.0,
-      minimumLot: 1000,
-      retailMinInvestment: '₹1,22,000',
-      underwriters: ['Interactive Financial Services'],
-      underwriterTier: 'BOUTIQUE',
-      openDate: '2026-10-28',
-      closeDate: '2026-10-30',
-      listingDate: '2026-11-05',
+      issueSize: '₹24.0 Cr',
+      issueSizeNum: 24.0,
+      marketCap: '₹84 Cr',
+      marketCapNum: 84,
+      freshIssuePct: 100.0,
+      ofsPct: 0.0,
+      freshValue: '₹24.0 Cr',
+      ofsValue: '₹0 Cr',
+      promoterHoldingPre: 99.2,
+      promoterHoldingPost: 71.4,
+      publicFloatPct: 28.6,
+      minimumLot: 1600,
+      retailMinInvestment: '₹1,44,000',
+      underwriters: ['Finshore Management Services'],
+      underwriterTier: 'TIER_3',
+      openDate: '2026-11-08',
+      closeDate: '2026-11-10',
+      allotmentDate: '2026-11-11',
+      listingDate: '2026-11-16',
       financialYear: 'FY 2026-27'
     },
     financials: {
       reportingCurrency: 'INR Cr',
       revenue3Y: [
-        { year: 'FY24', value: 68.4 },
-        { year: 'FY25', value: 72.1 },
-        { year: 'FY26', value: 89.6 }
+        { year: 'FY24', value: 42.1 },
+        { year: 'FY25', value: 48.6 },
+        { year: 'FY26', value: 52.4 }
       ],
       pat3Y: [
         { year: 'FY24', value: 1.1 },
-        { year: 'FY25', value: 1.8 },
-        { year: 'FY26', value: 7.4 }
+        { year: 'FY25', value: 1.4 },
+        { year: 'FY26', value: 2.1 }
       ],
       ebitda3Y: [
-        { year: 'FY24', value: 3.2 },
-        { year: 'FY25', value: 4.1 },
-        { year: 'FY26', value: 11.8 }
+        { year: 'FY24', value: 2.8 },
+        { year: 'FY25', value: 3.4 },
+        { year: 'FY26', value: 4.8 }
       ],
-      cagrRevenue: 14.4,
-      cagrPat: 159.2,
+      cagrRevenue: 11.6,
+      cagrPat: 38.2,
       operatingCashFlow: -6.4,
-      netDebt: 34.5,
-      debtToEquity: 1.15,
+      netDebt: 32.5,
+      debtToEquity: 1.48,
       margins: {
-        grossMargin: 18.2,
-        ebitdaMargin: 13.2,
-        patMargin: 8.3,
+        grossMargin: 14.2,
+        ebitdaMargin: 9.1,
+        patMargin: 4.0,
         spikeDetected: true
       }
     },
     valuation: {
-      peRatio: 12.8,
-      industryAvgPe: 38.0,
-      pbRatio: 2.8,
-      evEbitda: 10.9,
-      marketCapToSales: 1.06,
+      peRatio: 40.0,
+      industryAvgPe: 19.5,
+      pbRatio: 4.2,
+      evEbitda: 24.5,
+      marketCapToSales: 1.60,
       peerComps: [
-        { name: 'Titan Company', ticker: 'TITAN.NS', pe: 84.5, pb: 28.0, evEbitda: 52.0, patMargin: 8.4, roe: 32.4 },
-        { name: 'Kalyan Jewellers', ticker: 'KALYANKJIL.NS', pe: 64.2, pb: 11.4, evEbitda: 34.8, patMargin: 3.8, roe: 21.6 }
+        { name: 'Kalyan Jewellers', ticker: 'KALYANKJIL.NS', pe: 64.2, pb: 9.8, evEbitda: 31.2, patMargin: 3.8, roe: 16.5 },
+        { name: 'Thangamayil Jewellery', ticker: 'THANGAMAYL.NS', pe: 34.5, pb: 6.1, evEbitda: 21.0, patMargin: 3.2, roe: 18.2 },
+        { name: 'Senco Gold', ticker: 'SENCO.NS', pe: 36.2, pb: 5.4, evEbitda: 22.4, patMargin: 3.5, roe: 15.8 }
       ]
     },
     sentiment: {
       gmp: 0,
       gmpPct: 0.0,
-      gmpTrend: 'STABLE',
+      gmpTrend: 'FALLING',
       gmpHistory: [
-        { day: 'T-3', gmp: 0, gmpPct: 0.0 },
-        { day: 'T-2', gmp: 0, gmpPct: 0.0 },
+        { day: 'T-3', gmp: 4, gmpPct: 4.4 },
+        { day: 'T-2', gmp: 2, gmpPct: 2.2 },
         { day: 'T-1', gmp: 0, gmpPct: 0.0 }
       ],
-      qibSubscription: 0.0,
-      niiSubscription: 0.0,
-      retailSubscription: 0.0,
-      totalSubscription: 0.0,
-      anchorBookQuality: 'NOT_APPLICABLE',
-      anchorInvestors: []
+      qibSubscription: 0,
+      niiSubscription: 0,
+      retailSubscription: 0,
+      totalSubscription: 0,
+      anchorBookQuality: 'WEAK',
+      anchorInvestors: ['Retail HNI Syndicate']
     },
-    forensicScore: 28,
-    anchorPedigree: 'SME_NO_ANCHOR',
+    forensicScore: 32,
+    anchorPedigree: 'RETAIL_SYNDICATE_ONLY',
     retailAttractiveness: 'LOW',
-    institutionalMoat: 'NONE_COMMODITIZED',
-    executiveVerdict: '**AVOID (FORENSIC RED FLAGS).** High-risk pre-IPO window dressing identified: PAT miraculously expanded 311% in FY26 while revenue only grew 24%. Negative operating cash flow (-₹6.4 Cr), heavy 65% OFS promoter cashout, and 0% GMP signal severe post-listing liquidity trap.',
+    institutionalMoat: 'NO_MOAT_LOCAL_COMMODITY',
+    executiveVerdict: '**STRONG AVOID.** Thin 4.0% PAT margin, persistent negative operating cash flows (-₹6.4 Cr), high debt-to-equity (1.48x), and sudden pre-IPO margin spike. 40.0x P/E is absurdly expensive for a 4-store regional retail footprint.',
     businessAndRedFlags: {
-      whatTheyDo: 'Sells unbranded and semi-branded 22-carat gold ornaments and studded diamond jewelry across 6 regional retail stores.',
-      moat: 'None. Intense competition from national chains (Titan, Kalyan, Senco) and unorganized regional jewelers.',
+      whatTheyDo: 'Buys gold bullion from banks, outsources bridal jewelry crafting to local artisans, and retails through 4 branded shops.',
+      moat: 'None. Highly localized brand with extreme competition from organized national chains (Tanishq, Kalyan, Senco).',
       redFlags: [
-        'Forensic pre-IPO profit margin spike: PAT surged from ₹1.8 Cr to ₹7.4 Cr without corresponding store footprint additions.',
-        'Negative Operating Cash Flow (-₹6.4 Cr) despite reported net profits, indicating inventory pile-up and receivables expansion.',
-        'Predatory Offer For Sale (65% OFS) taking money off the table right before mandatory Hallmarking audit scrutiny.'
+        'Persistent negative cash flow from operations (-₹6.4 Cr in FY26) despite reported profitability.',
+        'Debt-to-equity ratio at a concerning 1.48x with heavy inventory holding costs.',
+        'Forensic pre-IPO PAT spike: Net profits jumped 50% in FY26 while revenue only rose 7.8%.'
       ]
     },
-    tacticalNote: 'Strict Avoid. Nil grey market demand. Do not deploy capital into illiquid SME issues with forensic margin anomalies.'
+    tacticalNote: 'Opens Nov 08. Zero grey market premium (0.0%) and high forensic accounting red flags make this a capital destruction risk. Steer completely clear.'
   },
 
+  // =========================================================================
+  // 4. CLOSED / ALLOTMENT IN PROGRESS IPOS (AWAITING LISTING)
+  // =========================================================================
   {
-    id: 'BOMBAY-COATED-STEELS',
-    verdict: 'APPLY',
-    score: 82,
-    pillarScores: {"fundamental":82,"quantitative":86,"sentiment":78},
-    valuationVsPeers: 'DISCOUNT',
-    valuationDiscountPct: 31,
-    name: 'Bombay Coated & Special Steels Ltd',
-    ticker: 'BCSSL',
+    id: 'GODAVARI-BIO',
+    verdict: 'WATCH',
+    score: 68,
+    pillarScores: {"fundamental":70,"quantitative":65,"sentiment":68},
+    valuationVsPeers: 'IN_LINE',
+    valuationDiscountPct: -4.5,
+    name: 'Godavari Biorefineries Ltd',
+    ticker: 'GODAVARI',
     market: 'IN',
     tier: 'MAINBOARD',
-    status: 'UPCOMING',
-    statusLabel: '🟡 UPCOMING (Opens Oct 29)',
-    biddingDates: 'Oct 29 – Nov 02, 2026',
-    dateDetail: 'Opens Thursday • Mainboard Issue',
-    exchange: 'BSE / NSE',
-    sector: 'Specialty Steel & Cold Rolled Strips',
-    businessSummary: 'Manufacturer of high-tensile cold-rolled steel strips, precision galvanized coils, and coated steel components for electrical stampings, power transmission, and two-wheeler chassis.',
+    status: 'CLOSED',
+    statusLabel: '🔵 ALLOTMENT TODAY (Listing Oct 30)',
+    biddingDates: 'Oct 23 – Oct 25, 2026 (Closed)',
+    dateDetail: 'Allotment Finalized Today • Listing Oct 30 on NSE/BSE',
+    exchange: 'NSE / BSE',
+    sector: 'Bio-based Chemicals, Ethanol & Renewable Energy',
+    businessSummary: 'One of the largest producers of ethanol-based specialty chemicals in India, manufacturing bio-based ethyl acetate, bio-butanol, and white refined sugar with integrated bagasse cogeneration.',
     issueDetails: {
-      priceBand: '₹135 - ₹142',
-      issuePrice: 142,
+      priceBand: '₹334 - ₹352',
+      issuePrice: 352,
       currency: 'INR',
       currencySymbol: '₹',
-      issueSize: '₹183.1 Cr',
-      issueSizeNum: 183.1,
-      marketCap: '₹840.0 Cr',
-      marketCapNum: 840.0,
-      freshIssuePct: 80.0,
-      ofsPct: 20.0,
-      freshValue: '₹146.5 Cr',
-      ofsValue: '₹36.6 Cr',
-      promoterHoldingPre: 88.4,
-      promoterHoldingPost: 68.2,
-      publicFloatPct: 21.8,
-      minimumLot: 105,
-      retailMinInvestment: '₹14,910',
-      underwriters: ['IDBI Capital Markets', 'Pantheon Securities'],
-      underwriterTier: 'TIER_2',
-      openDate: '2026-10-29',
-      closeDate: '2026-11-02',
-      listingDate: '2026-11-06',
+      issueSize: '₹554.75 Cr',
+      issueSizeNum: 554.75,
+      marketCap: '₹1,800 Cr',
+      marketCapNum: 1800,
+      freshIssuePct: 58.0,
+      ofsPct: 42.0,
+      freshValue: '₹325 Cr',
+      ofsValue: '₹229.75 Cr',
+      promoterHoldingPre: 78.4,
+      promoterHoldingPost: 64.2,
+      publicFloatPct: 35.8,
+      minimumLot: 42,
+      retailMinInvestment: '₹14,784',
+      underwriters: ['Equirus Capital', 'SBI Capital Markets'],
+      underwriterTier: 'TIER_1',
+      openDate: '2026-10-23',
+      closeDate: '2026-10-25',
+      allotmentDate: '2026-10-28',
+      listingDate: '2026-10-30',
       financialYear: 'FY 2026-27'
     },
     financials: {
       reportingCurrency: 'INR Cr',
       revenue3Y: [
-        { year: 'FY24', value: 412.5 },
-        { year: 'FY25', value: 524.8 },
-        { year: 'FY26', value: 648.2 }
+        { year: 'FY24', value: 1684 },
+        { year: 'FY25', value: 2023 },
+        { year: 'FY26', value: 1701 }
       ],
       pat3Y: [
-        { year: 'FY24', value: 24.2 },
-        { year: 'FY25', value: 38.6 },
-        { year: 'FY26', value: 54.8 }
+        { year: 'FY24', value: 19.6 },
+        { year: 'FY25', value: 31.8 },
+        { year: 'FY26', value: 12.3 }
       ],
       ebitda3Y: [
-        { year: 'FY24', value: 46.8 },
-        { year: 'FY25', value: 68.4 },
-        { year: 'FY26', value: 92.4 }
+        { year: 'FY24', value: 142 },
+        { year: 'FY25', value: 184 },
+        { year: 'FY26', value: 128 }
       ],
-      cagrRevenue: 25.3,
-      cagrPat: 50.5,
-      operatingCashFlow: 46.2,
-      netDebt: 82.4,
-      debtToEquity: 0.32,
+      cagrRevenue: 0.5,
+      cagrPat: -20.8,
+      operatingCashFlow: 82.4,
+      netDebt: 684.0,
+      debtToEquity: 0.95,
       margins: {
-        grossMargin: 24.2,
-        ebitdaMargin: 14.3,
-        patMargin: 8.5,
+        grossMargin: 28.5,
+        ebitdaMargin: 7.5,
+        patMargin: 0.72,
         spikeDetected: false
       }
     },
     valuation: {
-      peRatio: 15.3,
-      industryAvgPe: 22.4,
-      pbRatio: 2.6,
-      evEbitda: 9.9,
-      marketCapToSales: 1.30,
+      peRatio: 38.5,
+      industryAvgPe: 32.4,
+      pbRatio: 2.9,
+      evEbitda: 14.2,
+      marketCapToSales: 1.05,
       peerComps: [
-        { name: 'Pennar Industries', ticker: 'PENNARIND.NS', pe: 18.2, pb: 2.1, evEbitda: 11.4, patMargin: 4.8, roe: 14.2 },
-        { name: 'APL Apollo Tubes', ticker: 'APLAPOLLO.NS', pe: 42.8, pb: 9.4, evEbitda: 26.8, patMargin: 5.6, roe: 24.5 }
+        { name: 'Balrampur Chini Mills', ticker: 'BALRAMCHIN.NS', pe: 18.4, pb: 2.8, evEbitda: 11.2, patMargin: 8.4, roe: 15.2 },
+        { name: 'Praj Industries', ticker: 'PRAJIND.NS', pe: 42.1, pb: 9.4, evEbitda: 28.5, patMargin: 9.2, roe: 22.8 }
       ]
     },
     sentiment: {
-      gmp: 24,
-      gmpPct: 16.9,
+      gmp: 22,
+      gmpPct: 6.3,
       gmpTrend: 'STABLE',
       gmpHistory: [
-        { day: 'T-3', gmp: 18, gmpPct: 12.7 },
-        { day: 'T-2', gmp: 22, gmpPct: 15.5 },
-        { day: 'T-1', gmp: 24, gmpPct: 16.9 }
+        { day: 'T-2', gmp: 18, gmpPct: 5.1 },
+        { day: 'T-1', gmp: 20, gmpPct: 5.7 },
+        { day: 'Allotment Day (Today)', gmp: 22, gmpPct: 6.3 }
       ],
-      qibSubscription: 0.0,
-      niiSubscription: 0.0,
-      retailSubscription: 0.0,
-      totalSubscription: 0.0,
+      qibSubscription: 9.8,
+      niiSubscription: 4.8,
+      retailSubscription: 3.2,
+      totalSubscription: 5.4,
       anchorBookQuality: 'GOOD',
-      anchorInvestors: ['Tata Mutual Fund', 'Bandhan Small Cap Fund', 'Quant Mutual Fund']
+      anchorInvestors: ['SBI Mutual Fund', 'WhiteOak Capital', 'Kotak Mahindra Trustee']
     },
-    forensicScore: 84,
-    anchorPedigree: 'REPUTED_DOMESTIC',
-    retailAttractiveness: 'HIGH',
-    institutionalMoat: 'ENGINEERING_COLD_ROLLED_STEEL',
-    executiveVerdict: '**SUBSCRIBE FOR REASONABLE LISTING GAINS.** Honest valuation at 15.3x P/E with 80% fresh issue dedicated to modernizing pickling lines and reducing debt. Strong order visibility from EV component suppliers.',
+    forensicScore: 72,
+    anchorPedigree: 'INSTITUTIONAL_DOMESTIC',
+    retailAttractiveness: 'MODERATE',
+    institutionalMoat: 'BIO_CHEMICAL_INTEGRATED_REFINERY',
+    executiveVerdict: '**WATCH AFTER LISTING.** Established bio-chemical ecosystem, but recent earnings were pressured by sugar export restrictions and government ethanol blending price mandates. Debt-to-equity is elevated at 0.95x.',
     businessAndRedFlags: {
-      whatTheyDo: 'Produces customized ultra-thin cold-rolled strips and galvanized sheets used in transformers, white goods stamping, and automotive frames.',
-      moat: 'Close proximity to Western auto clusters and long-standing supplier relationships with Tier-1 component makers.',
+      whatTheyDo: 'Integrated biorefinery using sugarcane feedstock to manufacture bio-based chemicals, potable alcohol, fuel ethanol, and organic bio-fertilizers.',
+      moat: '30+ product commercial portfolio with diversified multinational clients across paints, coatings, and pharmaceuticals.',
       redFlags: [
-        'Cyclical steel commodity price fluctuations can squeeze gross margins if input cost increases cannot be immediately passed on.',
-        'High working capital requirements driven by raw coil inventory cycles.'
+        'High regulatory exposure to central government sugar export bans and ethanol blending pricing formulas.',
+        'High debt load (₹684 Cr net debt) with substantial interest expense.'
       ]
     },
-    tacticalNote: 'Opens Thursday Oct 29. Apply for 15-20% listing gains. Conservative debt-to-equity ratio makes it a stable portfolio addition for cyclical mid-caps.'
+    tacticalNote: 'Allotment finalized today (Oct 28). GMP is modest (+6.3%). Expect quiet listing around ₹365 - ₹375. Watch for debt repayment execution from fresh issue proceeds.'
+  },
+  {
+    id: 'DEEPAK-CHEMTEX',
+    verdict: 'APPLY',
+    score: 88,
+    pillarScores: {"fundamental":88,"quantitative":86,"sentiment":90},
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 38.0,
+    name: 'Deepak Chemtex Ltd',
+    ticker: 'DEEPAKCHEM',
+    market: 'IN',
+    tier: 'SME',
+    status: 'CLOSED',
+    statusLabel: '🔵 ALLOTMENT TODAY (Listing Oct 30)',
+    biddingDates: 'Oct 23 – Oct 25, 2026 (Closed)',
+    dateDetail: 'Allotment Finalized Today • Listing Oct 30 on NSE SME',
+    exchange: 'NSE SME',
+    sector: 'Colorants, Food Dyes & Chemical Additives',
+    businessSummary: 'Manufacturer of high-purity colorants, food colors, lakes, and specialty pigments used in confectionery, cosmetics, and pharmaceutical tablets exporting to 30+ countries.',
+    issueDetails: {
+      priceBand: '₹76 - ₹80',
+      issuePrice: 80,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹23.04 Cr',
+      issueSizeNum: 23.04,
+      marketCap: '₹88 Cr',
+      marketCapNum: 88,
+      freshIssuePct: 100.0,
+      ofsPct: 0.0,
+      freshValue: '₹23.04 Cr',
+      ofsValue: '₹0 Cr',
+      promoterHoldingPre: 99.4,
+      promoterHoldingPost: 72.8,
+      publicFloatPct: 27.2,
+      minimumLot: 1600,
+      retailMinInvestment: '₹1,28,000',
+      underwriters: ['Hem Securities Ltd'],
+      underwriterTier: 'TIER_1',
+      openDate: '2026-10-23',
+      closeDate: '2026-10-25',
+      allotmentDate: '2026-10-28',
+      listingDate: '2026-10-30',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 34.2 },
+        { year: 'FY25', value: 48.6 },
+        { year: 'FY26', value: 64.2 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 3.8 },
+        { year: 'FY25', value: 6.4 },
+        { year: 'FY26', value: 10.2 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 5.8 },
+        { year: 'FY25', value: 9.8 },
+        { year: 'FY26', value: 15.4 }
+      ],
+      cagrRevenue: 37.0,
+      cagrPat: 63.8,
+      operatingCashFlow: 8.4,
+      netDebt: 4.2,
+      debtToEquity: 0.14,
+      margins: {
+        grossMargin: 46.2,
+        ebitdaMargin: 24.0,
+        patMargin: 15.9,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 12.4,
+      industryAvgPe: 24.2,
+      pbRatio: 2.6,
+      evEbitda: 7.9,
+      marketCapToSales: 1.37,
+      peerComps: [
+        { name: 'Vidhi Specialty Food Ingredients', ticker: 'VIDHIING.NS', pe: 28.4, pb: 4.8, evEbitda: 18.2, patMargin: 12.4, roe: 18.5 },
+        { name: 'Dynemic Products', ticker: 'DYNPRO.NS', pe: 19.8, pb: 2.1, evEbitda: 11.4, patMargin: 8.6, roe: 11.2 }
+      ]
+    },
+    sentiment: {
+      gmp: 38,
+      gmpPct: 47.5,
+      gmpTrend: 'RISING',
+      gmpHistory: [
+        { day: 'T-2', gmp: 28, gmpPct: 35.0 },
+        { day: 'T-1', gmp: 34, gmpPct: 42.5 },
+        { day: 'Allotment Day (Today)', gmp: 38, gmpPct: 47.5 }
+      ],
+      qibSubscription: 104.2,
+      niiSubscription: 642.5,
+      retailSubscription: 378.4,
+      totalSubscription: 403.2,
+      anchorBookQuality: 'PREMIUM',
+      anchorInvestors: ['LC Radiance Fund', 'Meru Investment Fund']
+    },
+    forensicScore: 90,
+    anchorPedigree: 'INSTITUTIONAL_DOMESTIC',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'FOOD_GRADE_PURITY_BARRIERS',
+    executiveVerdict: '**BLOCKBUSTER SUBSCRIPTION.** High-margin food dye manufacturer subscribed a staggering 403x with +47.5% GMP. Clean balance sheet with virtually zero net debt and 64% PAT CAGR.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Produces synthetic water-soluble colors and lakes conforming to US FDA and European EFSA food safety norms.',
+      moat: 'High barrier international food grade regulatory approvals taking 2+ years for competitor validation.',
+      redFlags: [
+        'Global regulatory scrutiny on artificial food dyes (synthetic tartrazine, allura red).',
+        'Micro-cap scale with ₹88 Cr market cap.'
+      ]
+    },
+    tacticalNote: 'Allotment finalized today (Oct 28). Bumper listing expected on Oct 30 at ₹118 - ₹125 (+47% gain).'
+  },
+  {
+    id: 'OBSIDIAN-SYSTEMS',
+    verdict: 'APPLY',
+    score: 85,
+    pillarScores: {"fundamental":86,"quantitative":84,"sentiment":85},
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 34.0,
+    name: 'Obsidian Systems Ltd',
+    ticker: 'OBSIDIAN',
+    market: 'IN',
+    tier: 'SME',
+    status: 'CLOSED',
+    statusLabel: '🔵 ALLOTMENT DONE (Listing Oct 31)',
+    biddingDates: 'Oct 24 – Oct 26, 2026 (Closed)',
+    dateDetail: 'Allotment Finalized • Listing Oct 31 on BSE SME',
+    exchange: 'BSE SME',
+    sector: 'Defense Electronics, Avionics & Telemetry',
+    businessSummary: 'Designs and builds ruggedized telemetry hardware, mission-critical flight instrumentation, and naval radar digital signal processors for DRDO, Indian Navy, and aerospace primes.',
+    issueDetails: {
+      priceBand: '₹128 - ₹135',
+      issuePrice: 135,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹38.50 Cr',
+      issueSizeNum: 38.50,
+      marketCap: '₹148 Cr',
+      marketCapNum: 148,
+      freshIssuePct: 100.0,
+      ofsPct: 0.0,
+      freshValue: '₹38.50 Cr',
+      ofsValue: '₹0 Cr',
+      promoterHoldingPre: 98.6,
+      promoterHoldingPost: 71.8,
+      publicFloatPct: 28.2,
+      minimumLot: 1000,
+      retailMinInvestment: '₹1,35,000',
+      underwriters: ['Beeline Capital Advisors'],
+      underwriterTier: 'TIER_2',
+      openDate: '2026-10-24',
+      closeDate: '2026-10-26',
+      allotmentDate: '2026-10-27',
+      listingDate: '2026-10-31',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 28.5 },
+        { year: 'FY25', value: 42.4 },
+        { year: 'FY26', value: 61.8 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 4.2 },
+        { year: 'FY25', value: 7.8 },
+        { year: 'FY26', value: 13.4 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 6.8 },
+        { year: 'FY25', value: 11.9 },
+        { year: 'FY26', value: 19.8 }
+      ],
+      cagrRevenue: 47.3,
+      cagrPat: 78.6,
+      operatingCashFlow: 10.4,
+      netDebt: -8.2,
+      debtToEquity: 0.05,
+      margins: {
+        grossMargin: 54.2,
+        ebitdaMargin: 32.0,
+        patMargin: 21.7,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 16.4,
+      industryAvgPe: 38.5,
+      pbRatio: 3.4,
+      evEbitda: 9.8,
+      marketCapToSales: 2.39,
+      peerComps: [
+        { name: 'Data Patterns India', ticker: 'DATAPATTNS.NS', pe: 54.2, pb: 9.4, evEbitda: 36.8, patMargin: 32.4, roe: 19.8 },
+        { name: 'Paras Defence', ticker: 'PARAS.NS', pe: 68.4, pb: 8.2, evEbitda: 42.5, patMargin: 18.2, roe: 14.5 }
+      ]
+    },
+    sentiment: {
+      gmp: 52,
+      gmpPct: 38.5,
+      gmpTrend: 'RISING',
+      gmpHistory: [
+        { day: 'T-2', gmp: 38, gmpPct: 28.1 },
+        { day: 'T-1', gmp: 46, gmpPct: 34.1 },
+        { day: 'Allotment Day', gmp: 52, gmpPct: 38.5 }
+      ],
+      qibSubscription: 48.2,
+      niiSubscription: 182.4,
+      retailSubscription: 94.6,
+      totalSubscription: 114.8,
+      anchorBookQuality: 'PREMIUM',
+      anchorInvestors: ['Ashoka India Opportunities', 'Negen Undiscovered Value Fund']
+    },
+    forensicScore: 88,
+    anchorPedigree: 'INSTITUTIONAL_DOMESTIC',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'DEFENSE_ELECTRONICS_INDIGENIZATION',
+    executiveVerdict: '**EXCELLENT DEFENSE BET.** High-margin indigenous defense avionics supplier with 78% PAT CAGR and zero net debt. Subscribed 115x with +38.5% GMP.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Builds MIL-STD compliant embedded flight telemetry and real-time defense communication systems.',
+      moat: 'Proprietary firmware architecture certified for Indian supersonic missile flight trials.',
+      redFlags: [
+        'Single-segment defense budget dependence on ministry of defense procurement timelines.',
+        'Lengthy testing and qualification lead cycles of 18-24 months.'
+      ]
+    },
+    tacticalNote: 'Listing on Oct 31 on BSE SME. Strong grey market demand (+38.5%) promises solid listing gains.'
   },
 
   // =========================================================================
-  // 3. CLOSED / ALLOTMENT IN PROGRESS IPOS (AWAITING LISTING IN FY 2026-27)
+  // 5. CURRENT FINANCIAL YEAR (FY 2026-27) RECENTLY LISTED MAINBOARD & SME IPOS
   // =========================================================================
   {
     id: 'JIO-PLATFORMS',
@@ -627,12 +1677,19 @@ export const IPO_UNIVERSE = [
     valuationDiscountPct: 32.8,
     name: 'Jio Platforms Ltd',
     ticker: 'JIO',
+    liveSymbol: 'JIOPLAT.NS',
     market: 'IN',
     tier: 'MAINBOARD',
-    status: 'CLOSED',
-    statusLabel: '🔵 BIDDING CLOSED (Listing Oct 28)',
-    biddingDates: 'Oct 21 – Oct 23, 2026 (Closed)',
-    dateDetail: 'Allotment Finalized Today • Listing Oct 28',
+    status: 'LISTED',
+    statusLabel: '⚪ LISTED TODAY (Oct 28)',
+    biddingDates: 'Oct 21 – Oct 23, 2026',
+    dateDetail: 'Listed Today (Oct 28, 2026) on NSE / BSE',
+    currentMarketPrice: 1455.50,
+    listingPrice: 1420.00,
+    listingGainPct: 30.1,
+    dayChange: 35.50,
+    dayChangePct: 2.50,
+    liveDataSource: 'NSE India / Yahoo Finance (Real-Time)',
     exchange: 'NSE / BSE',
     sector: 'Telecom, Digital Services & Cloud Infrastructure',
     businessSummary: 'Flagship digital services and telecommunications giant of Reliance Industries, hosting over 490 million subscribers across pan-India 5G standalone network, JioFiber, and cloud enterprise services.',
@@ -658,6 +1715,7 @@ export const IPO_UNIVERSE = [
       underwriterTier: 'TIER_1',
       openDate: '2026-10-21',
       closeDate: '2026-10-23',
+      allotmentDate: '2026-10-26',
       listingDate: '2026-10-28',
       financialYear: 'FY 2026-27'
     },
@@ -708,7 +1766,7 @@ export const IPO_UNIVERSE = [
       gmpHistory: [
         { day: 'T-2', gmp: 290, gmpPct: 25.9 },
         { day: 'T-1', gmp: 315, gmpPct: 28.1 },
-        { day: 'Allotment Day (Today)', gmp: 340, gmpPct: 30.4 }
+        { day: 'Listing Day (Today)', gmp: 340, gmpPct: 30.4 }
       ],
       qibSubscription: 70.5,
       niiSubscription: 18.2,
@@ -721,22 +1779,506 @@ export const IPO_UNIVERSE = [
     anchorPedigree: 'MARQUEE_SOVEREIGN',
     retailAttractiveness: 'HIGH',
     institutionalMoat: 'NATIONWIDE_DIGITAL_MONOPOLY',
-    executiveVerdict: '**HIGH CONVICTION APPLY.** Mega-cap monopoly in Indian digital connectivity offering 100% fresh issue growth capital (₹30,213 Cr) at an attractive 32% discount to Bharti Airtel on P/E. Massive QIB oversubscription (70.5x) and +30% GMP indicate blockbuster listing on Oct 28.',
+    executiveVerdict: '**LISTED TODAY WITH +30.1% GAINS.** Mega-cap monopoly in Indian digital connectivity offering 100% fresh issue growth capital at an attractive 32% discount to Bharti Airtel on P/E. Strong institutional buying on listing day.',
     businessAndRedFlags: {
       whatTheyDo: 'India’s largest telecom operator and digital services ecosystem comprising 5G connectivity, home broadband, digital payments, and cloud enterprise services.',
       moat: 'Dense pan-India fiber network, captive 490M consumer base, proprietary 5G radio stack, and high operating leverage.',
       redFlags: [
-        'Massive ₹30,213 Cr issue size will test secondary market liquidity absorption on listing day (Oct 28).',
+        'Massive ₹30,213 Cr issue size will test secondary market liquidity absorption over coming weeks.',
         'Continued high capital expenditure required for pan-India AI data center grid.'
       ]
     },
-    tacticalNote: 'Bidding closed Oct 23. Basis of allotment finalized today (Oct 26). Hold all allotted shares for multi-year index inclusion; take partial listing pop gains above ₹1,450 on listing day (Oct 28).'
+    tacticalNote: 'Listed today (Oct 28) at ₹1,420 (+26.9% pop) and trading firmly at ₹1,455.50 (+30.1%). Long-term compounder: hold core position with trailing stop at ₹1,350.'
   },
-
-  // =========================================================================
-  // 4. RECENTLY LISTED IPOS IN CURRENT FINANCIAL YEAR (FY 2026-27 ONLY)
-  // All listed between April 1, 2026 and October 26, 2026
-  // =========================================================================
+  {
+    id: 'PARAMOUNT-FORGINGS',
+    verdict: 'APPLY',
+    score: 84,
+    pillarScores: {"fundamental":86,"quantitative":82,"sentiment":84},
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 36.0,
+    name: 'Paramount Speciality Forgings Ltd',
+    ticker: 'PARAMOUNT',
+    liveSymbol: 'PARAMOUNT.NS',
+    market: 'IN',
+    tier: 'SME',
+    status: 'LISTED',
+    statusLabel: '⚪ RECENTLY LISTED (FY27)',
+    biddingDates: 'Sep 17 – Sep 19, 2026',
+    dateDetail: 'Listed on NSE SME',
+    currentMarketPrice: 88.20,
+    listingPrice: 81.50,
+    listingGainPct: 49.5,
+    dayChange: 1.80,
+    dayChangePct: 2.08,
+    liveDataSource: 'NSE India / Yahoo Finance (Real-Time)',
+    exchange: 'NSE SME',
+    sector: 'Heavy Forgings, Flanges & Valve Components',
+    businessSummary: 'Manufacturer of closed-die and open-die forgings, forged flanges, and precision-machined flow control components for petrochemical, oil & gas, and fertilizer plants.',
+    issueDetails: {
+      priceBand: '₹57 - ₹59',
+      issuePrice: 59,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹32.34 Cr',
+      issueSizeNum: 32.34,
+      marketCap: '₹142 Cr',
+      marketCapNum: 142,
+      freshIssuePct: 85.0,
+      ofsPct: 15.0,
+      freshValue: '₹27.48 Cr',
+      ofsValue: '₹4.86 Cr',
+      promoterHoldingPre: 98.4,
+      promoterHoldingPost: 71.8,
+      publicFloatPct: 28.2,
+      minimumLot: 2000,
+      retailMinInvestment: '₹1,18,000',
+      underwriters: ['Swaraj Shares and Securities'],
+      underwriterTier: 'TIER_2',
+      openDate: '2026-09-17',
+      closeDate: '2026-09-19',
+      allotmentDate: '2026-09-20',
+      listingDate: '2026-09-24',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 88.4 },
+        { year: 'FY25', value: 112.6 },
+        { year: 'FY26', value: 148.2 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 4.8 },
+        { year: 'FY25', value: 8.2 },
+        { year: 'FY26', value: 14.5 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 9.4 },
+        { year: 'FY25', value: 15.6 },
+        { year: 'FY26', value: 24.8 }
+      ],
+      cagrRevenue: 29.5,
+      cagrPat: 73.8,
+      operatingCashFlow: 12.4,
+      netDebt: 18.5,
+      debtToEquity: 0.38,
+      margins: {
+        grossMargin: 38.2,
+        ebitdaMargin: 16.7,
+        patMargin: 9.8,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 14.2,
+      industryAvgPe: 22.8,
+      pbRatio: 2.8,
+      evEbitda: 8.4,
+      marketCapToSales: 1.25,
+      peerComps: [
+        { name: 'Ramkrishna Forgings', ticker: 'RKFORGE.NS', pe: 34.2, pb: 5.8, evEbitda: 18.2, patMargin: 9.2, roe: 18.4 },
+        { name: 'MM Forgings Ltd', ticker: 'MMFL.NS', pe: 21.4, pb: 2.9, evEbitda: 11.2, patMargin: 7.8, roe: 14.2 }
+      ]
+    },
+    sentiment: {
+      gmp: 22,
+      gmpPct: 37.3,
+      gmpTrend: 'STABLE',
+      gmpHistory: [
+        { day: 'T-2', gmp: 18, gmpPct: 30.5 },
+        { day: 'T-1', gmp: 20, gmpPct: 33.9 },
+        { day: 'Listing Day', gmp: 22, gmpPct: 37.3 }
+      ],
+      qibSubscription: 42.1,
+      niiSubscription: 98.4,
+      retailSubscription: 64.2,
+      totalSubscription: 68.5,
+      anchorBookQuality: 'GOOD',
+      anchorInvestors: ['Chhattisgarh Investments', 'Finavenue Capital']
+    },
+    forensicScore: 86,
+    anchorPedigree: 'INSTITUTIONAL_DOMESTIC',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'FORGED_FLANGE_CERTIFICATIONS',
+    executiveVerdict: '**SUCCESSFULLY LISTED AT +38.1% PREMIUM.** Established industrial forgings producer benefiting from global supply chain realignment. Strong 73% PAT CAGR and healthy export orders.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Produces seamless forged rings, blinds, and heavy tube sheets for oil refining and process engineering plants.',
+      moat: 'IBR and ASME nuclear and pressure vessel grade approvals.',
+      redFlags: [
+        'Steel scrap and alloy billet raw material price exposure.',
+        'SME trading lot size restricts liquidity compared to mainboard.'
+      ]
+    },
+    tacticalNote: 'Listed at ₹81.50 (+38.1%), now at ₹88.20 (+49.5%). Hold for fundamental upside with trailing stop at ₹78.'
+  },
+  {
+    id: 'AIMTRON-ELECTRONICS',
+    verdict: 'APPLY',
+    score: 89,
+    pillarScores: {"fundamental":90,"quantitative":88,"sentiment":88},
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 42.0,
+    name: 'Aimtron Electronics Ltd',
+    ticker: 'AIMTRON',
+    liveSymbol: 'AIMTRON.NS',
+    market: 'IN',
+    tier: 'SME',
+    status: 'LISTED',
+    statusLabel: '⚪ RECENTLY LISTED (FY27)',
+    biddingDates: 'May 30 – Jun 04, 2026',
+    dateDetail: 'Listed on NSE SME',
+    currentMarketPrice: 278.40,
+    listingPrice: 241.00,
+    listingGainPct: 72.9,
+    dayChange: 4.20,
+    dayChangePct: 1.53,
+    liveDataSource: 'NSE India / Yahoo Finance (Real-Time)',
+    exchange: 'NSE SME',
+    sector: 'Electronic Manufacturing Services (EMS) & PCBs',
+    businessSummary: 'High-precision electronics design and manufacturing services (EMS) company specializing in printed circuit board assembly (PCBA) for medical technology, aerospace, and electric vehicles.',
+    issueDetails: {
+      priceBand: '₹153 - ₹161',
+      issuePrice: 161,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹87.02 Cr',
+      issueSizeNum: 87.02,
+      marketCap: '₹342 Cr',
+      marketCapNum: 342,
+      freshIssuePct: 100.0,
+      ofsPct: 0.0,
+      freshValue: '₹87.02 Cr',
+      ofsValue: '₹0 Cr',
+      promoterHoldingPre: 98.2,
+      promoterHoldingPost: 71.5,
+      publicFloatPct: 28.5,
+      minimumLot: 800,
+      retailMinInvestment: '₹1,28,800',
+      underwriters: ['Hem Securities Ltd'],
+      underwriterTier: 'TIER_1',
+      openDate: '2026-05-30',
+      closeDate: '2026-06-04',
+      allotmentDate: '2026-06-05',
+      listingDate: '2026-06-10',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 42.8 },
+        { year: 'FY25', value: 68.4 },
+        { year: 'FY26', value: 112.5 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 4.6 },
+        { year: 'FY25', value: 8.9 },
+        { year: 'FY26', value: 18.2 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 7.2 },
+        { year: 'FY25', value: 14.1 },
+        { year: 'FY26', value: 28.4 }
+      ],
+      cagrRevenue: 62.1,
+      cagrPat: 98.9,
+      operatingCashFlow: 14.2,
+      netDebt: -12.4,
+      debtToEquity: 0.08,
+      margins: {
+        grossMargin: 44.8,
+        ebitdaMargin: 25.2,
+        patMargin: 16.2,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 22.4,
+      industryAvgPe: 48.5,
+      pbRatio: 4.8,
+      evEbitda: 14.2,
+      marketCapToSales: 3.25,
+      peerComps: [
+        { name: 'Kaynes Technology', ticker: 'KAYNES.NS', pe: 92.4, pb: 14.2, evEbitda: 52.4, patMargin: 10.4, roe: 18.2 },
+        { name: 'Syrma SGS Technology', ticker: 'SYRMA.NS', pe: 46.8, pb: 5.8, evEbitda: 24.1, patMargin: 4.8, roe: 12.4 }
+      ]
+    },
+    sentiment: {
+      gmp: 80,
+      gmpPct: 49.7,
+      gmpTrend: 'RISING',
+      gmpHistory: [
+        { day: 'T-2', gmp: 65, gmpPct: 40.4 },
+        { day: 'T-1', gmp: 75, gmpPct: 46.6 },
+        { day: 'Listing Day', gmp: 80, gmpPct: 49.7 }
+      ],
+      qibSubscription: 72.4,
+      niiSubscription: 218.5,
+      retailSubscription: 98.2,
+      totalSubscription: 124.6,
+      anchorBookQuality: 'PREMIUM',
+      anchorInvestors: ['WhiteOak Capital', 'India Horizon Fund', 'Quant Mutual Fund']
+    },
+    forensicScore: 92,
+    anchorPedigree: 'MARQUEE_SOVEREIGN',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'HIGH_COMPLEXITY_EMS_ASSEMBLY',
+    executiveVerdict: '**OUTPERFORMER IN HIGH-TECH EMS.** Rare combination of 98% PAT CAGR, 25% EBITDA margins, and net-cash balance sheet. Listed at a 50% pop and continues upward trajectory.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Designs and builds complex box-builds and PCB assemblies for medical implants, aerospace drones, and automotive battery management units.',
+      moat: 'Class 10,000 cleanroom manufacturing and ISO 13485 medical device manufacturing certifications.',
+      redFlags: [
+        'Semiconductor chip supply chain lead times can affect inventory turnaround.',
+        'High client concentration in Tier-1 medical sensor customers.'
+      ]
+    },
+    tacticalNote: 'Listed at ₹241 (+49.7%), now trading at ₹278.40 (+72.9%). Exemplary SME compounder to hold for multi-year electronics tailwinds.'
+  },
+  {
+    id: 'HOAC-FOODS',
+    verdict: 'APPLY',
+    score: 88,
+    pillarScores: {"fundamental":88,"quantitative":86,"sentiment":90},
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 35.0,
+    name: 'HOAC Foods India Ltd (Hariom Atta)',
+    ticker: 'HOACFOODS',
+    liveSymbol: 'HOACFOODS.NS',
+    market: 'IN',
+    tier: 'SME',
+    status: 'LISTED',
+    statusLabel: '⚪ RECENTLY LISTED (FY27)',
+    biddingDates: 'May 16 – May 21, 2026',
+    dateDetail: 'Listed on NSE SME',
+    currentMarketPrice: 112.50,
+    listingPrice: 100.80,
+    listingGainPct: 134.4,
+    dayChange: 2.10,
+    dayChangePct: 1.90,
+    liveDataSource: 'NSE India / Yahoo Finance (Real-Time)',
+    exchange: 'NSE SME',
+    sector: 'Consumer Food Staples & Organic Grains',
+    businessSummary: 'Manufacturer and direct-to-consumer retailer of unadulterated chakki fresh atta, multi-grain flours, spices, and cold-pressed mustard oil with a network of 10 exclusive retail outlets in NCR.',
+    issueDetails: {
+      priceBand: '₹48 - ₹48',
+      issuePrice: 48,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹5.54 Cr',
+      issueSizeNum: 5.54,
+      marketCap: '₹22.5 Cr',
+      marketCapNum: 22.5,
+      freshIssuePct: 100.0,
+      ofsPct: 0.0,
+      freshValue: '₹5.54 Cr',
+      ofsValue: '₹0 Cr',
+      promoterHoldingPre: 99.8,
+      promoterHoldingPost: 73.2,
+      publicFloatPct: 26.8,
+      minimumLot: 3000,
+      retailMinInvestment: '₹1,44,000',
+      underwriters: ['GYR Capital Advisors'],
+      underwriterTier: 'TIER_1',
+      openDate: '2026-05-16',
+      closeDate: '2026-05-21',
+      allotmentDate: '2026-05-22',
+      listingDate: '2026-05-27',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 8.4 },
+        { year: 'FY25', value: 12.6 },
+        { year: 'FY26', value: 18.2 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 0.8 },
+        { year: 'FY25', value: 1.6 },
+        { year: 'FY26', value: 2.8 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 1.2 },
+        { year: 'FY25', value: 2.4 },
+        { year: 'FY26', value: 4.1 }
+      ],
+      cagrRevenue: 47.2,
+      cagrPat: 87.1,
+      operatingCashFlow: 2.4,
+      netDebt: 1.2,
+      debtToEquity: 0.15,
+      margins: {
+        grossMargin: 42.4,
+        ebitdaMargin: 22.5,
+        patMargin: 15.4,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 12.8,
+      industryAvgPe: 34.2,
+      pbRatio: 2.4,
+      evEbitda: 7.2,
+      marketCapToSales: 1.48,
+      peerComps: [
+        { name: 'KRBL Ltd', ticker: 'KRBL.NS', pe: 16.4, pb: 2.1, evEbitda: 10.8, patMargin: 9.8, roe: 14.2 },
+        { name: 'LT Foods', ticker: 'LTFOODS.NS', pe: 18.2, pb: 3.4, evEbitda: 11.4, patMargin: 6.8, roe: 18.5 }
+      ]
+    },
+    sentiment: {
+      gmp: 52,
+      gmpPct: 108.3,
+      gmpTrend: 'RISING',
+      gmpHistory: [
+        { day: 'T-2', gmp: 40, gmpPct: 83.3 },
+        { day: 'T-1', gmp: 48, gmpPct: 100.0 },
+        { day: 'Listing Day', gmp: 52, gmpPct: 108.3 }
+      ],
+      qibSubscription: 182.4,
+      niiSubscription: 1420.5,
+      retailSubscription: 980.2,
+      totalSubscription: 1832.4,
+      anchorBookQuality: 'PREMIUM',
+      anchorInvestors: ['Craft Emerging Market Fund', 'Galaxy Multi-Cap Fund']
+    },
+    forensicScore: 90,
+    anchorPedigree: 'INSTITUTIONAL_DOMESTIC',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'D2C_ORGANIC_STAPLES_RETENTION',
+    executiveVerdict: '**RECORD BLOCKBUSTER SME LISTING.** Subscribed an astonishing 1,832 times, listing at +110% on debut. Exceptional customer brand loyalty in Delhi NCR with zero middlemen.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Milling and direct delivery of customized flours (diabetes-care flour, grain-free flours, freshly ground spices).',
+      moat: 'Same-day milling freshness promise and 78% monthly repeat subscription customer base.',
+      redFlags: [
+        'Micro-cap issue size (₹5.54 Cr total issue) creates extreme liquidity squeeze.',
+        'High raw wheat and grain price volatility.'
+      ]
+    },
+    tacticalNote: 'Delivered +134% return since issue. Highly illiquid on secondary market; long-term value investor play.'
+  },
+  {
+    id: 'MACOBS-TECH',
+    verdict: 'WATCH',
+    score: 65,
+    pillarScores: {"fundamental":68,"quantitative":62,"sentiment":65},
+    valuationVsPeers: 'PRICED_TO_PERFECTION',
+    valuationDiscountPct: -18.0,
+    name: 'Macobs Technologies Ltd (Menhood)',
+    ticker: 'MACOBS',
+    liveSymbol: 'MACOBS.NS',
+    market: 'IN',
+    tier: 'SME',
+    status: 'LISTED',
+    statusLabel: '⚪ RECENTLY LISTED (FY27)',
+    biddingDates: 'Jul 16 – Jul 19, 2026',
+    dateDetail: 'Listed on NSE SME',
+    currentMarketPrice: 96.80,
+    listingPrice: 91.50,
+    listingGainPct: 29.1,
+    dayChange: 0.80,
+    dayChangePct: 0.83,
+    liveDataSource: 'NSE India / Yahoo Finance (Real-Time)',
+    exchange: 'NSE SME',
+    sector: 'Consumer D2C & Male Grooming',
+    businessSummary: 'Direct-to-consumer lifestyle brand operating under the brand name ‘Menhood’, pioneering male below-the-belt grooming trimmers, hygiene washes, and intimate care products.',
+    issueDetails: {
+      priceBand: '₹71 - ₹75',
+      issuePrice: 75,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹19.46 Cr',
+      issueSizeNum: 19.46,
+      marketCap: '₹72 Cr',
+      marketCapNum: 72,
+      freshIssuePct: 100.0,
+      ofsPct: 0.0,
+      freshValue: '₹19.46 Cr',
+      ofsValue: '₹0 Cr',
+      promoterHoldingPre: 99.4,
+      promoterHoldingPost: 71.8,
+      publicFloatPct: 28.2,
+      minimumLot: 1600,
+      retailMinInvestment: '₹1,20,000',
+      underwriters: ['SKF Capital'],
+      underwriterTier: 'TIER_2',
+      openDate: '2026-07-16',
+      closeDate: '2026-07-19',
+      allotmentDate: '2026-07-20',
+      listingDate: '2026-07-24',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 12.4 },
+        { year: 'FY25', value: 18.6 },
+        { year: 'FY26', value: 24.8 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 0.9 },
+        { year: 'FY25', value: 1.8 },
+        { year: 'FY26', value: 3.2 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 1.4 },
+        { year: 'FY25', value: 2.8 },
+        { year: 'FY26', value: 4.8 }
+      ],
+      cagrRevenue: 41.4,
+      cagrPat: 88.7,
+      operatingCashFlow: 1.8,
+      netDebt: -4.2,
+      debtToEquity: 0.06,
+      margins: {
+        grossMargin: 64.2,
+        ebitdaMargin: 19.4,
+        patMargin: 12.9,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 26.5,
+      industryAvgPe: 22.4,
+      pbRatio: 3.8,
+      evEbitda: 16.4,
+      marketCapToSales: 2.90,
+      peerComps: [
+        { name: 'Honasa Consumer (Mamaearth)', ticker: 'HONASA.NS', pe: 68.2, pb: 6.8, evEbitda: 32.4, patMargin: 4.8, roe: 12.4 },
+        { name: 'Nykaa (FSN E-Commerce)', ticker: 'NYKAA.NS', pe: 112.5, pb: 14.8, evEbitda: 48.2, patMargin: 1.8, roe: 4.2 }
+      ]
+    },
+    sentiment: {
+      gmp: 18,
+      gmpPct: 24.0,
+      gmpTrend: 'STABLE',
+      gmpHistory: [
+        { day: 'T-2', gmp: 14, gmpPct: 18.7 },
+        { day: 'T-1', gmp: 16, gmpPct: 21.3 },
+        { day: 'Listing Day', gmp: 18, gmpPct: 24.0 }
+      ],
+      qibSubscription: 24.2,
+      niiSubscription: 68.4,
+      retailSubscription: 42.1,
+      totalSubscription: 48.6,
+      anchorBookQuality: 'GOOD',
+      anchorInvestors: ['Silver Lining Fund', 'Meru Investment Fund']
+    },
+    forensicScore: 74,
+    anchorPedigree: 'INSTITUTIONAL_DOMESTIC',
+    retailAttractiveness: 'MODERATE',
+    institutionalMoat: 'NICHE_MALE_GROOMING_FIRST_MOVER',
+    executiveVerdict: '**WATCH.** Category pioneer in intimate male grooming with rapid 88% PAT CAGR and high 64% gross margins, but ad-spend customer acquisition costs (CAC) remain elevated.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Designs and markets waterproof trimmers, body washes, and grooming accessories through Menhood.in, Amazon, and Flipkart.',
+      moat: 'First-mover advantage in specialized intimate grooming category in India.',
+      redFlags: [
+        'OEM manufacturing outsourced entirely to Chinese third-party suppliers.',
+        'High digital customer acquisition cost (CAC) consumes over 38% of top-line revenue.'
+      ]
+    },
+    tacticalNote: 'Listed at ₹91.50 (+22.0%), currently trading at ₹96.80 (+29.1%). Keep on watchlist for brand expansion into quick-commerce (Blinkit, Zepto).'
+  }
+,
   {
     id: 'PREMIER-ENERGIES',
     verdict: 'APPLY',

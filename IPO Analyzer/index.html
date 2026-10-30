@@ -24,8 +24,14 @@
 
         <!-- NAVIGATION TABS -->
         <nav class="app-nav-tabs" id="app-navigation" aria-label="Terminal Navigation">
-          <button class="nav-tab-btn active" data-tab="radar" id="nav-btn-radar">
-            <span class="tab-icon">📡</span> IPO Radar
+          <button class="nav-tab-btn active" data-tab="radar" data-market="ALL" id="nav-btn-radar">
+            <span class="tab-icon">📡</span> All IPO Radar
+          </button>
+          <button class="nav-tab-btn" data-tab="radar" data-market="IN_MAINBOARD" id="nav-btn-mainboard">
+            <span class="tab-icon">🏢</span> Mainboard IPOs
+          </button>
+          <button class="nav-tab-btn" data-tab="radar" data-market="IN_SME" id="nav-btn-sme">
+            <span class="tab-icon">🚀</span> SME IPOs
           </button>
           <button class="nav-tab-btn" data-tab="gmp" id="nav-btn-gmp">
             <span class="tab-icon">📈</span> GMP & Book Tracker

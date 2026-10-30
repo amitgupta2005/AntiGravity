@@ -58,6 +58,37 @@ export class IpoRadarView {
     const filtered = this.getFilteredData();
     const stats = this.computeStats();
 
+    // Determine current active segment metadata for display
+    let currentSegName = 'All FY 2026–27 IPOs';
+    let segTotal = stats.total;
+    let segOngoing = stats.ongoingCount;
+    let segUpcoming = stats.upcomingCount;
+    let segClosed = stats.closedCount;
+    let segListed = stats.listedCount;
+
+    if (this.marketFilter === 'IN_MAINBOARD') {
+      currentSegName = 'Mainboard';
+      segTotal = stats.mainboardCount;
+      segOngoing = stats.mainboardOngoing;
+      segUpcoming = stats.mainboardUpcoming;
+      segClosed = stats.mainboardClosed;
+      segListed = stats.mainboardListed;
+    } else if (this.marketFilter === 'IN_SME') {
+      currentSegName = 'SME';
+      segTotal = stats.smeCount;
+      segOngoing = stats.smeOngoing;
+      segUpcoming = stats.smeUpcoming;
+      segClosed = stats.smeClosed;
+      segListed = stats.smeListed;
+    } else if (this.marketFilter === 'US') {
+      currentSegName = 'US Tech';
+      segTotal = stats.usCount;
+      segOngoing = 0;
+      segUpcoming = 0;
+      segClosed = 0;
+      segListed = stats.usCount;
+    }
+
     this.container.innerHTML = `
       <div class="radar-view-wrapper">
         <!-- TOP REAL-TIME FEED STATUS STRIP -->
@@ -130,6 +161,32 @@ export class IpoRadarView {
           </div>
         </div>
 
+        <!-- PROMINENT SEGMENT SWITCHER TABS: MAINBOARD VS SME VS ALL -->
+        <div class="radar-segment-bar" id="radar-segment-bar" role="tablist" aria-label="IPO Market Segments">
+          <button class="segment-tab-btn ${this.marketFilter === 'IN_MAINBOARD' ? 'active' : ''}" data-segment="IN_MAINBOARD" id="seg-btn-mainboard" role="tab" aria-selected="${this.marketFilter === 'IN_MAINBOARD'}">
+            <span class="seg-icon">🏢</span>
+            <span class="seg-title">Mainboard IPOs</span>
+            <span class="seg-badge seg-badge-mainboard">${stats.mainboardCount}</span>
+            ${stats.mainboardOngoing > 0 ? `<span class="seg-live-indicator">🟢 ${stats.mainboardOngoing} LIVE TODAY</span>` : ''}
+          </button>
+          <button class="segment-tab-btn ${this.marketFilter === 'IN_SME' ? 'active' : ''}" data-segment="IN_SME" id="seg-btn-sme" role="tab" aria-selected="${this.marketFilter === 'IN_SME'}">
+            <span class="seg-icon">🚀</span>
+            <span class="seg-title">SME IPOs (NSE Emerge / BSE SME)</span>
+            <span class="seg-badge seg-badge-sme">${stats.smeCount}</span>
+            ${stats.smeOngoing > 0 ? `<span class="seg-live-indicator seg-live-sme">🔥 ${stats.smeOngoing} OPEN NOW</span>` : ''}
+          </button>
+          <button class="segment-tab-btn ${this.marketFilter === 'ALL' ? 'active' : ''}" data-segment="ALL" id="seg-btn-all" role="tab" aria-selected="${this.marketFilter === 'ALL'}">
+            <span class="seg-icon">🌐</span>
+            <span class="seg-title">All IPOs</span>
+            <span class="seg-badge">${stats.total}</span>
+          </button>
+          <button class="segment-tab-btn ${this.marketFilter === 'US' ? 'active' : ''}" data-segment="US" id="seg-btn-us" role="tab" aria-selected="${this.marketFilter === 'US'}">
+            <span class="seg-icon">🇺🇸</span>
+            <span class="seg-title">US Tech & Global</span>
+            <span class="seg-badge">${stats.usCount}</span>
+          </button>
+        </div>
+
         <!-- CONTROLS & FILTER TOOLBAR -->
         <div class="radar-controls-toolbar">
           <div class="toolbar-left">
@@ -148,25 +205,21 @@ export class IpoRadarView {
 
             <!-- Status Filter Pills (ONGOING vs UPCOMING vs CLOSED vs LISTED vs ALL) -->
             <div class="status-filter-group" id="status-filter-group">
-              <button class="status-pill ${this.statusFilter === 'ALL' ? 'active' : ''}" data-status="ALL">All FY 2026–27 IPOs (${this.universe.length})</button>
+              <button class="status-pill ${this.statusFilter === 'ALL' ? 'active' : ''}" data-status="ALL">
+                All ${currentSegName} (${segTotal})
+              </button>
               <button class="status-pill pill-ongoing ${this.statusFilter === 'ONGOING' ? 'active' : ''}" data-status="ONGOING">
-                🔴 LIVE / ONGOING (${stats.ongoingCount})
+                🔴 LIVE / ONGOING (${segOngoing})
               </button>
               <button class="status-pill pill-upcoming ${this.statusFilter === 'UPCOMING' ? 'active' : ''}" data-status="UPCOMING">
-                🟡 UPCOMING (${stats.upcomingCount})
+                🟡 UPCOMING (${segUpcoming})
               </button>
               <button class="status-pill pill-closed ${this.statusFilter === 'CLOSED' ? 'active' : ''}" data-status="CLOSED">
-                🔵 CLOSED / ALLOTMENT (${stats.closedCount})
+                🔵 CLOSED / ALLOTMENT (${segClosed})
               </button>
-              <button class="status-pill ${this.statusFilter === 'LISTED' ? 'active' : ''}" data-status="LISTED">FY27 Listed (${stats.listedCount})</button>
-            </div>
-
-            <!-- Market Filter Pills -->
-            <div class="filter-pills-group" id="market-filter-group">
-              <button class="filter-pill ${this.marketFilter === 'ALL' ? 'active' : ''}" data-market="ALL">All Markets</button>
-              <button class="filter-pill ${this.marketFilter === 'IN_MAINBOARD' ? 'active' : ''}" data-market="IN_MAINBOARD">🇮🇳 India Mainboard</button>
-              <button class="filter-pill ${this.marketFilter === 'IN_SME' ? 'active' : ''}" data-market="IN_SME">🇮🇳 India SME</button>
-              <button class="filter-pill ${this.marketFilter === 'US' ? 'active' : ''}" data-market="US">🇺🇸 US Market</button>
+              <button class="status-pill ${this.statusFilter === 'LISTED' ? 'active' : ''}" data-status="LISTED">
+                🚀 FY27 Listed (${segListed})
+              </button>
             </div>
           </div>
 
@@ -293,6 +346,11 @@ export class IpoRadarView {
                       <span class="price-sub-label">${isOngoing || isUpcoming ? 'Band:' : isClosed ? 'Price Band / Issue:' : 'Issue:'}</span>
                       <strong>${escapeHtml(issue.priceBand || (issue.currencySymbol + issue.issuePrice))}</strong>
                     </div>
+                    ${issue.minimumLot ? `
+                      <div class="lot-size-tag" title="Minimum Retail Application Lot Size">
+                        📦 Lot: ${issue.minimumLot} shares (${issue.retailMinInvestment || '₹1.14L'})
+                      </div>
+                    ` : ''}
                     ${item.currentMarketPrice ? `
                       <div class="live-cmp-container">
                         <span class="cmp-tag">Live CMP:</span> <strong>${issue.currencySymbol}${item.currentMarketPrice}</strong>
@@ -320,12 +378,12 @@ export class IpoRadarView {
                       <strong class="${gmpPct >= 30 ? 'text-success' : gmpPct <= 2 ? 'text-danger' : 'text-neutral'}">
                         ${gmpPct >= 0 ? '+' : ''}${gmpPct.toFixed(1)}%
                       </strong>
-                      <span class="gmp-price-small">${sent.gmpPrice ? issue.currencySymbol + sent.gmpPrice : ''}</span>
+                      <span class="gmp-price-small">${(sent.gmpPrice ?? sent.gmp) ? issue.currencySymbol + (sent.gmpPrice ?? sent.gmp) : ''}</span>
                     </div>
                   </td>
                   <td class="cell-sub">
-                    <span class="sub-number ${sent.subscription?.total >= 10 ? 'text-success' : ''}">
-                      ${sent.subscription?.total ? sent.subscription.total + 'x' : 'N/A'}
+                    <span class="sub-number ${(sent.subscription?.total ?? sent.totalSubscription) >= 10 ? 'text-success' : ''}">
+                      ${(sent.subscription?.total ?? sent.totalSubscription) != null ? (sent.subscription?.total ?? sent.totalSubscription) + 'x' : 'N/A'}
                     </span>
                   </td>
                   <td class="cell-score">
@@ -521,8 +579,8 @@ export class IpoRadarView {
         const sizeB = origB.issueDetails?.issueSizeNum ?? 0;
         return sizeB - sizeA;
       } else if (this.sortBy === 'cagr') {
-        const cagrA = origA.financials?.patCAGR ?? -999;
-        const cagrB = origB.financials?.patCAGR ?? -999;
+        const cagrA = origA.financials?.cagrPat ?? origA.financials?.patCAGR ?? -999;
+        const cagrB = origB.financials?.cagrPat ?? origB.financials?.patCAGR ?? -999;
         return cagrB - cagrA;
       }
       return 0;
@@ -542,7 +600,32 @@ export class IpoRadarView {
     const watchCount = this.evaluatedList.filter(i => i.verdict === 'WATCH').length;
     const totalRedFlags = this.evaluatedList.reduce((acc, i) => acc + (i.redFlags ? i.redFlags.length : 0), 0);
 
-    return { total, ongoingCount, upcomingCount, closedCount, listedCount, applyCount, avoidCount, watchCount, totalRedFlags };
+    // Segment-level statistics
+    const mainboardItems = this.evaluatedList.filter(i => i.market === 'IN' && i.tier === 'MAINBOARD');
+    const smeItems = this.evaluatedList.filter(i => i.market === 'IN' && i.tier === 'SME');
+    const usItems = this.evaluatedList.filter(i => i.market === 'US');
+
+    const mainboardCount = mainboardItems.length;
+    const mainboardOngoing = mainboardItems.filter(i => i.status === 'ONGOING').length;
+    const mainboardUpcoming = mainboardItems.filter(i => i.status === 'UPCOMING').length;
+    const mainboardClosed = mainboardItems.filter(i => i.status === 'CLOSED').length;
+    const mainboardListed = mainboardItems.filter(i => i.status === 'LISTED').length;
+
+    const smeCount = smeItems.length;
+    const smeOngoing = smeItems.filter(i => i.status === 'ONGOING').length;
+    const smeUpcoming = smeItems.filter(i => i.status === 'UPCOMING').length;
+    const smeClosed = smeItems.filter(i => i.status === 'CLOSED').length;
+    const smeListed = smeItems.filter(i => i.status === 'LISTED').length;
+
+    const usCount = usItems.length;
+
+    return {
+      total, ongoingCount, upcomingCount, closedCount, listedCount,
+      applyCount, avoidCount, watchCount, totalRedFlags,
+      mainboardCount, mainboardOngoing, mainboardUpcoming, mainboardClosed, mainboardListed,
+      smeCount, smeOngoing, smeUpcoming, smeClosed, smeListed,
+      usCount
+    };
   }
 
   attachEventListeners() {
@@ -597,6 +680,16 @@ export class IpoRadarView {
         this.render();
       });
     }
+
+    // Segment switcher tabs (Mainboard vs SME vs All vs US)
+    const segButtons = this.container.querySelectorAll('#radar-segment-bar .segment-tab-btn');
+    segButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const seg = btn.getAttribute('data-segment');
+        this.marketFilter = seg;
+        this.render();
+      });
+    });
 
     // Status filter buttons
     const statusPills = this.container.querySelectorAll('#status-filter-group .status-pill');

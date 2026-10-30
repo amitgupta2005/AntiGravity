@@ -118,7 +118,9 @@ def analyze_stock_setup(
     company_name: str = "",
     cap: str = "LARGE",
     min_liquidity_vol_ma: float = DEFAULT_MIN_LIQUIDITY_VOL_MA,
-    max_atr_pct: float = DEFAULT_MAX_ATR_PCT
+    max_atr_pct: float = DEFAULT_MAX_ATR_PCT,
+    feed_source: str = "YAHOO_FINANCE",
+    live_quote: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
     Evaluates intraday technical setup, generates trade rationale,
@@ -162,40 +164,18 @@ def analyze_stock_setup(
     orb_high = float(curr['ORB_High']) if ('ORB_High' in curr and not pd.isna(curr['ORB_High'])) else day_high
     orb_low = float(curr['ORB_Low']) if ('ORB_Low' in curr and not pd.isna(curr['ORB_Low'])) else day_low
 
-    # 1. Hard Liquidity Floor (Pre-Scoring Filter)
-    # Check share volume and turnover (to accommodate high-priced midcaps like DIXON, POLYCAB, etc.)
+    # 1. Hard Liquidity Floor & Volatility Risk Checks
+    # Check share volume and turnover (to accommodate high-priced midcaps like DIXON, POLYCAB, PAGEIND, etc.)
     is_inr = (".NS" in ticker or ".BO" in ticker)
     curr_sym = "₹" if is_inr else "$"
     min_turnover = 250000.0 if is_inr else 20000.0  # ₹2.5 Lakhs/min or $20k/min
     turnover_ma = vol_ma20 * close
-    has_sufficient_liquidity = (vol_ma20 >= min_liquidity_vol_ma) or (turnover_ma >= min_turnover and vol_ma20 >= 200.0)
+    has_sufficient_liquidity = (vol_ma20 >= min_liquidity_vol_ma) or (turnover_ma >= min_turnover and (vol_ma20 >= 10.0 or close >= 500.0))
 
-    if not has_sufficient_liquidity:
-        return {
-            "ticker": ticker,
-            "company_name": company_name or ticker,
-            "cap": cap,
-            "status": "REJECTED_ILLIQUID",
-            "vol_ma20": vol_ma20,
-            "turnover_ma": turnover_ma,
-            "min_liquidity_vol_ma": min_liquidity_vol_ma,
-            "message": f"Average 1-minute volume ({vol_ma20:,.0f} shares / {curr_sym}{turnover_ma:,.0f} turnover) is below the minimum liquidity floor ({min_liquidity_vol_ma:,.0f} shares or {curr_sym}{min_turnover:,.0f} turnover)."
-        }
-
-    # 2. Volatility Cap (Pre-Scoring Filter)
+    # 2. Volatility Cap
     atr_pct = (atr / close) * 100.0 if close > 0 else 0.0
     effective_max_atr = 2.5 if cap == "SMALL" else max(max_atr_pct, 1.8)
-    if atr_pct > effective_max_atr:
-        return {
-            "ticker": ticker,
-            "company_name": company_name or ticker,
-            "cap": cap,
-            "status": "REJECTED_HIGH_VOLATILITY",
-            "atr": atr,
-            "atr_pct": round(atr_pct, 2),
-            "max_atr_pct": effective_max_atr,
-            "message": f"1-minute ATR volatility ({atr_pct:.2f}%) exceeds maximum volatility cap ({effective_max_atr:.2f}%). Stock is too erratic for safe intraday stops."
-        }
+    has_acceptable_volatility = (atr_pct <= effective_max_atr)
 
     # 4. Factor MTF Alignment - Precompute MTF alignment before scoring section
     mtf_data = compute_mtf_alignment(df)
@@ -470,57 +450,100 @@ def analyze_stock_setup(
     # Extract confluence:
     # If action == "LONG" and 3/3 timeframes are bullish, add +15 to score. If 0/3 are bullish (fighting trend), subtract -30.
     # Apply inverse logic for action == "SHORT".
+    # 4. Factor Multi-Timeframe Alignment (1m, 5m, 10m, 15m) into the Score
     direction_bias = "LONG" if (score > 0 or (score == 0 and close >= vwap)) else "SHORT"
     if tf_count >= 3:
         if direction_bias == "LONG":
-            if bull_tfs == 3:
+            if bull_tfs == 4:
+                score += 30
+                checks.append({
+                    "factor": "MTF Confluence (1m, 5m, 10m, 15m)",
+                    "status": "Full 4-TF Bullish Alignment (4/4) - Recommended",
+                    "score": "+30",
+                    "detail": "All 4 Timeframes (1m, 5m, 10m, 15m) satisfy bullish criteria above VWAP. Maximum probability institutional breakout setup."
+                })
+            elif bull_tfs == 3:
                 score += 15
                 checks.append({
-                    "factor": "MTF Confluence",
-                    "status": "Full Bullish Alignment",
+                    "factor": "MTF Confluence (1m, 5m, 10m, 15m)",
+                    "status": "Partial Bullish Confluence (3/4) - Not Recommended Yet",
                     "score": "+15",
-                    "detail": "All 3 Timeframes (1m, 5m, 15m) are in Bullish Trend alignment above VWAP."
+                    "detail": "3 of 4 Timeframes confirm bullish momentum; awaiting all 4 timeframes before issuing Buy recommendation."
                 })
-            elif bull_tfs == 0:
+            elif bull_tfs <= 1:
                 score -= 30
                 checks.append({
-                    "factor": "MTF Confluence",
-                    "status": "Fighting MTF Trend",
+                    "factor": "MTF Confluence (1m, 5m, 10m, 15m)",
+                    "status": "Fighting Higher Timeframe Trend",
                     "score": "-30",
-                    "detail": "0 of 3 Timeframes are Bullish; fighting prevailing higher timeframe trend."
+                    "detail": f"Only {bull_tfs} of 4 timeframes are Bullish. 1-minute rally is fighting prevailing 5m/10m/15m supply resistance."
                 })
             else:
                 checks.append({
-                    "factor": "MTF Confluence",
-                    "status": f"{bull_tfs}/3 Bullish Timeframes",
+                    "factor": "MTF Confluence (1m, 5m, 10m, 15m)",
+                    "status": f"{bull_tfs}/4 Bullish Timeframes",
                     "score": "0",
-                    "detail": f"{bull_tfs} of 3 timeframes show bullish momentum."
+                    "detail": f"{bull_tfs} of 4 timeframes show bullish momentum; awaiting full confluence."
                 })
         else:
             # action == "SHORT" inverse logic:
-            if bear_tfs == 3:
+            if bear_tfs == 4:
+                score -= 30
+                checks.append({
+                    "factor": "MTF Confluence (1m, 5m, 10m, 15m)",
+                    "status": "Full 4-TF Bearish Alignment (4/4) - Recommended",
+                    "score": "-30",
+                    "detail": "All 4 Timeframes (1m, 5m, 10m, 15m) satisfy bearish criteria below VWAP. High conviction institutional short setup."
+                })
+            elif bear_tfs == 3:
                 score -= 15
                 checks.append({
-                    "factor": "MTF Confluence",
-                    "status": "Full Bearish Alignment",
+                    "factor": "MTF Confluence (1m, 5m, 10m, 15m)",
+                    "status": "Partial Bearish Confluence (3/4) - Not Recommended Yet",
                     "score": "-15",
-                    "detail": "All 3 Timeframes (1m, 5m, 15m) are in Bearish Trend alignment below VWAP."
+                    "detail": "3 of 4 Timeframes confirm downward supply pressure; awaiting all 4 timeframes before issuing Short recommendation."
                 })
-            elif bear_tfs == 0:
+            elif bear_tfs <= 1:
                 score += 30
                 checks.append({
-                    "factor": "MTF Confluence",
-                    "status": "Fighting MTF Trend",
+                    "factor": "MTF Confluence (1m, 5m, 10m, 15m)",
+                    "status": "Shorting into Higher TF Support",
                     "score": "+30",
-                    "detail": "0 of 3 Timeframes are Bearish; shorting against prevailing higher timeframe trend."
+                    "detail": f"Only {bear_tfs} of 4 timeframes are Bearish. Shorting into prevailing 5m/10m/15m buyer support."
                 })
             else:
                 checks.append({
-                    "factor": "MTF Confluence",
-                    "status": f"{bear_tfs}/3 Bearish Timeframes",
+                    "factor": "MTF Confluence (1m, 5m, 10m, 15m)",
+                    "status": f"{bear_tfs}/4 Bearish Timeframes",
                     "score": "0",
-                    "detail": f"{bear_tfs} of 3 timeframes show bearish momentum."
+                    "detail": f"{bear_tfs} of 4 timeframes show bearish momentum."
                 })
+
+    # 7. Risk Guardrails (Liquidity & Volatility Checks)
+    if not has_sufficient_liquidity:
+        score -= 40
+        checks.append({
+            "factor": "Liquidity Floor",
+            "status": "Thin Intraday Volume",
+            "score": "-40",
+            "detail": f"1-minute volume ({vol_ma20:,.0f} shares / {curr_sym}{turnover_ma:,.0f} turnover) is below standard institutional floor ({min_liquidity_vol_ma:,.0f} shares or {curr_sym}{min_turnover:,.0f} turnover)."
+        })
+    else:
+        checks.append({
+            "factor": "Liquidity Floor",
+            "status": "Adequate Liquidity",
+            "score": "+10",
+            "detail": f"1-minute volume ({vol_ma20:,.0f} shares / {curr_sym}{turnover_ma:,.0f} turnover) meets intraday execution standards."
+        })
+
+    if not has_acceptable_volatility:
+        score -= 40
+        checks.append({
+            "factor": "Volatility Cap",
+            "status": "Excessive Intraday ATR",
+            "score": "-40",
+            "detail": f"1-minute ATR volatility ({atr_pct:.2f}%) exceeds safety cap ({effective_max_atr:.2f}%). Erratic swings risk premature stop loss hit."
+        })
 
     # Normalize score between -100 and +100
     score = max(-100, min(100, score))
@@ -528,23 +551,63 @@ def analyze_stock_setup(
     # Intraday Normalized Score (0 to 100) for UI display
     display_score = int(round((score + 100) / 2))
 
-    # --- SIGNAL DETERMINATION ---
-    if score >= 65:
+    # --- SIGNAL DETERMINATION (STRICT 4-TIMEFRAME SATISFACTION) ---
+    # User requirement: Only recommend stocks that satisfy ALL 4 TIMEFRAMES (1m, 5m, 10m, and 15m).
+    # Stocks with 3 or fewer aligned timeframes are strictly held on WATCH and NOT recommended.
+    is_recommended = False
+    if not has_sufficient_liquidity:
+        signal = "AVOID - ILLIQUID"
+        action = "WATCH"
+        color = "#9CA3AF"
+        setup_name = "Caution: Low Liquidity Order Book"
+        setup_desc = f"Order book volume ({vol_ma20:,.0f} shares/min) is thin. Intraday execution risks elevated slippage."
+    elif not has_acceptable_volatility:
+        signal = "AVOID - HIGH VOLATILITY"
+        action = "WATCH"
+        color = "#F87171"
+        setup_name = "Caution: High Intraday Volatility"
+        setup_desc = f"1-minute ATR volatility ({atr_pct:.2f}%) exceeds safety ceiling. Whipsaws likely to trigger stops."
+    elif bull_tfs == 4 and score >= 60:
         signal = "STRONG BUY"
         action = "LONG"
         color = "#10B981"  # Emerald Green
-    elif score >= 35:
+        is_recommended = True
+    elif bull_tfs == 4 and score >= 35:
         signal = "BUY"
         action = "LONG"
         color = "#34D399"
-    elif score <= -65:
+        is_recommended = True
+    elif bear_tfs == 4 and score <= -60:
         signal = "STRONG SELL"
         action = "SHORT"
         color = "#EF4444"  # Red
-    elif score <= -35:
+        is_recommended = True
+    elif bear_tfs == 4 and score <= -35:
         signal = "SELL"
         action = "SHORT"
         color = "#F87171"
+        is_recommended = True
+    elif bull_tfs == 3 and score >= 35:
+        # Satisfies 3 of 4 timeframes; NOT recommended until 4th timeframe confirms
+        signal = "WATCH - 3/4 MTF"
+        action = "WATCH"
+        color = "#38BDF8"  # Sky Blue
+        setup_name = "Awaiting 4-TF Confluence (3/4 Bullish)"
+        setup_desc = "Satisfies 3 of 4 timeframes (1m, 5m, 10m, 15m). Awaiting all 4 timeframes to align before recommending."
+    elif bear_tfs == 3 and score <= -35:
+        # Satisfies 3 of 4 timeframes; NOT recommended until 4th timeframe confirms
+        signal = "WATCH - 3/4 MTF"
+        action = "WATCH"
+        color = "#FB923C"  # Orange
+        setup_name = "Awaiting 4-TF Confluence (3/4 Bearish)"
+        setup_desc = "Satisfies 3 of 4 timeframes (1m, 5m, 10m, 15m). Awaiting all 4 timeframes to align before recommending."
+    elif (score >= 35 and bull_tfs < 3) or (score <= -35 and bear_tfs < 3):
+        # 1-min was showing momentum, but 5m, 10m, or 15m are not in alignment
+        signal = "WATCH - MTF CONFLICT"
+        action = "WATCH"
+        color = "#EAB308"  # Amber
+        setup_name = f"MTF Divergence ({bull_tfs}/4 Bullish)" if score > 0 else f"MTF Divergence ({bear_tfs}/4 Bearish)"
+        setup_desc = "1-minute momentum is contradicted across 5m, 10m, and 15m charts. Awaiting higher timeframe alignment."
     else:
         signal = "NEUTRAL"
         action = "WATCH"
@@ -580,6 +643,12 @@ def analyze_stock_setup(
         else:
             setup_name = "Intraday Trend Continuation (Short)"
             setup_desc = "Sustained downward momentum with resistance at 9/21 EMA."
+    elif not has_sufficient_liquidity:
+        setup_name = "Caution: Low Liquidity Order Book"
+        setup_desc = f"Order book volume ({vol_ma20:,.0f} shares/min) is thin. Intraday execution risks elevated slippage."
+    elif not has_acceptable_volatility:
+        setup_name = "Caution: High Intraday Volatility"
+        setup_desc = f"1-minute ATR volatility ({atr_pct:.2f}%) exceeds safety ceiling. Whipsaws likely to trigger stops."
     else:
         setup_name = "Range Consolidation / No Direction"
         setup_desc = "Price oscillating around VWAP without decisive volume impulse."
@@ -591,7 +660,7 @@ def analyze_stock_setup(
     entry_price = round(close, 2)
     atr_val = max(atr, close * 0.002)  # Floor ATR at 0.2%
 
-    if action in ["LONG", "WATCH"]:
+    if action == "LONG" or (action == "WATCH" and score >= 0):
         # Primary SL candidate 1: Swing low of last 10 candles with a tiny buffer
         cand_sl1 = recent_swing_low - (0.2 * atr_val)
         # Primary SL candidate 2: Just below VWAP (if close is above VWAP)
@@ -665,7 +734,22 @@ def analyze_stock_setup(
         f"**3. Price Action & Range**: Day High is {currency_symbol}{day_high:,.2f} and Day Low is {currency_symbol}{day_low:,.2f}. 15-Min Opening Range: {currency_symbol}{orb_low:,.2f} - {currency_symbol}{orb_high:,.2f}. Setup: **{setup_name}**.",
         f"**4. Momentum (RSI 14)**: RSI is currently **{rsi:.1f}**. {'Optimal bullish trajectory, plenty of headroom before overbought exhaustion.' if 50 <= rsi <= 72 else ('High momentum, watch for pullback' if rsi > 72 else 'Bearish momentum dominance.')}",
         f"**5. Volatility & Stop Loss Rule**: 1-minute ATR is {currency_symbol}{atr_val:,.2f}. Strict Stop Loss placed at **{currency_symbol}{sl_price:,.2f}** ({sl_pct:+.2f}% risk), safely anchored below key structural support (Swing Low / VWAP buffer).",
-        f"**6. Target Projections**: Target 1 at **{currency_symbol}{t1_price:,.2f}** ({t1_pct:+.2f}%, 1:1.5 R:R); Target 2 at **{currency_symbol}{t2_price:,.2f}** ({t2_pct:+.2f}%, 1:2.5 R:R); Target 3 runner at **{currency_symbol}{t3_price:,.2f}** ({t3_pct:+.2f}%)."
+        f"**6. Target Projections**: Target 1 at **{currency_symbol}{t1_price:,.2f}** ({t1_pct:+.2f}%, 1:1.5 R:R); Target 2 at **{currency_symbol}{t2_price:,.2f}** ({t2_pct:+.2f}%, 1:2.5 R:R); Target 3 runner at **{currency_symbol}{t3_price:,.2f}** ({t3_pct:+.2f}%).",
+        (
+            f"**7. Multi-Timeframe Alignment (1m, 5m, 10m, 15m)**: FULL 4-TF CONFLUENCE (RECOMMENDED - {mtf_data.get('confluence_score', '')}). "
+            f"[1m: {mtf_data.get('timeframes', {}).get('1m', {}).get('bias', 'N/A')} | "
+            f"5m: {mtf_data.get('timeframes', {}).get('5m', {}).get('bias', 'N/A')} | "
+            f"10m: {mtf_data.get('timeframes', {}).get('10m', {}).get('bias', 'N/A')} | "
+            f"15m: {mtf_data.get('timeframes', {}).get('15m', {}).get('bias', 'N/A')}]. "
+            "Satisfies ALL 4 time periods (1m, 5m, 10m, 15m) simultaneously. Validated for institutional recommendation."
+        ) if is_recommended else (
+            f"**7. Multi-Timeframe Alignment (1m, 5m, 10m, 15m)**: PARTIAL / CONFLICTED ({mtf_data.get('confluence_score', '')}) - NOT RECOMMENDED. "
+            f"[1m: {mtf_data.get('timeframes', {}).get('1m', {}).get('bias', 'N/A')} | "
+            f"5m: {mtf_data.get('timeframes', {}).get('5m', {}).get('bias', 'N/A')} | "
+            f"10m: {mtf_data.get('timeframes', {}).get('10m', {}).get('bias', 'N/A')} | "
+            f"15m: {mtf_data.get('timeframes', {}).get('15m', {}).get('bias', 'N/A')}]. "
+            "Fails full 4-timeframe criteria. Recommendation withheld until 1m, 5m, 10m, and 15m align in unison."
+        )
     ]
 
     roi_pct = round(abs(t2_pct), 2)
@@ -719,10 +803,18 @@ def analyze_stock_setup(
         "score": score,
         "display_score": display_score,
         "signal": signal,
+        "is_recommended": is_recommended,
         "roi_pct": roi_pct,
         "color": color,
         "setup_name": setup_name,
         "setup_desc": setup_desc,
+        "feed_source": feed_source,
+        "feed_source_label": "⚡ Angel One Smart API (Live NSE)" if "ANGEL" in feed_source.upper() else "📡 Yahoo Finance (Real-Time)",
+        "circuit_limits": {
+            "upper": live_quote.get("upper_circuit") if live_quote else None,
+            "lower": live_quote.get("lower_circuit") if live_quote else None
+        } if live_quote else None,
+        "market_depth": live_quote.get("depth") if live_quote else None,
         "checks": checks,
         "rationale_points": rationale_points,
         "trade_plan": trade_plan,
@@ -869,33 +961,38 @@ def detect_candlestick_patterns_and_markers(df: pd.DataFrame, action: str = "LON
 
 def compute_mtf_alignment(df_1m: pd.DataFrame) -> Dict[str, Any]:
     """
-    Computes multi-timeframe alignment across 1m, 5m, and 15m intervals.
+    Computes multi-timeframe alignment across 1m, 5m, 10m, and 15m intervals.
+    Recommends high-conviction trades when all 4 timeframes satisfy the directional trend.
     """
-    if df_1m.empty or len(df_1m) < 15:
+    if df_1m.empty or len(df_1m) < 10:
         return {
             "confluence_level": "NEUTRAL",
-            "confluence_score": "1/3",
+            "confluence_score": "0/4",
+            "all_aligned": False,
             "badge_color": "#94a3b8",
             "verdict": "Awaiting sufficient intraday bars to compute MTF alignment.",
             "bull_count": 0,
             "bear_count": 0,
+            "total_timeframes": 4,
             "timeframes": {}
         }
 
+    agg_rules = {'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'}
+
+    # 1. 1-Minute (Trigger)
     last_1m = df_1m.iloc[-1]
     close_1m = float(last_1m['Close'])
     vwap_1m = float(last_1m.get('VWAP', close_1m))
     rsi_1m = float(last_1m.get('RSI', 50.0))
     ema9_1m = float(last_1m.get('EMA9', close_1m))
     ema21_1m = float(last_1m.get('EMA21', close_1m))
+    bias_1m = "BULLISH" if (close_1m >= vwap_1m and ema9_1m >= ema21_1m and rsi_1m >= 48.0) else (
+        "BEARISH" if (close_1m < vwap_1m and ema9_1m <= ema21_1m and rsi_1m <= 52.0) else "NEUTRAL"
+    )
 
-    bias_1m = "BULLISH" if (close_1m > vwap_1m and ema9_1m > ema21_1m) else ("BEARISH" if (close_1m < vwap_1m and ema9_1m < ema21_1m) else "NEUTRAL")
-
-    # 5-min resample
-    agg_rules = {'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'}
+    # 2. 5-Minute (Tactical)
     df_5m = df_1m.resample('5min').agg(agg_rules).dropna()
     df_5m = calculate_intraday_indicators(df_5m)
-    
     if not df_5m.empty and 'VWAP' in df_5m.columns:
         last_5m = df_5m.iloc[-1]
         close_5m = float(last_5m['Close'])
@@ -903,14 +1000,31 @@ def compute_mtf_alignment(df_1m: pd.DataFrame) -> Dict[str, Any]:
         rsi_5m = float(last_5m.get('RSI', 50.0))
         ema9_5m = float(last_5m.get('EMA9', close_5m))
         ema21_5m = float(last_5m.get('EMA21', close_5m))
-        bias_5m = "BULLISH" if (close_5m > vwap_5m and ema9_5m > ema21_5m) else ("BEARISH" if (close_5m < vwap_5m and ema9_5m < ema21_5m) else "NEUTRAL")
+        bias_5m = "BULLISH" if (close_5m >= vwap_5m and ema9_5m >= ema21_5m and rsi_5m >= 48.0) else (
+            "BEARISH" if (close_5m < vwap_5m and ema9_5m <= ema21_5m and rsi_5m <= 52.0) else "NEUTRAL"
+        )
     else:
-        close_5m, vwap_5m, rsi_5m, bias_5m = close_1m, vwap_1m, rsi_1m, bias_1m
+        close_5m, vwap_5m, rsi_5m, ema9_5m, ema21_5m, bias_5m = close_1m, vwap_1m, rsi_1m, ema9_1m, ema21_1m, bias_1m
 
-    # 15-min resample
+    # 3. 10-Minute (Intermediate)
+    df_10m = df_1m.resample('10min').agg(agg_rules).dropna()
+    df_10m = calculate_intraday_indicators(df_10m)
+    if not df_10m.empty and 'VWAP' in df_10m.columns:
+        last_10m = df_10m.iloc[-1]
+        close_10m = float(last_10m['Close'])
+        vwap_10m = float(last_10m.get('VWAP', close_10m))
+        rsi_10m = float(last_10m.get('RSI', 50.0))
+        ema9_10m = float(last_10m.get('EMA9', close_10m))
+        ema21_10m = float(last_10m.get('EMA21', close_10m))
+        bias_10m = "BULLISH" if (close_10m >= vwap_10m and ema9_10m >= ema21_10m and rsi_10m >= 48.0) else (
+            "BEARISH" if (close_10m < vwap_10m and ema9_10m <= ema21_10m and rsi_10m <= 52.0) else "NEUTRAL"
+        )
+    else:
+        close_10m, vwap_10m, rsi_10m, ema9_10m, ema21_10m, bias_10m = close_5m, vwap_5m, rsi_5m, ema9_5m, ema21_5m, bias_5m
+
+    # 4. 15-Minute (Macro)
     df_15m = df_1m.resample('15min').agg(agg_rules).dropna()
     df_15m = calculate_intraday_indicators(df_15m)
-    
     if not df_15m.empty and 'VWAP' in df_15m.columns:
         last_15m = df_15m.iloc[-1]
         close_15m = float(last_15m['Close'])
@@ -918,51 +1032,104 @@ def compute_mtf_alignment(df_1m: pd.DataFrame) -> Dict[str, Any]:
         rsi_15m = float(last_15m.get('RSI', 50.0))
         ema9_15m = float(last_15m.get('EMA9', close_15m))
         ema21_15m = float(last_15m.get('EMA21', close_15m))
-        bias_15m = "BULLISH" if (close_15m > vwap_15m and ema9_15m > ema21_15m) else ("BEARISH" if (close_15m < vwap_15m and ema9_15m < ema21_15m) else "NEUTRAL")
+        bias_15m = "BULLISH" if (close_15m >= vwap_15m and ema9_15m >= ema21_15m and rsi_15m >= 48.0) else (
+            "BEARISH" if (close_15m < vwap_15m and ema9_15m <= ema21_15m and rsi_15m <= 52.0) else "NEUTRAL"
+        )
     else:
-        close_15m, vwap_15m, rsi_15m, bias_15m = close_5m, vwap_5m, rsi_5m, bias_5m
+        close_15m, vwap_15m, rsi_15m, ema9_15m, ema21_15m, bias_15m = close_10m, vwap_10m, rsi_10m, ema9_10m, ema21_10m, bias_10m
 
-    # Confluence calculation
-    bulls = [b == "BULLISH" for b in [bias_1m, bias_5m, bias_15m]].count(True)
-    bears = [b == "BEARISH" for b in [bias_1m, bias_5m, bias_15m]].count(True)
+    # Confluence calculation across 4 time periods: 1m, 5m, 10m, 15m
+    all_biases = [bias_1m, bias_5m, bias_10m, bias_15m]
+    bulls = all_biases.count("BULLISH")
+    bears = all_biases.count("BEARISH")
+    all_aligned = (bulls == 4 or bears == 4)
 
-    if bulls == 3:
-        confluence_level = "FULL BULLISH ALIGNMENT"
-        confluence_score = "3/3 High Conviction"
+    if bulls == 4:
+        confluence_level = "FULL 4-TF BULLISH ALIGNMENT"
+        confluence_score = "4/4 High Conviction"
         badge_color = "#10b981"
-        verdict = "All 3 Timeframes (1m, 5m, 15m) are in Bullish Trend alignment above VWAP. Maximum probability institutional setup."
-    elif bears == 3:
-        confluence_level = "FULL BEARISH ALIGNMENT"
-        confluence_score = "3/3 High Conviction"
+        verdict = "All 4 Timeframes (1m, 5m, 10m, 15m) satisfy bullish criteria above VWAP. Maximum probability institutional breakout setup."
+    elif bears == 4:
+        confluence_level = "FULL 4-TF BEARISH ALIGNMENT"
+        confluence_score = "4/4 High Conviction"
         badge_color = "#ef4444"
-        verdict = "All 3 Timeframes are in Bearish Trend alignment below VWAP. High conviction short setup."
-    elif bulls == 2:
-        confluence_level = "MODERATE BULLISH CONFLUENCE"
-        confluence_score = "2/3 Good Confluence"
+        verdict = "All 4 Timeframes (1m, 5m, 10m, 15m) satisfy bearish criteria below VWAP. High conviction institutional short setup."
+    elif bulls == 3:
+        confluence_level = "STRONG BULLISH CONFLUENCE"
+        confluence_score = "3/4 Good Confluence"
         badge_color = "#34d399"
-        verdict = "2 of 3 Timeframes confirm bullish momentum; watch for pullback retests to 21 EMA."
-    elif bears == 2:
-        confluence_level = "MODERATE BEARISH CONFLUENCE"
-        confluence_score = "2/3 Good Confluence"
+        verdict = "3 of 4 Timeframes satisfy bullish momentum; watch for 1m/5m pullback retest to 21 EMA."
+    elif bears == 3:
+        confluence_level = "STRONG BEARISH CONFLUENCE"
+        confluence_score = "3/4 Good Confluence"
         badge_color = "#f87171"
-        verdict = "2 of 3 Timeframes confirm downward supply pressure."
+        verdict = "3 of 4 Timeframes confirm persistent downward supply pressure."
+    elif bulls == 2 and bears == 0:
+        confluence_level = "MILD BULLISH BIAS"
+        confluence_score = "2/4 Developing"
+        badge_color = "#60a5fa"
+        verdict = "2 of 4 Timeframes turning bullish; awaiting 10m and 15m confirmation."
+    elif bears == 2 and bulls == 0:
+        confluence_level = "MILD BEARISH BIAS"
+        confluence_score = "2/4 Developing"
+        badge_color = "#fb923c"
+        verdict = "2 of 4 Timeframes turning bearish; awaiting 10m and 15m breakdown confirmation."
     else:
-        confluence_level = "MIXED / CONFLICTED"
-        confluence_score = "1/3 Low Confluence"
+        confluence_level = "MIXED / MTF CONFLICT"
+        confluence_score = f"{max(bulls, bears)}/4 Conflicted"
         badge_color = "#94a3b8"
-        verdict = "Timeframes are out of sync (chop/consolidation). Wait for higher timeframe breakout."
+        verdict = "Timeframes are out of sync across 1m, 5m, 10m, 15m. Waiting for alignment to prevent chop whipsaws."
 
     return {
         "confluence_level": confluence_level,
         "confluence_score": confluence_score,
+        "all_aligned": all_aligned,
         "badge_color": badge_color,
         "verdict": verdict,
         "bull_count": bulls,
         "bear_count": bears,
+        "total_timeframes": 4,
         "timeframes": {
-            "1m": { "bias": bias_1m, "vwap": round(vwap_1m, 2), "rsi": round(rsi_1m, 1) },
-            "5m": { "bias": bias_5m, "vwap": round(vwap_5m, 2), "rsi": round(rsi_5m, 1) },
-            "15m": { "bias": bias_15m, "vwap": round(vwap_15m, 2), "rsi": round(rsi_15m, 1) }
+            "1m": {
+                "bias": bias_1m,
+                "close": round(close_1m, 2),
+                "vwap": round(vwap_1m, 2),
+                "rsi": round(rsi_1m, 1),
+                "ema9": round(ema9_1m, 2),
+                "ema21": round(ema21_1m, 2),
+                "above_vwap": close_1m >= vwap_1m,
+                "ema_bullish": ema9_1m >= ema21_1m
+            },
+            "5m": {
+                "bias": bias_5m,
+                "close": round(close_5m, 2),
+                "vwap": round(vwap_5m, 2),
+                "rsi": round(rsi_5m, 1),
+                "ema9": round(ema9_5m, 2),
+                "ema21": round(ema21_5m, 2),
+                "above_vwap": close_5m >= vwap_5m,
+                "ema_bullish": ema9_5m >= ema21_5m
+            },
+            "10m": {
+                "bias": bias_10m,
+                "close": round(close_10m, 2),
+                "vwap": round(vwap_10m, 2),
+                "rsi": round(rsi_10m, 1),
+                "ema9": round(ema9_10m, 2),
+                "ema21": round(ema21_10m, 2),
+                "above_vwap": close_10m >= vwap_10m,
+                "ema_bullish": ema9_10m >= ema21_10m
+            },
+            "15m": {
+                "bias": bias_15m,
+                "close": round(close_15m, 2),
+                "vwap": round(vwap_15m, 2),
+                "rsi": round(rsi_15m, 1),
+                "ema9": round(ema9_15m, 2),
+                "ema21": round(ema21_15m, 2),
+                "above_vwap": close_15m >= vwap_15m,
+                "ema_bullish": ema9_15m >= ema21_15m
+            }
         }
     }
 
