@@ -7,11 +7,14 @@
  * 2. Primary Market Pipeline: BSE India, NSE Emerge, Chittorgarh, and Groww IPO Desks
  */
 
+import { syncUniverseWithDate } from './ipoUniverse.js';
+import { getIstTimeString } from '../utils/dateUtils.js';
+
 export class MarketDataFeed {
   static cachedVix = {
     indiaVix: { value: 14.35, change: -0.35, status: 'STABLE', regime: 'FAVORABLE' },
     usVix: { value: 13.92, change: -0.18, status: 'LOW_VOLATILITY', regime: 'BULLISH' },
-    lastUpdated: new Date().toLocaleTimeString()
+    lastUpdated: getIstTimeString()
   };
 
   static livePeerPrices = {};
@@ -19,11 +22,11 @@ export class MarketDataFeed {
   static syncIntervalMs = 12000; // 12-second live refresh cycle
   static intervalTimer = null;
   static subscribers = new Set();
-  static lastSyncTimestamp = new Date().toLocaleTimeString();
+  static lastSyncTimestamp = getIstTimeString();
   static primaryMarketStatus = {
     source: 'BSE / NSE / Chittorgarh / Groww Live Primary Book',
     status: 'ACTIVE',
-    lastSync: new Date().toLocaleTimeString()
+    lastSync: getIstTimeString()
   };
 
   /**
@@ -91,7 +94,7 @@ export class MarketDataFeed {
    * Synchronizes all live data sources across macro VIX, listed peers, and ongoing IPOs
    */
   static async syncAll(notifyImmediate = true) {
-    this.lastSyncTimestamp = new Date().toLocaleTimeString();
+    this.lastSyncTimestamp = getIstTimeString();
 
     // 1. Fetch live macro VIX indexes via proxy
     await this.fetchLiveMacroVix();
@@ -207,6 +210,12 @@ export class MarketDataFeed {
       'MACOBS.NS',
       'SWASTIK-SM.NS',
       'KRN.NS',
+      'SWIGGY.NS',
+      'SAGILITY.NS',
+      'ACMESOLAR.NS',
+      'NIVABUPA.NS',
+      'ZINKA.NS',
+      'NTPCGREEN.NS',
       'ALAB',
       'RDDT',
       'RELIANCE.NS',
@@ -233,7 +242,7 @@ export class MarketDataFeed {
                   dayChange,
                   dayChangePct,
                   currency: meta.currency || (sym.endsWith('.NS') ? 'INR' : 'USD'),
-                  timestamp: new Date().toLocaleTimeString()
+                  timestamp: getIstTimeString()
                 };
 
                 // Link to universe items
@@ -272,6 +281,8 @@ export class MarketDataFeed {
    */
   static updateUniverseRealtimeState() {
     if (!this.universeRef) return;
+
+    syncUniverseWithDate(this.universeRef, new Date());
 
     this.universeRef.forEach(ipo => {
       // Inject current live VIX into IPO sentiment

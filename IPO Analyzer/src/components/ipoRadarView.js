@@ -5,6 +5,8 @@
  */
 
 import { IpoEvaluationEngine } from '../quant/ipoEvaluationEngine.js';
+import { determineIpoStatus, syncUniverseWithDate } from '../data/ipoUniverse.js';
+import { getIstTimeString, getIstDateString } from '../utils/dateUtils.js';
 import { openIpoDetailModal } from './ipoDetailReport.js';
 import { showToast } from './toast.js';
 
@@ -21,7 +23,7 @@ export class IpoRadarView {
     this.statusFilter = 'ALL'; // 'ALL', 'ONGOING', 'UPCOMING', 'LISTED'
     this.searchQuery = '';
     this.sortBy = 'score';
-    this.lastSynced = new Date().toLocaleTimeString();
+    this.lastSynced = getIstTimeString();
     this.autoSyncActive = false;
     this.syncIntervalId = null;
 
@@ -29,6 +31,9 @@ export class IpoRadarView {
   }
 
   recalculateEvaluations() {
+    const today = new Date();
+    syncUniverseWithDate(this.universe, today);
+
     this.evaluatedList = this.universe.map(ipo => {
       const evaluation = IpoEvaluationEngine.evaluate(ipo);
       const isListed = ipo.status === 'LISTED';
@@ -97,7 +102,8 @@ export class IpoRadarView {
             <span class="live-pulse-dot"></span>
             <span class="rt-feed-title">REAL-TIME DATA ENGINE ACTIVE</span>
             <span class="rt-feed-divider">•</span>
-            <span class="rt-sync-time">Last Synced: <strong id="rt-sync-timestamp">${this.lastSynced}</strong></span>
+            <span class="rt-feed-badge" style="background: rgba(14, 165, 233, 0.15); border: 1px solid rgba(14, 165, 233, 0.4); color: #38bdf8; font-weight: 700;">🇮🇳 Indian Standard Time (IST • UTC+05:30) Active</span>
+            <span class="rt-sync-time">Last Synced (IST): <strong id="rt-sync-timestamp">${this.lastSynced}</strong></span>
             <span class="rt-feed-badge" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4); color: #34d399; font-weight: 700;">📅 Current Financial Year (FY 2026–27 Only)</span>
             <span class="rt-feed-badge">NSE & BSE India Live Quotes • Chittorgarh / BSE / Groww Primary IPO Desk</span>
           </div>
@@ -124,7 +130,7 @@ export class IpoRadarView {
             <span class="kpi-title">Upcoming Pipeline</span>
             <div class="kpi-main">
               <span class="kpi-value text-warning">${stats.upcomingCount}</span>
-              <span class="kpi-detail">Scheduled Primary</span>
+              <span class="kpi-detail">SEBI & Exchange Approved</span>
             </div>
           </div>
           <div class="kpi-card kpi-closed">
@@ -212,7 +218,11 @@ export class IpoRadarView {
                 🔴 LIVE / ONGOING (${segOngoing})
               </button>
               <button class="status-pill pill-upcoming ${this.statusFilter === 'UPCOMING' ? 'active' : ''}" data-status="UPCOMING">
-                🟡 UPCOMING (${segUpcoming})
+                ${this.marketFilter === 'IN_MAINBOARD' 
+                  ? `🟡 UPCOMING (SEBI Approved) (${segUpcoming})` 
+                  : this.marketFilter === 'IN_SME' 
+                  ? `🟡 UPCOMING (Exchange Approved) (${segUpcoming})` 
+                  : `🟡 UPCOMING (Approved Pipeline) (${segUpcoming})`}
               </button>
               <button class="status-pill pill-closed ${this.statusFilter === 'CLOSED' ? 'active' : ''}" data-status="CLOSED">
                 🔵 CLOSED / ALLOTMENT (${segClosed})
@@ -265,6 +275,35 @@ export class IpoRadarView {
 
         <!-- MAIN DATA DISPLAY -->
         <div class="radar-content-area">
+          ${this.statusFilter === 'UPCOMING' ? `
+            <div class="upcoming-chittorgarh-banner">
+              <div class="ucb-badge">
+                <span class="pulse-dot-amber"></span>
+                CHITTORGARH.COM VERIFIED PIPELINE
+              </div>
+              <div class="ucb-content">
+                <div class="ucb-title">
+                  ${this.marketFilter === 'IN_MAINBOARD' 
+                    ? '🏢 Upcoming Mainboard IPOs (Approved - SEBI Approval Received)' 
+                    : this.marketFilter === 'IN_SME' 
+                    ? '🚀 Upcoming SME IPOs (Approved - Exchange In-Principle Approval Received)' 
+                    : '🏛️ Upcoming Approved IPOs (Chittorgarh SEBI & Exchange In-Principle Approved Pipeline)'}
+                </div>
+                <div class="ucb-desc">
+                  Strictly filtering for ${this.marketFilter === 'IN_MAINBOARD' 
+                    ? 'SEBI-approved DRHPs ready for primary issuance on NSE / BSE' 
+                    : this.marketFilter === 'IN_SME' 
+                    ? 'Exchange In-Principle Approved issues on NSE Emerge / BSE SME' 
+                    : 'companies with official regulatory approval (SEBI / Stock Exchanges)'}. 
+                  Past-listed issues and unapproved draft DRHPs are excluded.
+                </div>
+              </div>
+              <div class="ucb-meta">
+                <span class="ucb-source">Source: Chittorgarh.com DRHP Tracker</span>
+                <span class="ucb-count">${filtered.length} Approved Offerings</span>
+              </div>
+            </div>
+          ` : ''}
           ${filtered.length === 0 ? `
             <div class="empty-state-box">
               <div class="empty-icon">📂</div>
@@ -310,9 +349,9 @@ export class IpoRadarView {
               const val = orig.valuation || {};
               const sent = orig.sentiment || {};
               const gmpPct = sent.gmpPct ?? 0;
-              const isOngoing = orig.status === 'ONGOING';
-              const isUpcoming = orig.status === 'UPCOMING';
-              const isClosed = orig.status === 'CLOSED';
+              const isOngoing = item.status === 'ONGOING';
+              const isUpcoming = item.status === 'UPCOMING';
+              const isClosed = item.status === 'CLOSED';
               const badgeClass = isOngoing ? 'status-badge-ongoing' : isUpcoming ? 'status-badge-upcoming' : isClosed ? 'status-badge-closed' : 'status-badge-listed';
 
               return `
@@ -398,6 +437,11 @@ export class IpoRadarView {
                     <span class="verdict-badge verdict-badge-${item.verdict.toLowerCase()}">
                       ${escapeHtml(item.verdictLabel)}
                     </span>
+                    ${isOngoing && item.verdict === 'APPLY' && item.allotmentStrategy ? `
+                      <div class="allotment-badge-row" title="${escapeHtml(item.allotmentStrategy.strategyRationale)}">
+                        <span class="allotment-best-pill">🎯 Best Odds: <strong>${escapeHtml(item.allotmentStrategy.bestCategory)}</strong> (${item.allotmentStrategy.bestProbabilityPct}%)</span>
+                      </div>
+                    ` : ''}
                   </td>
                   <td class="cell-action text-right">
                     <button class="btn btn-sm btn-outline-terminal btn-open-dossier" data-ticker="${item.ticker}">
@@ -425,9 +469,9 @@ export class IpoRadarView {
           const sent = orig.sentiment || {};
           const fin = orig.financials || {};
           const gmpPct = sent.gmpPct ?? 0;
-          const isOngoing = orig.status === 'ONGOING';
-          const isUpcoming = orig.status === 'UPCOMING';
-          const isClosed = orig.status === 'CLOSED';
+          const isOngoing = item.status === 'ONGOING';
+          const isUpcoming = item.status === 'UPCOMING';
+          const isClosed = item.status === 'CLOSED';
           const badgeClass = isOngoing ? 'status-badge-ongoing' : isUpcoming ? 'status-badge-upcoming' : isClosed ? 'status-badge-closed' : 'status-badge-listed';
 
           return `
@@ -504,6 +548,33 @@ export class IpoRadarView {
                 </div>
               </div>
 
+              ${isOngoing && item.verdict === 'APPLY' && item.allotmentStrategy ? `
+                <div class="card-allotment-optimizer">
+                  <div class="cao-header">
+                    <span class="cao-title">🎯 Allotment Probability Optimizer</span>
+                    <span class="cao-best-tag">Highest: <strong>${escapeHtml(item.allotmentStrategy.bestCategory)}</strong> (${item.allotmentStrategy.bestProbabilityPct}%)</span>
+                  </div>
+                  <div class="cao-odds-strip">
+                    <div class="cao-cat-item ${item.allotmentStrategy.bestCategory === 'Retail' ? 'is-best' : ''}">
+                      <span class="cao-cat-name">Retail (≤ ₹2L)</span>
+                      <span class="cao-cat-prob">${item.allotmentStrategy.breakdown?.retail?.probabilityPct}%</span>
+                      <span class="cao-cat-sub">${item.allotmentStrategy.breakdown?.retail?.subscription}x</span>
+                    </div>
+                    <div class="cao-cat-item ${item.allotmentStrategy.bestCategory === 'sHNI' ? 'is-best' : ''}">
+                      <span class="cao-cat-name">sHNI (₹2L–₹10L)</span>
+                      <span class="cao-cat-prob">${item.allotmentStrategy.breakdown?.sHNI?.probabilityPct}%</span>
+                      <span class="cao-cat-sub">${item.allotmentStrategy.breakdown?.sHNI?.subscription}x</span>
+                    </div>
+                    <div class="cao-cat-item ${item.allotmentStrategy.bestCategory === 'bHNI' ? 'is-best' : ''}">
+                      <span class="cao-cat-name">bHNI (> ₹10L)</span>
+                      <span class="cao-cat-prob">${item.allotmentStrategy.breakdown?.bHNI?.probabilityPct}%</span>
+                      <span class="cao-cat-sub">${item.allotmentStrategy.breakdown?.bHNI?.subscription}x</span>
+                    </div>
+                  </div>
+                  <div class="cao-rationale-note">${escapeHtml(item.allotmentStrategy.strategyRationale)}</div>
+                </div>
+              ` : ''}
+
               <div class="card-tactical-preview">
                 <strong>Tactical Guidance:</strong>
                 <p>${escapeHtml(orig.tacticalNote || item.dossier.part5_tacticalNote)}</p>
@@ -521,18 +592,55 @@ export class IpoRadarView {
     `;
   }
 
+  _getIpoDates(item) {
+    const orig = this.universe.find(u => u.ticker === item.ticker) || {};
+    const d = orig.issueDetails || {};
+    return {
+      openDate: d.openDate || orig.openDate || item.openDate,
+      closeDate: d.closeDate || orig.closeDate || item.closeDate,
+      listingDate: d.listingDate || orig.listingDate || item.listingDate
+    };
+  }
+
+  _isUpcoming(item, todayStr = getIstDateString()) {
+    const { openDate, listingDate } = this._getIpoDates(item);
+    const isAlreadyListed = item.status === 'LISTED' || (listingDate && listingDate <= todayStr);
+    return Boolean(!isAlreadyListed && openDate && openDate > todayStr);
+  }
+
+  _isClosed(item, todayStr = getIstDateString()) {
+    const { closeDate, listingDate } = this._getIpoDates(item);
+    const isNotListed = item.status !== 'LISTED' && (!listingDate || listingDate > todayStr);
+    return Boolean(isNotListed && closeDate && closeDate < todayStr);
+  }
+
+  _isOngoing(item, todayStr = getIstDateString()) {
+    const { openDate, closeDate } = this._getIpoDates(item);
+    return Boolean(openDate && closeDate && openDate <= todayStr && todayStr <= closeDate);
+  }
+
+  _isListed(item, todayStr = getIstDateString()) {
+    const { listingDate } = this._getIpoDates(item);
+    return Boolean(item.status === 'LISTED' || (listingDate && listingDate <= todayStr));
+  }
+
   getFilteredData() {
     let list = [...this.evaluatedList];
+    const todayStr = getIstDateString();
 
-    // Status filter (ONGOING vs UPCOMING vs CLOSED vs LISTED vs ALL)
+    // Strict status filter:
+    // UPCOMING: strictly openDate > today's date
+    // CLOSED: strictly closeDate < today's date AND not listed
+    // ONGOING: openDate <= today <= closeDate
+    // LISTED: listingDate <= today
     if (this.statusFilter === 'ONGOING') {
-      list = list.filter(item => item.status === 'ONGOING');
+      list = list.filter(item => this._isOngoing(item, todayStr));
     } else if (this.statusFilter === 'UPCOMING') {
-      list = list.filter(item => item.status === 'UPCOMING');
+      list = list.filter(item => this._isUpcoming(item, todayStr));
     } else if (this.statusFilter === 'CLOSED') {
-      list = list.filter(item => item.status === 'CLOSED');
+      list = list.filter(item => this._isClosed(item, todayStr));
     } else if (this.statusFilter === 'LISTED') {
-      list = list.filter(item => item.status === 'LISTED');
+      list = list.filter(item => this._isListed(item, todayStr));
     }
 
     // Market filter
@@ -590,11 +698,12 @@ export class IpoRadarView {
   }
 
   computeStats() {
+    const todayStr = getIstDateString();
     const total = this.evaluatedList.length;
-    const ongoingCount = this.evaluatedList.filter(i => i.status === 'ONGOING').length;
-    const upcomingCount = this.evaluatedList.filter(i => i.status === 'UPCOMING').length;
-    const closedCount = this.evaluatedList.filter(i => i.status === 'CLOSED').length;
-    const listedCount = this.evaluatedList.filter(i => i.status === 'LISTED').length;
+    const ongoingCount = this.evaluatedList.filter(i => this._isOngoing(i, todayStr)).length;
+    const upcomingCount = this.evaluatedList.filter(i => this._isUpcoming(i, todayStr)).length;
+    const closedCount = this.evaluatedList.filter(i => this._isClosed(i, todayStr)).length;
+    const listedCount = this.evaluatedList.filter(i => this._isListed(i, todayStr)).length;
     const applyCount = this.evaluatedList.filter(i => i.verdict === 'APPLY').length;
     const avoidCount = this.evaluatedList.filter(i => i.verdict === 'AVOID').length;
     const watchCount = this.evaluatedList.filter(i => i.verdict === 'WATCH').length;
@@ -606,16 +715,16 @@ export class IpoRadarView {
     const usItems = this.evaluatedList.filter(i => i.market === 'US');
 
     const mainboardCount = mainboardItems.length;
-    const mainboardOngoing = mainboardItems.filter(i => i.status === 'ONGOING').length;
-    const mainboardUpcoming = mainboardItems.filter(i => i.status === 'UPCOMING').length;
-    const mainboardClosed = mainboardItems.filter(i => i.status === 'CLOSED').length;
-    const mainboardListed = mainboardItems.filter(i => i.status === 'LISTED').length;
+    const mainboardOngoing = mainboardItems.filter(i => this._isOngoing(i, todayStr)).length;
+    const mainboardUpcoming = mainboardItems.filter(i => this._isUpcoming(i, todayStr)).length;
+    const mainboardClosed = mainboardItems.filter(i => this._isClosed(i, todayStr)).length;
+    const mainboardListed = mainboardItems.filter(i => this._isListed(i, todayStr)).length;
 
     const smeCount = smeItems.length;
-    const smeOngoing = smeItems.filter(i => i.status === 'ONGOING').length;
-    const smeUpcoming = smeItems.filter(i => i.status === 'UPCOMING').length;
-    const smeClosed = smeItems.filter(i => i.status === 'CLOSED').length;
-    const smeListed = smeItems.filter(i => i.status === 'LISTED').length;
+    const smeOngoing = smeItems.filter(i => this._isOngoing(i, todayStr)).length;
+    const smeUpcoming = smeItems.filter(i => this._isUpcoming(i, todayStr)).length;
+    const smeClosed = smeItems.filter(i => this._isClosed(i, todayStr)).length;
+    const smeListed = smeItems.filter(i => this._isListed(i, todayStr)).length;
 
     const usCount = usItems.length;
 
@@ -636,7 +745,7 @@ export class IpoRadarView {
         btnRefresh.classList.add('loading');
         btnRefresh.innerText = 'Syncing...';
         const res = await this.marketFeed.refreshUniverseRealtimeData(this.universe);
-        this.lastSynced = res.timestamp;
+        this.lastSynced = res?.timestamp || getIstTimeString();
         this.recalculateEvaluations();
         this.render();
         showToast('Real-time market quotes and GMP synced', 'success');
@@ -652,7 +761,7 @@ export class IpoRadarView {
           showToast('Live Auto-Sync activated (15s polling)', 'info');
           this.syncIntervalId = setInterval(async () => {
             const res = await this.marketFeed.refreshUniverseRealtimeData(this.universe);
-            this.lastSynced = res.timestamp;
+            this.lastSynced = res?.timestamp || getIstTimeString();
             this.recalculateEvaluations();
             this.render();
           }, 15000);

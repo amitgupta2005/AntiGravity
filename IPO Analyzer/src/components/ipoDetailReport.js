@@ -14,7 +14,8 @@ export function openIpoDetailModal(ipo) {
     }
 
     const evaluation = IpoEvaluationEngine.evaluate(ipo);
-    const { dossier, pillarScores, score, verdictLabel, verdictColor } = evaluation;
+    const { dossier, pillarScores, score, verdictLabel, verdictColor, allotmentStrategy } = evaluation;
+    const strat = allotmentStrategy || dossier.allotmentStrategy;
 
     // Remove existing modal if any
     const existing = document.getElementById('ipo-dossier-modal');
@@ -397,6 +398,95 @@ export function openIpoDetailModal(ipo) {
             </div>
           </div>
         </section>
+
+        <!-- ALLOTMENT PROBABILITY OPTIMIZER (RETAIL vs. sHNI vs. bHNI) -->
+        ${strat ? `
+        <section class="dossier-section allotment-optimizer-section">
+          <div class="section-badge allotment-badge">Allotment Engine</div>
+          <h3 class="section-title">🎯 Allotment Probability & Category Optimizer</h3>
+          
+          <div class="allotment-optimizer-card ${ipo.status === 'ONGOING' && evaluation.verdict === 'APPLY' ? 'aoc-featured' : ''}">
+            <div class="aoc-winner-banner">
+              <div class="awb-left">
+                <span class="awb-crown">🏆</span>
+                <div>
+                  <span class="awb-label">Highest Allotment Probability Category</span>
+                  <h4 class="awb-cat">${escapeHtml(strat.bestCategory)} Category (${strat.bestProbabilityPct}% Odds)</h4>
+                </div>
+              </div>
+              <div class="awb-badge">
+                ${ipo.status === 'ONGOING' ? '🟢 Live Bidding Window Active' : '🟡 Scheduled Issue'}
+              </div>
+            </div>
+
+            <div class="aoc-rationale-box">
+              <span class="arb-icon">💡</span>
+              <p><strong>Strategic Alpha:</strong> ${escapeHtml(strat.strategyRationale)}</p>
+            </div>
+
+            <div class="aoc-comparison-table-wrapper">
+              <table class="aoc-table">
+                <thead>
+                  <tr>
+                    <th>Category Tier</th>
+                    <th>Ticket Size Bracket</th>
+                    <th>Subscription Pressure</th>
+                    <th>Allotment Win Probability</th>
+                    <th>SEBI ICDR Allocation Method</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="${strat.bestCategory === 'Retail' ? 'tier-winner-row' : ''}">
+                    <td>
+                      <strong>${escapeHtml(strat.breakdown?.retail?.name || 'Retail (RII)')}</strong>
+                      ${strat.bestCategory === 'Retail' ? '<span class="winner-tag">BEST ODDS</span>' : ''}
+                    </td>
+                    <td>${escapeHtml(strat.breakdown?.retail?.ticket || '≤ ₹2,00,000')}</td>
+                    <td><strong class="sub-num">${strat.breakdown?.retail?.subscription}x</strong></td>
+                    <td>
+                      <div class="prob-cell-flex">
+                        <span class="prob-num ${strat.bestCategory === 'Retail' ? 'text-accent' : ''}">${strat.breakdown?.retail?.probabilityPct}%</span>
+                        <div class="prob-bar"><div class="prob-fill" style="width: ${Math.min(100, strat.breakdown?.retail?.probabilityPct)}%"></div></div>
+                      </div>
+                    </td>
+                    <td class="text-muted" style="font-size:0.8rem;">${escapeHtml(strat.breakdown?.retail?.rule || 'Random computerized lottery draw for 1 lot per PAN')}</td>
+                  </tr>
+                  <tr class="${strat.bestCategory === 'sHNI' ? 'tier-winner-row' : ''}">
+                    <td>
+                      <strong>${escapeHtml(strat.breakdown?.sHNI?.name || 'Small HNI (sHNI)')}</strong>
+                      ${strat.bestCategory === 'sHNI' ? '<span class="winner-tag">BEST ODDS</span>' : ''}
+                    </td>
+                    <td>${escapeHtml(strat.breakdown?.sHNI?.ticket || '₹2L – ₹10L')}</td>
+                    <td><strong class="sub-num">${strat.breakdown?.sHNI?.subscription}x</strong></td>
+                    <td>
+                      <div class="prob-cell-flex">
+                        <span class="prob-num ${strat.bestCategory === 'sHNI' ? 'text-accent' : ''}">${strat.breakdown?.sHNI?.probabilityPct}%</span>
+                        <div class="prob-bar"><div class="prob-fill" style="width: ${Math.min(100, strat.breakdown?.sHNI?.probabilityPct)}%"></div></div>
+                      </div>
+                    </td>
+                    <td class="text-muted" style="font-size:0.8rem;">${escapeHtml(strat.breakdown?.sHNI?.rule || 'Lottery draw for minimum sHNI lot application')}</td>
+                  </tr>
+                  <tr class="${strat.bestCategory === 'bHNI' ? 'tier-winner-row' : ''}">
+                    <td>
+                      <strong>${escapeHtml(strat.breakdown?.bHNI?.name || 'Big HNI (bHNI)')}</strong>
+                      ${strat.bestCategory === 'bHNI' ? '<span class="winner-tag">BEST ODDS</span>' : ''}
+                    </td>
+                    <td>${escapeHtml(strat.breakdown?.bHNI?.ticket || '> ₹10,00,000')}</td>
+                    <td><strong class="sub-num">${strat.breakdown?.bHNI?.subscription}x</strong></td>
+                    <td>
+                      <div class="prob-cell-flex">
+                        <span class="prob-num ${strat.bestCategory === 'bHNI' ? 'text-accent' : ''}">${strat.breakdown?.bHNI?.probabilityPct}%</span>
+                        <div class="prob-bar"><div class="prob-fill" style="width: ${Math.min(100, strat.breakdown?.bHNI?.probabilityPct)}%"></div></div>
+                      </div>
+                    </td>
+                    <td class="text-muted" style="font-size:0.8rem;">${escapeHtml(strat.breakdown?.bHNI?.rule || 'Proportional / high-bracket allocation')}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+        ` : ''}
       </div>
 
       <div class="modal-footer">

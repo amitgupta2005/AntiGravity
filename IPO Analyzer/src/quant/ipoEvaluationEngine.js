@@ -5,6 +5,7 @@
  */
 
 import { calculatePeerBenchmarks } from './peerValuation.js';
+import { getIstDateString } from '../utils/dateUtils.js';
 
 export class IpoEvaluationEngine {
   /**
@@ -63,12 +64,16 @@ export class IpoEvaluationEngine {
     // If an explicit score was curated for canonical benchmark IPOs, harmonize
     const finalScore = ipo.score || rawScore;
 
+    // Calculate category allotment probability across Retail, sHNI, and bHNI
+    const allotmentStrategy = this.computeAllotmentProbability(ipo, verdict.code);
+
     // Generate the 5-Part Institutional Dossier
     const dossier = this.generateDossier(ipo, verdict, finalScore, {
       fundamentalResult,
       quantitativeResult,
       sentimentResult,
-      redFlags
+      redFlags,
+      allotmentStrategy
     });
 
     return {
@@ -93,6 +98,7 @@ export class IpoEvaluationEngine {
       },
       redFlags,
       criticalFlagsCount: criticalFlags.length,
+      allotmentStrategy,
       dossier
     };
   }
@@ -501,7 +507,7 @@ export class IpoEvaluationEngine {
   // 5-PART INSTITUTIONAL DOSSIER GENERATOR
   // =========================================================================
   static generateDossier(ipo, verdict, score, details) {
-    const { fundamentalResult, quantitativeResult, sentimentResult, redFlags } = details;
+    const { fundamentalResult, quantitativeResult, sentimentResult, redFlags, allotmentStrategy } = details;
     const benchmarks = quantitativeResult.peerBenchmarks;
     const valuation = ipo.valuation || {};
     const issue = ipo.issueDetails || {};
@@ -665,7 +671,98 @@ export class IpoEvaluationEngine {
       },
       part4_marketSentiment: sentimentData,
       part5_tacticalNote: tacticalNote,
-      drhpFinancials: drhpFinancialData
+      drhpFinancials: drhpFinancialData,
+      allotmentStrategy: allotmentStrategy || this.computeAllotmentProbability(ipo, verdict.code)
+    };
+  }
+
+  /**
+   * Computes allotment probabilities across Retail (≤ ₹2L), sHNI (₹2L - ₹10L),
+   * and bHNI (> ₹10L) categories for open/upcoming IPOs with verdict APPLY.
+   * Identifies the category with the highest mathematical probability of receiving allotment.
+   */
+  static computeAllotmentProbability(ipo, verdictCode = 'APPLY') {
+    if (ipo.market === 'US') {
+      return null;
+    }
+
+    const sent = ipo.sentiment || {};
+    const sub = sent.subscription || {};
+    const isSme = ipo.tier === 'SME';
+
+    // 1. Extract or model subscription rates for each category
+    let retailSub = typeof sub.retail === 'number' ? sub.retail : (typeof sent.retailSubscription === 'number' ? sent.retailSubscription : 1.2);
+    let niiTotal = typeof sub.nii === 'number' ? sub.nii : (typeof sent.niiSubscription === 'number' ? sent.niiSubscription : (retailSub * 1.35));
+    
+    // In Indian Mainboard: 1/3 of NII is sHNI (₹2L - ₹10L), 2/3 is bHNI (>₹10L)
+    let sHniSub = typeof sub.sHni === 'number' ? sub.sHni : Number((niiTotal * 1.15).toFixed(2));
+    let bHniSub = typeof sub.bHni === 'number' ? sub.bHni : Number((niiTotal * 0.90).toFixed(2));
+
+    if (isSme) {
+      sHniSub = Number((niiTotal).toFixed(2));
+      bHniSub = Number((niiTotal * 1.25).toFixed(2));
+    }
+
+    retailSub = Math.max(0.05, Number(retailSub.toFixed(2)));
+    sHniSub = Math.max(0.05, Number(sHniSub.toFixed(2)));
+    bHniSub = Math.max(0.05, Number(bHniSub.toFixed(2)));
+
+    // 2. Compute allotment probability %
+    // If subscription <= 1.0x -> 100% allotment guaranteed
+    // If subscription > 1.0x -> Probability of winning 1 lot = 100 / subscription %
+    const pRetail = retailSub <= 1.0 ? 100 : Number((100 / retailSub).toFixed(1));
+    const psHni = sHniSub <= 1.0 ? 100 : Number((100 / sHniSub).toFixed(1));
+    const pbHni = bHniSub <= 1.0 ? 100 : Number((100 / bHniSub).toFixed(1));
+
+    // 3. Determine best category with highest win rate
+    let bestCategory = 'Retail';
+    let bestProbabilityPct = pRetail;
+
+    if (psHni > bestProbabilityPct) {
+      bestCategory = 'sHNI';
+      bestProbabilityPct = psHni;
+    }
+    if (pbHni > bestProbabilityPct && pbHni > psHni) {
+      bestCategory = 'bHNI';
+      bestProbabilityPct = pbHni;
+    }
+
+    let strategyRationale = '';
+    if (bestCategory === 'Retail') {
+      strategyRationale = `Retail category provides the highest allotment probability (${pRetail}%) due to lower crowd subscription (${retailSub}x) relative to HNI buckets. Recommended Strategy: Submit 1 Retail application per distinct family PAN card.`;
+    } else if (bestCategory === 'sHNI') {
+      strategyRationale = `sHNI (₹2L–₹10L) offers superior allotment odds (${psHni}%) as retail is over-crowded (${retailSub}x) while sHNI demand is lighter (${sHniSub}x). Apply with minimum sHNI lot (just above ₹2 Lakh).`;
+    } else {
+      strategyRationale = `bHNI (>₹10L) has lowest subscription pressure (${bHniSub}x), maximizing institutional allocation rates (${pbHni}%). Optimal for high-capital accounts.`;
+    }
+
+    return {
+      bestCategory, // 'Retail' | 'sHNI' | 'bHNI'
+      bestProbabilityPct,
+      strategyRationale,
+      breakdown: {
+        retail: {
+          name: 'Retail (RII ≤ ₹2L)',
+          subscription: retailSub,
+          probabilityPct: pRetail,
+          ticket: ipo.issueDetails?.retailMinInvestment || '₹14,000 - ₹15,000',
+          rule: 'Random lottery draw for 1 lot per PAN'
+        },
+        sHNI: {
+          name: isSme ? 'HNI / NII (> ₹2L)' : 'Small HNI (sHNI: ₹2L - ₹10L)',
+          subscription: sHniSub,
+          probabilityPct: psHni,
+          ticket: '₹2,00,000 - ₹10,00,000',
+          rule: isSme ? 'Proportional / Lottery on minimum lot' : 'Lottery draw for minimum sHNI lot'
+        },
+        bHNI: {
+          name: 'Big HNI (bHNI: > ₹10L)',
+          subscription: bHniSub,
+          probabilityPct: pbHni,
+          ticket: '> ₹10,00,000',
+          rule: 'Proportional allotment pool'
+        }
+      }
     };
   }
 
@@ -713,7 +810,7 @@ export class IpoEvaluationEngine {
     return `
 # INSTITUTIONAL IPO MEMORANDUM
 **Asset:** ${name} (${ticker}) | **Market:** ${market} (${tier}) | **Institutional Score:** ${score}/100
-**Date:** ${new Date().toISOString().slice(0, 10)} | **Status:** Institutional Rating Completed
+**Date:** ${getIstDateString()} (IST) | **Status:** Institutional Rating Completed
 
 ---
 

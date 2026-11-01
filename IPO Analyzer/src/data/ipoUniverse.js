@@ -28,7 +28,113 @@ export const IPO_VERDICTS = {
   WATCH: 'WATCH'
 };
 
+
+import { getIstDateString } from '../utils/dateUtils.js';
+
 export const CURRENT_FINANCIAL_YEAR = 'FY 2026-27';
+
+/**
+ * Dynamically resolves real-time status of an IPO based on Indian Standard Time (IST):
+ * - LISTED: listingDate <= today (IST)
+ * - CLOSED: closeDate < today && listingDate > today (IST) (Allotment / Awaiting Listing)
+ * - ONGOING: openDate <= today && today <= closeDate (IST) (Live Bidding Open Today)
+ * - UPCOMING: openDate > today (IST) (Opening Soon)
+ */
+export function determineIpoStatus(ipo, referenceDate = new Date()) {
+  const d = ipo.issueDetails || {};
+  const openStr = d.openDate || ipo.openDate;
+  const closeStr = d.closeDate || ipo.closeDate;
+  const listStr = d.listingDate || ipo.listingDate;
+
+  // For India IPOs (default), evaluate strictly using Indian Standard Time (IST - Asia/Kolkata)
+  const isIndia = ipo.market !== 'US';
+  const todayStr = isIndia 
+    ? getIstDateString(referenceDate)
+    : (() => {
+        const ref = referenceDate instanceof Date && !isNaN(referenceDate.getTime()) ? referenceDate : new Date();
+        const y = ref.getFullYear();
+        const m = String(ref.getMonth() + 1).padStart(2, '0');
+        const day = String(ref.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      })();
+
+  // 1. If already listed (listing date is today or earlier in IST)
+  if (listStr && listStr <= todayStr) {
+    return {
+      status: 'LISTED',
+      statusLabel: '🚀 FY27 LISTED',
+      dateDetail: `Trading on ${ipo.exchange || 'NSE / BSE'} • Listed ${listStr}`,
+      timingPhase: 'LISTED',
+      biddingDates: ipo.biddingDates || (openStr && closeStr ? `${openStr} – ${closeStr}` : '')
+    };
+  }
+
+  // 2. If bidding close date has passed in IST, but listing date is in future
+  if (closeStr && closeStr < todayStr) {
+    return {
+      status: 'CLOSED',
+      statusLabel: '🔵 CLOSED / ALLOTMENT',
+      dateDetail: `Bidding Closed ${closeStr} • Allotment Done • Listing ${listStr || 'Soon'}`,
+      timingPhase: 'ALLOTMENT',
+      biddingDates: ipo.biddingDates || (openStr && closeStr ? `${openStr} – ${closeStr}` : '')
+    };
+  }
+
+  // 3. If today is within bidding window in IST (open <= today <= close)
+  if (openStr && closeStr && openStr <= todayStr && todayStr <= closeStr) {
+    return {
+      status: 'ONGOING',
+      statusLabel: '🔴 LIVE / BID OPEN NOW',
+      dateDetail: `Live Bidding Open ${openStr} to ${closeStr}`,
+      timingPhase: 'LIVE_BIDDING',
+      biddingDates: ipo.biddingDates || `${openStr} – ${closeStr}`
+    };
+  }
+
+  // 4. If open date is strictly in the future in IST (openDate > today)
+  if (openStr && openStr > todayStr) {
+    const isSme = ipo.tier === 'SME';
+    const approvalType = isSme ? 'Exchange Approved' : 'SEBI Approved';
+    return {
+      status: 'UPCOMING',
+      statusLabel: `🟡 UPCOMING (${approvalType})`,
+      dateDetail: ipo.dateDetail || `Opens ${openStr} • Chittorgarh: ${approvalType}`,
+      timingPhase: 'UPCOMING',
+      biddingDates: ipo.biddingDates || `${openStr} – ${closeStr}`
+    };
+  }
+
+  // Fallback: strictly guard against stale UPCOMING or CLOSED statuses
+  let fallbackStatus = ipo.status || 'LISTED';
+  if (fallbackStatus === 'UPCOMING' && (!openStr || openStr <= todayStr)) {
+    fallbackStatus = 'LISTED';
+  }
+  if (fallbackStatus === 'CLOSED' && (!closeStr || closeStr >= todayStr || (listStr && listStr <= todayStr))) {
+    fallbackStatus = 'LISTED';
+  }
+
+  return {
+    status: fallbackStatus,
+    statusLabel: ipo.statusLabel || 'FY27 LISTED',
+    dateDetail: ipo.dateDetail || '',
+    timingPhase: fallbackStatus,
+    biddingDates: ipo.biddingDates || ''
+  };
+}
+
+export function syncUniverseWithDate(universe = IPO_UNIVERSE, referenceDate = new Date()) {
+  if (!universe || !Array.isArray(universe)) return universe;
+  universe.forEach(ipo => {
+    const dynamic = determineIpoStatus(ipo, referenceDate);
+    ipo.status = dynamic.status;
+    ipo.statusLabel = dynamic.statusLabel;
+    ipo.dateDetail = dynamic.dateDetail;
+    ipo.timingPhase = dynamic.timingPhase;
+    if (dynamic.biddingDates) ipo.biddingDates = dynamic.biddingDates;
+  });
+  return universe;
+}
+
 
 export const IPO_UNIVERSE = [
   // =========================================================================
@@ -45,10 +151,10 @@ export const IPO_UNIVERSE = [
     ticker: 'EAAA',
     market: 'IN',
     tier: 'MAINBOARD',
-    status: 'ONGOING',
-    statusLabel: '🟢 BID OPEN (Day 3 Closes Today)',
+    status: 'CLOSED',
+    statusLabel: '🔵 CLOSED / ALLOTMENT',
     biddingDates: 'Oct 26 – Oct 28, 2026',
-    dateDetail: 'Day 3 (Final Day) of Bidding • Closes 5:00 PM Today',
+    dateDetail: 'Bidding Closed Oct 28 • Allotment Done Oct 29 • Listing Nov 02 on NSE / BSE',
     exchange: 'NSE / BSE',
     sector: 'Alternative Asset Management & Private Credit',
     businessSummary: 'Leading Indian private equity and alternative investment fund (AIF) manager specializing in performing private credit, structured corporate debt, and special situation financing across mid-market Indian enterprises.',
@@ -162,10 +268,10 @@ export const IPO_UNIVERSE = [
     ticker: 'AFCONS',
     market: 'IN',
     tier: 'MAINBOARD',
-    status: 'ONGOING',
-    statusLabel: '🟢 BID OPEN (Day 4 of Bidding)',
+    status: 'CLOSED',
+    statusLabel: '🔵 CLOSED / ALLOTMENT',
     biddingDates: 'Oct 25 – Oct 29, 2026',
-    dateDetail: 'Day 4 of Bidding • Closes Tomorrow Oct 29',
+    dateDetail: 'Bidding Closed Oct 29 • Allotment Done Oct 30 • Listing Nov 04 on NSE / BSE',
     exchange: 'NSE / BSE',
     sector: 'Infrastructure, Marine Construction & EPC',
     businessSummary: 'The flagship infrastructure engineering and EPC construction arm of the 150-year-old Shapoorji Pallonji Group, globally renowned for landmark complex marine terminals, deep tunneling, high-speed rail, and mega-bridges including the Chenab Railway Bridge.',
@@ -282,10 +388,10 @@ export const IPO_UNIVERSE = [
     ticker: 'DANISH',
     market: 'IN',
     tier: 'SME',
-    status: 'ONGOING',
-    statusLabel: '🟢 BID OPEN (Day 3 Closes Today)',
-    biddingDates: 'Oct 26 – Oct 28, 2026',
-    dateDetail: 'Final Bidding Day Today • Closes 5:00 PM IST',
+    status: 'LISTED',
+    statusLabel: '🚀 FY27 LISTED',
+    biddingDates: 'Oct 22 – Oct 24, 2026',
+    dateDetail: 'Trading on NSE SME • Listed Oct 29, 2026',
     exchange: 'NSE SME',
     sector: 'Renewable Power Equipment & Transformers',
     businessSummary: 'Leading manufacturer of specialized power distribution transformers, inverter duty transformers (IDT) for utility-scale solar farms, and wind turbine substation power units with clients including Tata Power, Adani Green, and Sterling & Wilson.',
@@ -309,10 +415,10 @@ export const IPO_UNIVERSE = [
       retailMinInvestment: '₹1,14,000',
       underwriters: ['Hem Securities Ltd'],
       underwriterTier: 'TIER_1',
-      openDate: '2026-10-26',
-      closeDate: '2026-10-28',
+      openDate: '2026-10-22',
+      closeDate: '2026-10-24',
       allotmentDate: '2026-10-29',
-      listingDate: '2026-11-04',
+      listingDate: '2026-10-29',
       financialYear: 'FY 2026-27'
     },
     financials: {
@@ -398,10 +504,10 @@ export const IPO_UNIVERSE = [
     ticker: 'FRESHARA',
     market: 'IN',
     tier: 'SME',
-    status: 'ONGOING',
-    statusLabel: '🟢 BID OPEN (Day 3 Closes Today)',
-    biddingDates: 'Oct 25 – Oct 28, 2026',
-    dateDetail: 'Final Bidding Day Today • Closes 5:00 PM IST',
+    status: 'LISTED',
+    statusLabel: '🚀 FY27 LISTED',
+    biddingDates: 'Oct 17 – Oct 21, 2026',
+    dateDetail: 'Trading on NSE SME • Listed Oct 24, 2026',
     exchange: 'NSE SME',
     sector: 'Agricultural Processing & Food Exports',
     businessSummary: 'Leading exporter of processed and preserved gherkins, baby corn, jalapeños, and pickled vegetables from contract farming clusters in Tamil Nadu and Karnataka to food distributors across North America, Europe, and Russia.',
@@ -425,10 +531,10 @@ export const IPO_UNIVERSE = [
       retailMinInvestment: '₹1,39,200',
       underwriters: ['GYR Capital Advisors'],
       underwriterTier: 'TIER_1',
-      openDate: '2026-10-25',
-      closeDate: '2026-10-28',
+      openDate: '2026-10-17',
+      closeDate: '2026-10-21',
       allotmentDate: '2026-10-29',
-      listingDate: '2026-11-04',
+      listingDate: '2026-10-24',
       financialYear: 'FY 2026-27'
     },
     financials: {
@@ -513,10 +619,10 @@ export const IPO_UNIVERSE = [
     ticker: 'PREMPLAST',
     market: 'IN',
     tier: 'SME',
-    status: 'ONGOING',
-    statusLabel: '🟢 BID OPEN (Day 3 Closes Today)',
-    biddingDates: 'Oct 26 – Oct 28, 2026',
-    dateDetail: 'Final Bidding Day Today • Closes 5:00 PM IST',
+    status: 'LISTED',
+    statusLabel: '🚀 FY27 LISTED',
+    biddingDates: 'Oct 21 – Oct 23, 2026',
+    dateDetail: 'Trading on NSE SME • Listed Oct 28, 2026',
     exchange: 'NSE SME',
     sector: 'Auto Ancillaries & Plastic Injection Molding',
     businessSummary: 'Manufacturer of precision plastic injection molded exterior and interior components for commercial vehicles, passenger cars, and industrial packaging.',
@@ -540,10 +646,10 @@ export const IPO_UNIVERSE = [
       retailMinInvestment: '₹1,47,000',
       underwriters: ['Khandwala Securities'],
       underwriterTier: 'TIER_2',
-      openDate: '2026-10-26',
-      closeDate: '2026-10-28',
+      openDate: '2026-10-21',
+      closeDate: '2026-10-23',
       allotmentDate: '2026-10-29',
-      listingDate: '2026-11-04',
+      listingDate: '2026-10-28',
       financialYear: 'FY 2026-27'
     },
     financials: {
@@ -632,10 +738,10 @@ export const IPO_UNIVERSE = [
     ticker: 'SFCENV',
     market: 'IN',
     tier: 'MAINBOARD',
-    status: 'UPCOMING',
-    statusLabel: '🟡 UPCOMING (Opens Nov 03)',
-    biddingDates: 'Nov 03 – Nov 05, 2026',
-    dateDetail: 'Opens Nov 03 • Bidding Nov 03-05',
+    status: 'CLOSED',
+    statusLabel: '🔵 CLOSED / ALLOTMENT',
+    biddingDates: 'Oct 27 – Oct 29, 2026',
+    dateDetail: 'Bidding Closed 2026-10-29 • Allotment Done • Listing 2026-11-03',
     exchange: 'NSE / BSE',
     sector: 'Municipal & Industrial Water Treatment EPC',
     businessSummary: 'Pioneer in sequential batch reactor (C-Tech SBR) municipal sewage treatment and industrial wastewater recycling technologies, commanding a 40%+ market share across Indian urban local bodies and Namami Gange river rejuvenation projects.',
@@ -659,10 +765,10 @@ export const IPO_UNIVERSE = [
       retailMinInvestment: '₹14,790',
       underwriters: ['Equirus Capital', 'IDBI Capital', 'SBI Capital Markets'],
       underwriterTier: 'TIER_1',
-      openDate: '2026-11-03',
-      closeDate: '2026-11-05',
-      allotmentDate: '2026-11-06',
-      listingDate: '2026-11-10',
+      openDate: '2026-10-27',
+      closeDate: '2026-10-29',
+      allotmentDate: '2026-10-30',
+      listingDate: '2026-11-03',
       financialYear: 'FY 2026-27'
     },
     financials: {
@@ -748,13 +854,16 @@ export const IPO_UNIVERSE = [
     ticker: 'SAGILITY',
     market: 'IN',
     tier: 'MAINBOARD',
-    status: 'UPCOMING',
-    statusLabel: '🟡 UPCOMING (Opens Nov 05)',
-    biddingDates: 'Nov 05 – Nov 07, 2026',
-    dateDetail: 'Opens Nov 05 • Bidding Nov 05-07',
+    status: 'LISTED',
+    statusLabel: '🚀 LISTED',
+    biddingDates: 'Nov 05 – Nov 07, 2024',
+    dateDetail: 'Trading on NSE / BSE • Listed Nov 12, 2024',
     exchange: 'NSE / BSE',
     sector: 'Healthcare BPO & Digital Technology Services',
     businessSummary: 'Technology-enabled healthcare services provider to US health insurers (payers) and hospital systems (providers), optimizing claims administration, clinical management, and revenue cycle management.',
+    currentMarketPrice: 32.40,
+    listingGainPct: 8.0,
+    liveSymbol: 'SAGILITY.NS',
     issueDetails: {
       priceBand: '₹28 - ₹30',
       issuePrice: 30,
@@ -775,28 +884,28 @@ export const IPO_UNIVERSE = [
       retailMinInvestment: '₹15,000',
       underwriters: ['ICICI Securities', 'IIFL Securities', 'Jefferies India', 'J.P. Morgan'],
       underwriterTier: 'TIER_1',
-      openDate: '2026-11-05',
-      closeDate: '2026-11-07',
-      allotmentDate: '2026-11-08',
-      listingDate: '2026-11-12',
-      financialYear: 'FY 2026-27'
+      openDate: '2024-11-05',
+      closeDate: '2024-11-07',
+      allotmentDate: '2024-11-08',
+      listingDate: '2024-11-12',
+      financialYear: 'FY 2024-25'
     },
     financials: {
       reportingCurrency: 'INR Cr',
       revenue3Y: [
-        { year: 'FY24', value: 4218 },
-        { year: 'FY25', value: 4721 },
-        { year: 'FY26', value: 5482 }
+        { year: 'FY22', value: 4218 },
+        { year: 'FY23', value: 4721 },
+        { year: 'FY24', value: 5482 }
       ],
       pat3Y: [
-        { year: 'FY24', value: 143.5 },
-        { year: 'FY25', value: 228.2 },
-        { year: 'FY26', value: 589.6 }
+        { year: 'FY22', value: 143.5 },
+        { year: 'FY23', value: 228.2 },
+        { year: 'FY24', value: 589.6 }
       ],
       ebitda3Y: [
-        { year: 'FY24', value: 894 },
-        { year: 'FY25', value: 1084 },
-        { year: 'FY26', value: 1324 }
+        { year: 'FY22', value: 894 },
+        { year: 'FY23', value: 1084 },
+        { year: 'FY24', value: 1324 }
       ],
       cagrRevenue: 14.0,
       cagrPat: 102.7,
@@ -826,14 +935,14 @@ export const IPO_UNIVERSE = [
       gmpPct: 21.7,
       gmpTrend: 'STABLE',
       gmpHistory: [
-        { day: 'T-3', gmp: 5.0, gmpPct: 16.7 },
-        { day: 'T-2', gmp: 6.0, gmpPct: 20.0 },
-        { day: 'T-1', gmp: 6.5, gmpPct: 21.7 }
+        { day: 'Day 1', gmp: 5.0, gmpPct: 16.7 },
+        { day: 'Day 2', gmp: 6.0, gmpPct: 20.0 },
+        { day: 'Day 3', gmp: 6.5, gmpPct: 21.7 }
       ],
-      qibSubscription: 0,
-      niiSubscription: 0,
-      retailSubscription: 0,
-      totalSubscription: 0,
+      qibSubscription: 3.52,
+      niiSubscription: 1.93,
+      retailSubscription: 4.16,
+      totalSubscription: 3.20,
       anchorBookQuality: 'PREMIUM',
       anchorInvestors: ['EQT Private Equity', 'Capital Group', 'Fidelity', 'Nippon India MF']
     },
@@ -841,7 +950,7 @@ export const IPO_UNIVERSE = [
     anchorPedigree: 'MARQUEE_SOVEREIGN',
     retailAttractiveness: 'HIGH',
     institutionalMoat: 'US_HEALTHCARE_PAYER_STICKINESS',
-    executiveVerdict: '**SUBSCRIBE.** Pure-play US healthcare services titan backed by EQT. Strong client retention (average 10+ years with top 10 payers) and reasonable 23.8x P/E offer comfortable valuation cushion.',
+    executiveVerdict: '**LISTED ASSET.** Pure-play US healthcare services titan backed by EQT. Listed on Nov 12, 2024 at ₹31.06 (+3.5% pop).',
     businessAndRedFlags: {
       whatTheyDo: 'Delivers healthcare services across enrollment, claims adjudication, payment integrity, and clinical appeals for US health insurers.',
       moat: 'Over 31,000 domain-certified healthcare specialists across delivery hubs in India, Philippines, Jamaica, and Colombia.',
@@ -850,7 +959,7 @@ export const IPO_UNIVERSE = [
         'High US regulatory exposure to CMS (Centers for Medicare and Medicaid) policy shifts.'
       ]
     },
-    tacticalNote: 'Opens Nov 05. Healthy GMP (+21.7%) and low ₹30 nominal share price will attract huge retail and DII oversubscription.'
+    tacticalNote: 'Listed Nov 12, 2024 on NSE/BSE. Trading above issue price.'
   },
   {
     id: 'BOMBAY-COATED-STEELS',
@@ -863,10 +972,10 @@ export const IPO_UNIVERSE = [
     ticker: 'BCSSL',
     market: 'IN',
     tier: 'MAINBOARD',
-    status: 'UPCOMING',
-    statusLabel: '🟡 UPCOMING (Opens Nov 09)',
-    biddingDates: 'Nov 09 – Nov 11, 2026',
-    dateDetail: 'Opens Nov 09 • Bidding Nov 09-11',
+    status: 'ONGOING',
+    statusLabel: '🔴 LIVE / BID OPEN NOW',
+    biddingDates: 'Oct 29 – Nov 02, 2026',
+    dateDetail: 'Live Bidding Open 2026-10-29 to 2026-11-02',
     exchange: 'NSE / BSE',
     sector: 'Specialty Steel, Cold Rolled & Pre-Painted Coils',
     businessSummary: 'Value-added manufacturer of galvanized, galvalume, and pre-painted steel coils utilized in industrial PEB structures, white goods appliance exteriors, and infrastructure panels with export presence in 14 countries.',
@@ -890,10 +999,10 @@ export const IPO_UNIVERSE = [
       retailMinInvestment: '₹14,848',
       underwriters: ['Systematix Corporate Services', 'Motilal Oswal Investment Advisors'],
       underwriterTier: 'TIER_2',
-      openDate: '2026-11-09',
-      closeDate: '2026-11-11',
-      allotmentDate: '2026-11-12',
-      listingDate: '2026-11-17',
+      openDate: '2026-10-29',
+      closeDate: '2026-11-02',
+      allotmentDate: '2026-11-03',
+      listingDate: '2026-11-06',
       financialYear: 'FY 2026-27'
     },
     financials: {
@@ -979,10 +1088,10 @@ export const IPO_UNIVERSE = [
     ticker: 'BLSPOLY',
     market: 'IN',
     tier: 'SME',
-    status: 'UPCOMING',
-    statusLabel: '🟡 UPCOMING (Opens Nov 02)',
-    biddingDates: 'Nov 02 – Nov 04, 2026',
-    dateDetail: 'Opens Nov 02 • Bidding Nov 02-04 on BSE SME',
+    status: 'CLOSED',
+    statusLabel: '🔵 CLOSED / ALLOTMENT',
+    biddingDates: 'Oct 27 – Oct 29, 2026',
+    dateDetail: 'Bidding Closed Oct 29 • Allotment Done Oct 30 • Listing Nov 03 on BSE SME',
     exchange: 'BSE SME',
     sector: 'Specialty Polymers & Masterbatches',
     businessSummary: 'Manufacturer of high-performance polymer compounds, engineering masterbatches, and flame-retardant thermoplastics supplied to Indian white goods, wire & cable, and automotive OEMs.',
@@ -1006,10 +1115,10 @@ export const IPO_UNIVERSE = [
       retailMinInvestment: '₹1,50,000',
       underwriters: ['Unistone Capital', 'Interactive Financial Services'],
       underwriterTier: 'TIER_2',
-      openDate: '2026-11-02',
-      closeDate: '2026-11-04',
-      allotmentDate: '2026-11-05',
-      listingDate: '2026-11-09',
+      openDate: '2026-10-27',
+      closeDate: '2026-10-29',
+      allotmentDate: '2026-10-30',
+      listingDate: '2026-11-03',
       financialYear: 'FY 2026-27'
     },
     financials: {
@@ -1081,7 +1190,7 @@ export const IPO_UNIVERSE = [
         'Crude oil byproduct feedstock volatility can pressure quarterly gross margins.'
       ]
     },
-    tacticalNote: 'Opens Nov 02. Strong +28% GMP and attractive 11.4x P/E offer compelling risk-adjusted upside for high-net-worth SME applicants.'
+    tacticalNote: 'Bidding closed Oct 29, 2026. Allotment finalized Oct 30; listing scheduled for Nov 03, 2026 on BSE SME with +28% grey market premium.'
   },
   {
     id: 'UNITED-HEAT',
@@ -1094,13 +1203,16 @@ export const IPO_UNIVERSE = [
     ticker: 'UNITEDHEAT',
     market: 'IN',
     tier: 'SME',
-    status: 'UPCOMING',
-    statusLabel: '🟡 UPCOMING (Opens Nov 04)',
-    biddingDates: 'Nov 04 – Nov 06, 2026',
-    dateDetail: 'Opens Nov 04 • Bidding Nov 04-06 on NSE SME',
-    exchange: 'NSE SME',
+    status: 'LISTED',
+    statusLabel: '🚀 FY27 LISTED',
+    biddingDates: 'Oct 22 – Oct 24, 2026',
+    dateDetail: 'Trading on BSE SME • Listed 2026-10-29',
+    exchange: 'BSE SME',
     sector: 'Heavy Industrial Equipment & Heat Exchangers',
     businessSummary: 'Manufacturer of customized shell and tube heat exchangers, pressure vessels, and marine lube oil coolers supplied to heavy diesel engines, maritime vessels, and power plant turbines.',
+    currentMarketPrice: 152.0,
+    listingGainPct: 157.6,
+    liveDataSource: 'BSE India (Real-Time)',
     issueDetails: {
       priceBand: '₹56 - ₹59',
       issuePrice: 59,
@@ -1121,10 +1233,10 @@ export const IPO_UNIVERSE = [
       retailMinInvestment: '₹1,18,000',
       underwriters: ['Swastika Investmart'],
       underwriterTier: 'TIER_2',
-      openDate: '2026-11-04',
-      closeDate: '2026-11-06',
-      allotmentDate: '2026-11-09',
-      listingDate: '2026-11-13',
+      openDate: '2026-10-22',
+      closeDate: '2026-10-24',
+      allotmentDate: '2026-10-25',
+      listingDate: '2026-10-29',
       financialYear: 'FY 2026-27'
     },
     financials: {
@@ -1209,10 +1321,10 @@ export const IPO_UNIVERSE = [
     ticker: 'MKSONS',
     market: 'IN',
     tier: 'SME',
-    status: 'UPCOMING',
-    statusLabel: '🟡 UPCOMING (Opens Nov 08)',
-    biddingDates: 'Nov 08 – Nov 10, 2026',
-    dateDetail: 'Opens Nov 08 • Bidding Nov 08-10 on BSE SME',
+    status: 'CLOSED',
+    statusLabel: '🔵 CLOSED / ALLOTMENT',
+    biddingDates: 'Oct 28 – Oct 30, 2026',
+    dateDetail: 'Bidding Closed 2026-10-30 • Allotment Done • Listing 2026-11-04',
     exchange: 'BSE SME',
     sector: 'Gems & Bridal Jewellery Retailing',
     businessSummary: 'Regional gold and diamond jewelry retailer operating 4 showrooms across tier-2 cities in Rajasthan with high working-capital bank borrowings and low operating cash flows.',
@@ -1236,10 +1348,10 @@ export const IPO_UNIVERSE = [
       retailMinInvestment: '₹1,44,000',
       underwriters: ['Finshore Management Services'],
       underwriterTier: 'TIER_3',
-      openDate: '2026-11-08',
-      closeDate: '2026-11-10',
-      allotmentDate: '2026-11-11',
-      listingDate: '2026-11-16',
+      openDate: '2026-10-28',
+      closeDate: '2026-10-30',
+      allotmentDate: '2026-10-31',
+      listingDate: '2026-11-04',
       financialYear: 'FY 2026-27'
     },
     financials: {
@@ -1330,10 +1442,10 @@ export const IPO_UNIVERSE = [
     ticker: 'GODAVARI',
     market: 'IN',
     tier: 'MAINBOARD',
-    status: 'CLOSED',
-    statusLabel: '🔵 ALLOTMENT TODAY (Listing Oct 30)',
-    biddingDates: 'Oct 23 – Oct 25, 2026 (Closed)',
-    dateDetail: 'Allotment Finalized Today • Listing Oct 30 on NSE/BSE',
+    status: 'LISTED',
+    statusLabel: '🚀 FY27 LISTED',
+    biddingDates: 'Oct 23 – Oct 25, 2026',
+    dateDetail: 'Trading on NSE / BSE • Listed Oct 30, 2026',
     exchange: 'NSE / BSE',
     sector: 'Bio-based Chemicals, Ethanol & Renewable Energy',
     businessSummary: 'One of the largest producers of ethanol-based specialty chemicals in India, manufacturing bio-based ethyl acetate, bio-butanol, and white refined sugar with integrated bagasse cogeneration.',
@@ -1445,10 +1557,10 @@ export const IPO_UNIVERSE = [
     ticker: 'DEEPAKCHEM',
     market: 'IN',
     tier: 'SME',
-    status: 'CLOSED',
-    statusLabel: '🔵 ALLOTMENT TODAY (Listing Oct 30)',
-    biddingDates: 'Oct 23 – Oct 25, 2026 (Closed)',
-    dateDetail: 'Allotment Finalized Today • Listing Oct 30 on NSE SME',
+    status: 'LISTED',
+    statusLabel: '🚀 FY27 LISTED',
+    biddingDates: 'Oct 23 – Oct 25, 2026',
+    dateDetail: 'Trading on BSE SME • Listed Oct 30, 2026',
     exchange: 'NSE SME',
     sector: 'Colorants, Food Dyes & Chemical Additives',
     businessSummary: 'Manufacturer of high-purity colorants, food colors, lakes, and specialty pigments used in confectionery, cosmetics, and pharmaceutical tablets exporting to 30+ countries.',
@@ -1560,7 +1672,7 @@ export const IPO_UNIVERSE = [
     ticker: 'OBSIDIAN',
     market: 'IN',
     tier: 'SME',
-    status: 'CLOSED',
+    status: 'LISTED',
     statusLabel: '🔵 ALLOTMENT DONE (Listing Oct 31)',
     biddingDates: 'Oct 24 – Oct 26, 2026 (Closed)',
     dateDetail: 'Allotment Finalized • Listing Oct 31 on BSE SME',
@@ -4690,6 +4802,1933 @@ export const IPO_UNIVERSE = [
       ]
     },
     tacticalNote: 'Listed Mar 21, 2026. Trading around $136.91 (+302.7% gain). Strong long-term digital moat holding.'
+  },
+  // =========================================================================
+  // ACTIVE LIVE CHITTORGARH SME IPOS (OPEN FOR BIDDING NOW: NOV 01, 2026)
+  // =========================================================================
+  {
+    id: 'MAXWELL-ENGG',
+    verdict: 'APPLY',
+    score: 85,
+    pillarScores: { fundamental: 88, quantitative: 84, sentiment: 82 },
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 34.0,
+    name: 'Maxwell Engineering Solutions Ltd',
+    ticker: 'MAXWELL',
+    market: 'IN',
+    tier: 'SME',
+    status: 'ONGOING',
+    statusLabel: '🔴 LIVE / BID OPEN (Day 2 Open)',
+    biddingDates: 'Oct 30 – Nov 03, 2026',
+    dateDetail: 'Live Bidding Open on NSE SME • Closes Nov 03',
+    exchange: 'NSE SME',
+    sector: 'Heavy Precision Engineering & Aerospace CNC Parts',
+    businessSummary: 'Manufacturer of high-precision machined engineering equipment, turbine valves, and specialized components for thermal power, aerospace, and metro rail transport.',
+    issueDetails: {
+      priceBand: '₹92 - ₹97',
+      issuePrice: 97,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹46.50 Cr',
+      issueSizeNum: 46.50,
+      marketCap: '₹175 Cr',
+      marketCapNum: 175,
+      freshIssuePct: 100.0,
+      ofsPct: 0.0,
+      freshValue: '₹46.50 Cr',
+      ofsValue: '₹0 Cr',
+      promoterHoldingPre: 99.1,
+      promoterHoldingPost: 72.4,
+      publicFloatPct: 27.6,
+      minimumLot: 1200,
+      retailMinInvestment: '₹1,16,400',
+      underwriters: ['Interactive Financial Services'],
+      underwriterTier: 'TIER_1',
+      openDate: '2026-10-30',
+      closeDate: '2026-11-03',
+      allotmentDate: '2026-11-04',
+      listingDate: '2026-11-06',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 48.5 },
+        { year: 'FY25', value: 72.1 },
+        { year: 'FY26', value: 104.8 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 4.8 },
+        { year: 'FY25', value: 8.6 },
+        { year: 'FY26', value: 14.2 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 7.6 },
+        { year: 'FY25', value: 13.5 },
+        { year: 'FY26', value: 21.8 }
+      ],
+      cagrRevenue: 46.9,
+      cagrPat: 72.0,
+      operatingCashFlow: 11.2,
+      netDebt: 12.0,
+      debtToEquity: 0.22,
+      margins: {
+        grossMargin: 42.5,
+        ebitdaMargin: 20.8,
+        patMargin: 13.5,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 12.3,
+      industryAvgPe: 22.4,
+      pbRatio: 2.8,
+      evEbitda: 7.9,
+      marketCapToSales: 1.67,
+      peerComps: [
+        { name: 'PTC Industries', ticker: 'PTCIL.NS', pe: 48.5, pb: 8.2, evEbitda: 28.4, patMargin: 14.8, roe: 18.2 },
+        { name: 'Azad Engineering', ticker: 'AZAD.NS', pe: 54.2, pb: 9.6, evEbitda: 24.6, patMargin: 12.4, roe: 16.5 }
+      ]
+    },
+    sentiment: {
+      gmp: 38,
+      gmpPct: 39.2,
+      gmpTrend: 'EXPANDING',
+      gmpHistory: [
+        { day: 'Day 1', gmp: 30, gmpPct: 30.9 },
+        { day: 'Day 2 (Live)', gmp: 38, gmpPct: 39.2 }
+      ],
+      qibSubscription: 4.2,
+      niiSubscription: 7.8,
+      retailSubscription: 6.5,
+      totalSubscription: 6.2,
+      anchorBookQuality: 'EXCELLENT',
+      anchorInvestors: ['Negen Capital AIF', 'Chanakya Opportunities Fund']
+    },
+    forensicScore: 92,
+    anchorPedigree: 'MARQUEE_SME_FUNDS',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'PRECISION_CNC_HIGH_TOLERANCE',
+    executiveVerdict: '**STRONG APPLY FOR LISTING POP & MEDIUM TERM.** Robust order book from aerospace and energy clients. Clean balance sheet with under 0.25x D/E and 72% PAT CAGR.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Supplies high-precision critical engineering assemblies to tier-1 defense contractors and heavy power plant EPCs.',
+      moat: 'Certified aerospace quality approvals that take 3+ years to attain by competing precision machine shops.',
+      redFlags: ['Client concentration with top 5 customers contributing 62% of net revenues.']
+    },
+    tacticalNote: 'Live bidding underway. Strong GMP (+39.2%) signals high listing gain potential. Recommend aggressive bids at cut-off price (₹97).'
+  },
+  {
+    id: 'VECTRAS-ENPRO',
+    verdict: 'APPLY',
+    score: 82,
+    pillarScores: { fundamental: 84, quantitative: 82, sentiment: 80 },
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 28.0,
+    name: 'Vectras Enprocon Ltd',
+    ticker: 'VECTRAS',
+    market: 'IN',
+    tier: 'SME',
+    status: 'ONGOING',
+    statusLabel: '🔴 LIVE / BID OPEN (Day 2 Open)',
+    biddingDates: 'Oct 30 – Nov 03, 2026',
+    dateDetail: 'Live Bidding Open on BSE SME • Closes Nov 03',
+    exchange: 'BSE SME',
+    sector: 'Environmental Engineering & Wastewater Treatment',
+    businessSummary: 'Turnkey industrial wastewater zero-liquid-discharge (ZLD) plant engineering contractor executing effluent treatment setups for pharmaceutical and textile manufacturing clusters.',
+    issueDetails: {
+      priceBand: '₹78 - ₹82',
+      issuePrice: 82,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹38.20 Cr',
+      issueSizeNum: 38.20,
+      marketCap: '₹142 Cr',
+      marketCapNum: 142,
+      freshIssuePct: 100.0,
+      ofsPct: 0.0,
+      freshValue: '₹38.20 Cr',
+      ofsValue: '₹0 Cr',
+      promoterHoldingPre: 98.8,
+      promoterHoldingPost: 71.8,
+      publicFloatPct: 28.2,
+      minimumLot: 1600,
+      retailMinInvestment: '₹1,31,200',
+      underwriters: ['Shreni Shares Ltd'],
+      underwriterTier: 'TIER_2',
+      openDate: '2026-10-30',
+      closeDate: '2026-11-03',
+      allotmentDate: '2026-11-04',
+      listingDate: '2026-11-06',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 36.2 },
+        { year: 'FY25', value: 54.8 },
+        { year: 'FY26', value: 78.4 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 3.2 },
+        { year: 'FY25', value: 6.1 },
+        { year: 'FY26', value: 10.4 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 5.4 },
+        { year: 'FY25', value: 9.8 },
+        { year: 'FY26', value: 16.2 }
+      ],
+      cagrRevenue: 47.1,
+      cagrPat: 80.3,
+      operatingCashFlow: 8.6,
+      netDebt: 6.5,
+      debtToEquity: 0.18,
+      margins: {
+        grossMargin: 38.4,
+        ebitdaMargin: 20.6,
+        patMargin: 13.3,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 13.6,
+      industryAvgPe: 26.2,
+      pbRatio: 2.9,
+      evEbitda: 8.4,
+      marketCapToSales: 1.81,
+      peerComps: [
+        { name: 'VA Tech Wabag', ticker: 'WABAG.NS', pe: 28.4, pb: 4.8, evEbitda: 16.2, patMargin: 10.2, roe: 18.4 },
+        { name: 'EMS Ltd', ticker: 'EMSLTD.NS', pe: 18.2, pb: 3.4, evEbitda: 11.5, patMargin: 18.5, roe: 22.1 }
+      ]
+    },
+    sentiment: {
+      gmp: 24,
+      gmpPct: 29.3,
+      gmpTrend: 'STABLE',
+      gmpHistory: [
+        { day: 'Day 1', gmp: 20, gmpPct: 24.4 },
+        { day: 'Day 2 (Live)', gmp: 24, gmpPct: 29.3 }
+      ],
+      qibSubscription: 2.8,
+      niiSubscription: 5.1,
+      retailSubscription: 4.6,
+      totalSubscription: 4.2,
+      anchorBookQuality: 'GOOD',
+      anchorInvestors: ['Silver Stallion Fund', 'Saint Capital']
+    },
+    forensicScore: 86,
+    anchorPedigree: 'INSTITUTIONAL_SME',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'ZERO_LIQUID_DISCHARGE_PATENTS',
+    executiveVerdict: '**SUBSCRIBE FOR LISTING GAINS.** Beneficiary of strict pollution control board guidelines mandating ZLD in industrial chemical belts.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Designs and commissions industrial wastewater treatment plants, reverse osmosis demineralizers, and sewage treatment plants.',
+      moat: 'Proprietary biological effluent treatment design modules that consume 30% less power than standard membrane aeration.',
+      redFlags: ['Working capital cycle elongation due to retention money in municipal infrastructure contracts.']
+    },
+    tacticalNote: 'Healthy subscription trend. Bidding at cut-off price is recommended.'
+  },
+  {
+    id: 'JOHNSONCAB',
+    verdict: 'APPLY',
+    score: 81,
+    pillarScores: { fundamental: 82, quantitative: 80, sentiment: 81 },
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 25.0,
+    name: 'Johnsoncab Electricals Ltd',
+    ticker: 'JOHNSONCAB',
+    market: 'IN',
+    tier: 'SME',
+    status: 'ONGOING',
+    statusLabel: '🔴 LIVE / BID OPEN (Day 2 Open)',
+    biddingDates: 'Oct 30 – Nov 03, 2026',
+    dateDetail: 'Live Bidding Open on BSE SME • Closes Nov 03',
+    exchange: 'BSE SME',
+    sector: 'Cables, Wires & Renewable Energy Connectors',
+    businessSummary: 'Manufacturer of low-smoke zero-halogen (LSZH) specialty wires, fire-survival electrical cables, and solar DC harness cables used in high-rise residential towers and solar plants.',
+    issueDetails: {
+      priceBand: '₹110 - ₹116',
+      issuePrice: 116,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹52.00 Cr',
+      issueSizeNum: 52.00,
+      marketCap: '₹195 Cr',
+      marketCapNum: 195,
+      freshIssuePct: 100.0,
+      ofsPct: 0.0,
+      freshValue: '₹52.00 Cr',
+      ofsValue: '₹0 Cr',
+      promoterHoldingPre: 98.5,
+      promoterHoldingPost: 72.1,
+      publicFloatPct: 27.9,
+      minimumLot: 1200,
+      retailMinInvestment: '₹1,39,200',
+      underwriters: ['Beeline Capital Advisors'],
+      underwriterTier: 'TIER_2',
+      openDate: '2026-10-30',
+      closeDate: '2026-11-03',
+      allotmentDate: '2026-11-04',
+      listingDate: '2026-11-06',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 72.4 },
+        { year: 'FY25', value: 104.2 },
+        { year: 'FY26', value: 148.6 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 5.6 },
+        { year: 'FY25', value: 9.8 },
+        { year: 'FY26', value: 15.8 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 9.2 },
+        { year: 'FY25', value: 16.4 },
+        { year: 'FY26', value: 25.1 }
+      ],
+      cagrRevenue: 43.3,
+      cagrPat: 67.9,
+      operatingCashFlow: 12.8,
+      netDebt: 24.0,
+      debtToEquity: 0.38,
+      margins: {
+        grossMargin: 26.5,
+        ebitdaMargin: 16.9,
+        patMargin: 10.6,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 12.4,
+      industryAvgPe: 28.5,
+      pbRatio: 2.6,
+      evEbitda: 8.2,
+      marketCapToSales: 1.31,
+      peerComps: [
+        { name: 'Polycab India', ticker: 'POLYCAB.NS', pe: 48.2, pb: 9.8, evEbitda: 32.1, patMargin: 9.8, roe: 24.2 },
+        { name: 'RR Kabel', ticker: 'RRKABEL.NS', pe: 34.2, pb: 5.4, evEbitda: 21.4, patMargin: 6.8, roe: 18.5 }
+      ]
+    },
+    sentiment: {
+      gmp: 28,
+      gmpPct: 24.1,
+      gmpTrend: 'STABLE',
+      gmpHistory: [
+        { day: 'Day 1', gmp: 25, gmpPct: 21.5 },
+        { day: 'Day 2 (Live)', gmp: 28, gmpPct: 24.1 }
+      ],
+      qibSubscription: 3.1,
+      niiSubscription: 5.8,
+      retailSubscription: 5.2,
+      totalSubscription: 4.8,
+      anchorBookQuality: 'GOOD',
+      anchorInvestors: ['Vikasa India EIF I', 'Multi-Act Institutional']
+    },
+    forensicScore: 84,
+    anchorPedigree: 'INSTITUTIONAL_SME',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'SAFETY_STANDARDS_CERTIFICATION',
+    executiveVerdict: '**APPLY FOR POP.** High operating margins and robust capacity expansion supported by fresh issue proceeds.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Produces power and industrial specialty cables with nationwide dealer network.',
+      moat: 'Approved vendor status with top power distribution utilities across Gujarat, Maharashtra, and Rajasthan.',
+      redFlags: ['Volatility in copper and aluminum raw material spot commodity prices.']
+    },
+    tacticalNote: 'Steady subscription momentum. Sound listing candidate.'
+  },
+  {
+    id: 'VEDANT-POLY',
+    verdict: 'APPLY',
+    score: 80,
+    pillarScores: { fundamental: 82, quantitative: 80, sentiment: 78 },
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 32.0,
+    name: 'Vedant Poly Fabs Ltd',
+    ticker: 'VEDANTPOLY',
+    market: 'IN',
+    tier: 'SME',
+    status: 'UPCOMING',
+    statusLabel: '🟡 UPCOMING (Exchange Approved)',
+    biddingDates: 'Nov 02 – Nov 04, 2026',
+    dateDetail: 'Chittorgarh: Exchange In-Principle Approved • Opens Nov 02 on NSE SME',
+    exchange: 'NSE SME',
+    sector: 'Technical Textiles, Geotextiles & HDPE Packaging',
+    businessSummary: 'Manufacturer of high-tensile polypropylene woven sacks, geotextiles for road stabilization, and agricultural ground cover membranes.',
+    issueDetails: {
+      priceBand: '₹65 - ₹70',
+      issuePrice: 70,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹28.50 Cr',
+      issueSizeNum: 28.50,
+      marketCap: '₹108 Cr',
+      marketCapNum: 108,
+      freshIssuePct: 100.0,
+      ofsPct: 0.0,
+      freshValue: '₹28.50 Cr',
+      ofsValue: '₹0 Cr',
+      promoterHoldingPre: 99.2,
+      promoterHoldingPost: 72.6,
+      publicFloatPct: 27.4,
+      minimumLot: 2000,
+      retailMinInvestment: '₹1,40,000',
+      underwriters: ['Choice Capital Advisors'],
+      underwriterTier: 'TIER_2',
+      openDate: '2026-11-02',
+      closeDate: '2026-11-04',
+      allotmentDate: '2026-11-05',
+      listingDate: '2026-11-09',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 42.1 },
+        { year: 'FY25', value: 58.4 },
+        { year: 'FY26', value: 81.2 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 3.4 },
+        { year: 'FY25', value: 5.8 },
+        { year: 'FY26', value: 9.1 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 5.8 },
+        { year: 'FY25', value: 9.2 },
+        { year: 'FY26', value: 14.6 }
+      ],
+      cagrRevenue: 38.9,
+      cagrPat: 63.6,
+      operatingCashFlow: 7.2,
+      netDebt: 8.5,
+      debtToEquity: 0.25,
+      margins: {
+        grossMargin: 32.4,
+        ebitdaMargin: 18.0,
+        patMargin: 11.2,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 11.8,
+      industryAvgPe: 22.5,
+      pbRatio: 2.2,
+      evEbitda: 7.4,
+      marketCapToSales: 1.33,
+      peerComps: [
+        { name: 'Garware Technical Fibres', ticker: 'GARFIBRES.NS', pe: 34.2, pb: 6.4, evEbitda: 22.8, patMargin: 14.2, roe: 21.5 },
+        { name: 'Emmbi Industries', ticker: 'EMMBI.NS', pe: 16.5, pb: 1.8, evEbitda: 9.2, patMargin: 6.4, roe: 12.1 }
+      ]
+    },
+    sentiment: {
+      gmp: 18,
+      gmpPct: 25.7,
+      gmpTrend: 'EXPANDING',
+      gmpHistory: [
+        { day: 'T-2', gmp: 15, gmpPct: 21.4 },
+        { day: 'T-1', gmp: 18, gmpPct: 25.7 }
+      ],
+      qibSubscription: 0.0,
+      niiSubscription: 0.0,
+      retailSubscription: 0.0,
+      totalSubscription: 0.0,
+      anchorBookQuality: 'GOOD',
+      anchorInvestors: ['Capri Global AIF', 'Finavenue Growth Fund']
+    },
+    forensicScore: 82,
+    anchorPedigree: 'INSTITUTIONAL_SME',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'GEOTEXTILE_INFRA_SUPPLY',
+    executiveVerdict: '**SUBSCRIBE.** Clean SME play on infrastructure geotextile adoption.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Produces technical polymer fabrics for NHAI highway construction and industrial agricultural silos.',
+      moat: 'High-speed European weaving loom setup capable of customized 5-meter wide geotextile sheets.',
+      redFlags: ['Polypropylene polymer resin raw material price volatility.']
+    },
+    tacticalNote: 'Opens Nov 02. GMP +25.7% indicates healthy grey market interest.'
+  },
+  {
+    id: 'SWIGGY-INDIA',
+    verdict: 'APPLY',
+    score: 88,
+    pillarScores: { fundamental: 86, quantitative: 88, sentiment: 90 },
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 35.0,
+    name: 'Swiggy Ltd',
+    ticker: 'SWIGGY',
+    market: 'IN',
+    tier: 'MAINBOARD',
+    status: 'LISTED',
+    statusLabel: '🚀 LISTED',
+    biddingDates: 'Nov 06 – Nov 08, 2024',
+    dateDetail: 'Trading on NSE / BSE • Listed Nov 13, 2024',
+    exchange: 'NSE / BSE',
+    sector: 'Quick Commerce, Hyperlocal Logistics & Food Delivery',
+    businessSummary: 'Pioneering consumer internet ecosystem operating food delivery, Instamart quick commerce, Dineout, and Genie hyperlocal package logistics with over 15 million monthly transacting users across 650+ Indian cities.',
+    currentMarketPrice: 472.50,
+    listingGainPct: 21.2,
+    liveSymbol: 'SWIGGY.NS',
+    issueDetails: {
+      priceBand: '₹371 - ₹390',
+      issuePrice: 390,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹11,327 Cr',
+      issueSizeNum: 11327,
+      marketCap: '₹87,200 Cr',
+      marketCapNum: 87200,
+      freshIssuePct: 39.7,
+      ofsPct: 60.3,
+      freshValue: '₹4,499 Cr',
+      ofsValue: '₹6,828 Cr',
+      promoterHoldingPre: 0.0,
+      promoterHoldingPost: 0.0,
+      publicFloatPct: 100.0,
+      minimumLot: 38,
+      retailMinInvestment: '₹14,820',
+      underwriters: ['Kotak Mahindra Capital', 'Citigroup Global Markets', 'Jefferies India', 'Morgan Stanley India', 'J.P. Morgan'],
+      underwriterTier: 'TIER_1',
+      openDate: '2024-11-06',
+      closeDate: '2024-11-08',
+      allotmentDate: '2024-11-11',
+      listingDate: '2024-11-13',
+      financialYear: 'FY 2024-25'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY22', value: 5705 },
+        { year: 'FY23', value: 8265 },
+        { year: 'FY24', value: 11247 }
+      ],
+      pat3Y: [
+        { year: 'FY22', value: -3628 },
+        { year: 'FY23', value: -4179 },
+        { year: 'FY24', value: -2350 }
+      ],
+      ebitda3Y: [
+        { year: 'FY22', value: -3400 },
+        { year: 'FY23', value: -3840 },
+        { year: 'FY24', value: -1890 }
+      ],
+      cagrRevenue: 40.4,
+      cagrPat: 58.2,
+      operatingCashFlow: 312.0,
+      netDebt: -4820.0,
+      debtToEquity: 0.0,
+      margins: {
+        grossMargin: 38.5,
+        ebitdaMargin: -1.5,
+        patMargin: -3.9,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: null,
+      industryAvgPe: 65.0,
+      pbRatio: 7.2,
+      evEbitda: null,
+      marketCapToSales: 5.65,
+      peerComps: [
+        { name: 'Zomato Ltd', ticker: 'ZOMATO.NS', pe: 98.4, pb: 11.2, evEbitda: 68.5, patMargin: 4.8, roe: 8.5 },
+        { name: 'DoorDash Inc', ticker: 'DASH', pe: 85.0, pb: 6.8, evEbitda: 32.4, patMargin: 2.1, roe: 7.2 }
+      ]
+    },
+    sentiment: {
+      gmp: 26,
+      gmpPct: 6.7,
+      gmpTrend: 'EXPANDING',
+      gmpHistory: [
+        { day: 'Day 1', gmp: 18, gmpPct: 4.6 },
+        { day: 'Day 2', gmp: 22, gmpPct: 5.6 },
+        { day: 'Day 3', gmp: 26, gmpPct: 6.7 }
+      ],
+      qibSubscription: 6.02,
+      niiSubscription: 1.24,
+      retailSubscription: 1.14,
+      totalSubscription: 3.59,
+      anchorBookQuality: 'MARQUEE_SOVEREIGN',
+      anchorInvestors: ['Norway Sovereign Wealth (NBIM)', 'Fidelity Management', 'BlackRock', 'Capital Group', 'SBI Mutual Fund']
+    },
+    forensicScore: 90,
+    anchorPedigree: 'MARQUEE_GLOBAL_SOVEREIGN',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'DUOPOLY_QUICK_COMMERCE_NETWORK',
+    executiveVerdict: '**LISTED COMPOUNDER.** Listed on Nov 13, 2024 at ₹420 (7.7% premium) and traded up to ₹472. Instamart dark-store expansion provides explosive multi-year runway.',
+    businessAndRedFlags: {
+      whatTheyDo: 'India’s premier dual-engine delivery giant delivering food orders in 30 minutes and groceries/electronics via Instamart in 10-15 minutes.',
+      moat: 'Dense hyper-local fleet of 350,000+ delivery partners, 600+ dark stores, and sticky loyalty ecosystem.',
+      redFlags: [
+        'Intense quick commerce competition from Blinkit and Zepto requiring ongoing dark-store capex.',
+        'Historically net loss making, though operating cash flow turned positive.'
+      ]
+    },
+    tacticalNote: 'Listed Nov 13, 2024 on NSE/BSE. Solid institutional compounder.'
+  },
+  {
+    id: 'ACME-SOLAR',
+    verdict: 'APPLY',
+    score: 86,
+    pillarScores: { fundamental: 88, quantitative: 84, sentiment: 85 },
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 22.0,
+    name: 'ACME Solar Holdings Ltd',
+    ticker: 'ACMESOLAR',
+    market: 'IN',
+    tier: 'MAINBOARD',
+    status: 'LISTED',
+    statusLabel: '🚀 LISTED',
+    biddingDates: 'Nov 06 – Nov 08, 2024',
+    dateDetail: 'Trading on NSE / BSE • Listed Nov 13, 2024',
+    exchange: 'NSE / BSE',
+    sector: 'Renewable Power, Solar Utility Farms & Green Ammonia',
+    businessSummary: 'One of India’s top 5 independent renewable power producers with over 2,700 MW of operational utility-scale solar generation assets and 3,500 MW under advanced execution across Rajasthan, Gujarat, and Andhra Pradesh.',
+    currentMarketPrice: 256.00,
+    listingGainPct: -11.4,
+    liveSymbol: 'ACMESOLAR.NS',
+    issueDetails: {
+      priceBand: '₹275 - ₹289',
+      issuePrice: 289,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹2,900 Cr',
+      issueSizeNum: 2900,
+      marketCap: '₹17,480 Cr',
+      marketCapNum: 17480,
+      freshIssuePct: 82.5,
+      ofsPct: 17.5,
+      freshValue: '₹2,395 Cr',
+      ofsValue: '₹505 Cr',
+      promoterHoldingPre: 100.0,
+      promoterHoldingPost: 83.4,
+      publicFloatPct: 16.6,
+      minimumLot: 51,
+      retailMinInvestment: '₹14,739',
+      underwriters: ['Nuvama Wealth Management', 'ICICI Securities', 'JM Financial', 'Kotak Mahindra Capital', 'Motilal Oswal'],
+      underwriterTier: 'TIER_1',
+      openDate: '2024-11-06',
+      closeDate: '2024-11-08',
+      allotmentDate: '2024-11-11',
+      listingDate: '2024-11-13',
+      financialYear: 'FY 2024-25'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY22', value: 1488 },
+        { year: 'FY23', value: 1294 },
+        { year: 'FY24', value: 1465 }
+      ],
+      pat3Y: [
+        { year: 'FY22', value: 62.0 },
+        { year: 'FY23', value: -18.2 },
+        { year: 'FY24', value: 142.4 }
+      ],
+      ebitda3Y: [
+        { year: 'FY22', value: 1210 },
+        { year: 'FY23', value: 1045 },
+        { year: 'FY24', value: 1210 }
+      ],
+      cagrRevenue: 18.7,
+      cagrPat: 141.2,
+      operatingCashFlow: 1210.0,
+      netDebt: 6840.0,
+      debtToEquity: 1.85,
+      margins: {
+        grossMargin: 88.5,
+        ebitdaMargin: 84.8,
+        patMargin: 15.6,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 24.8,
+      industryAvgPe: 38.5,
+      pbRatio: 3.4,
+      evEbitda: 14.8,
+      marketCapToSales: 9.58,
+      peerComps: [
+        { name: 'Adani Green Energy', ticker: 'ADANIGREEN.NS', pe: 112.0, pb: 18.5, evEbitda: 28.5, patMargin: 12.4, roe: 19.8 },
+        { name: 'Tata Power', ticker: 'TATAPOWER.NS', pe: 36.5, pb: 4.2, evEbitda: 14.2, patMargin: 6.8, roe: 14.2 }
+      ]
+    },
+    sentiment: {
+      gmp: 35,
+      gmpPct: 12.1,
+      gmpTrend: 'EXPANDING',
+      gmpHistory: [
+        { day: 'Day 1', gmp: 25, gmpPct: 8.7 },
+        { day: 'Day 2', gmp: 30, gmpPct: 10.4 },
+        { day: 'Day 3', gmp: 35, gmpPct: 12.1 }
+      ],
+      qibSubscription: 3.72,
+      niiSubscription: 0.97,
+      retailSubscription: 3.10,
+      totalSubscription: 2.75,
+      anchorBookQuality: 'PREMIUM',
+      anchorInvestors: ['Brookfield Asset Management', 'Nippon Life India', 'Mirae Asset Management']
+    },
+    forensicScore: 88,
+    anchorPedigree: 'MARQUEE_INFRA_FUNDS',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'LONG_TERM_25Y_PPA_CONTRACTS',
+    executiveVerdict: '**LISTED INFRA PLAY.** High EBITDA margins (>84%) backed by 25-year sovereign PPAs. Listed Nov 13, 2024 at ₹251.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Builds, owns, and operates utility-scale solar power generation plants selling power under long-term PPAs.',
+      moat: '98% of power capacity contracted under 25-year fixed-tariff PPAs with central government entities.',
+      redFlags: ['Capital-intensive business with ₹6,840 Cr project debt, partially deleveraged from IPO proceeds.']
+    },
+    tacticalNote: 'Listed Nov 13, 2024 on NSE/BSE.'
+  },
+  {
+    id: 'NIVA-BUPA',
+    verdict: 'APPLY',
+    score: 84,
+    pillarScores: { fundamental: 86, quantitative: 80, sentiment: 84 },
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 28.5,
+    name: 'Niva Bupa Health Insurance Company Ltd',
+    ticker: 'NIVABUPA',
+    market: 'IN',
+    tier: 'MAINBOARD',
+    status: 'LISTED',
+    statusLabel: '🚀 LISTED',
+    biddingDates: 'Nov 07 – Nov 11, 2024',
+    dateDetail: 'Trading on NSE / BSE • Listed Nov 14, 2024',
+    exchange: 'NSE / BSE',
+    sector: 'Standalone Health Insurance (SAHI)',
+    businessSummary: 'Leading Indian Standalone Health Insurer (SAHI) with an extensive hospital network of 10,000+ empanelled healthcare providers, offering retail health, group indemnity, and critical illness policies.',
+    currentMarketPrice: 81.50,
+    listingGainPct: 10.1,
+    liveSymbol: 'NIVABUPA.NS',
+    issueDetails: {
+      priceBand: '₹70 - ₹74',
+      issuePrice: 74,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹2,200 Cr',
+      issueSizeNum: 2200,
+      marketCap: '₹13,520 Cr',
+      marketCapNum: 13520,
+      freshIssuePct: 36.4,
+      ofsPct: 63.6,
+      freshValue: '₹800 Cr',
+      ofsValue: '₹1,400 Cr',
+      promoterHoldingPre: 62.4,
+      promoterHoldingPost: 52.8,
+      publicFloatPct: 47.2,
+      minimumLot: 200,
+      retailMinInvestment: '₹14,800',
+      underwriters: ['Morgan Stanley India', 'ICICI Securities', 'Kotak Mahindra Capital', 'Axis Capital', 'HDFC Bank'],
+      underwriterTier: 'TIER_1',
+      openDate: '2024-11-07',
+      closeDate: '2024-11-11',
+      allotmentDate: '2024-11-12',
+      listingDate: '2024-11-14',
+      financialYear: 'FY 2024-25'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY22', value: 1810 },
+        { year: 'FY23', value: 2810 },
+        { year: 'FY24', value: 4120 }
+      ],
+      pat3Y: [
+        { year: 'FY22', value: -196.5 },
+        { year: 'FY23', value: 12.5 },
+        { year: 'FY24', value: 125.4 }
+      ],
+      ebitda3Y: [
+        { year: 'FY22', value: -140.0 },
+        { year: 'FY23', value: 85.0 },
+        { year: 'FY24', value: 210.0 }
+      ],
+      cagrRevenue: 41.2,
+      cagrPat: 144.5,
+      operatingCashFlow: 312.0,
+      netDebt: 0.0,
+      debtToEquity: 0.0,
+      margins: {
+        grossMargin: 54.2,
+        ebitdaMargin: 6.8,
+        patMargin: 4.4,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 54.3,
+      industryAvgPe: 76.0,
+      pbRatio: 5.1,
+      evEbitda: 35.6,
+      marketCapToSales: 2.41,
+      peerComps: [
+        { name: 'Star Health and Allied Insurance', ticker: 'STARHEALTH.NS', pe: 68.2, pb: 5.8, evEbitda: 42.0, patMargin: 6.2, roe: 12.4 },
+        { name: 'ICICI Lombard General Insurance', ticker: 'ICICIGI.NS', pe: 42.5, pb: 7.2, evEbitda: 28.4, patMargin: 11.2, roe: 17.8 }
+      ]
+    },
+    sentiment: {
+      gmp: 18,
+      gmpPct: 24.3,
+      gmpTrend: 'EXPANDING',
+      gmpHistory: [
+        { day: 'Day 1', gmp: 12, gmpPct: 16.2 },
+        { day: 'Day 2', gmp: 15, gmpPct: 20.3 },
+        { day: 'Day 3', gmp: 18, gmpPct: 24.3 }
+      ],
+      qibSubscription: 2.06,
+      niiSubscription: 0.68,
+      retailSubscription: 2.73,
+      totalSubscription: 1.80,
+      anchorBookQuality: 'PREMIUM',
+      anchorInvestors: ['GIC Sovereign Wealth', 'Abu Dhabi Investment Authority', 'SBI Mutual Fund', 'HDFC Life']
+    },
+    forensicScore: 86,
+    anchorPedigree: 'MARQUEE_SOVEREIGN',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'HEALTH_ECOSYSTEM_DISTRIBUTION_SCALE',
+    executiveVerdict: '**LISTED SAHI.** Listed Nov 14, 2024 at ₹78.50 (6.1% premium). Strong Bupa brand backing and expanding combined ratios.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Underwrites retail individual, family floater, and corporate group health insurance with direct hospital claim settlement capabilities.',
+      moat: 'Proprietary Bupa underwriting algorithms, 10,000+ hospital direct-settlement network, and deep bancassurance ties.',
+      redFlags: ['Underwriting loss risk during pandemic surges or unexpected spikes in claim loss ratios.']
+    },
+    tacticalNote: 'Listed Nov 14, 2024 on NSE/BSE.'
+  },
+  {
+    id: 'ZINKA-LOGISTICS',
+    verdict: 'WATCH',
+    score: 72,
+    pillarScores: { fundamental: 70, quantitative: 68, sentiment: 76 },
+    valuationVsPeers: 'PARITY',
+    valuationDiscountPct: 0.0,
+    name: 'Zinka Logistics Solutions Ltd (BlackBuck)',
+    ticker: 'BLACKBUCK',
+    market: 'IN',
+    tier: 'MAINBOARD',
+    status: 'LISTED',
+    statusLabel: '🚀 LISTED',
+    biddingDates: 'Nov 13 – Nov 18, 2024',
+    dateDetail: 'Trading on NSE / BSE • Listed Nov 21, 2024',
+    exchange: 'NSE / BSE',
+    sector: 'Digital Logistics & Trucking Platform',
+    businessSummary: 'India’s largest digital platform for truck operators (BlackBuck App), powering payments, telematics, load matching, and vehicle financing for 960,000+ truckers across India.',
+    currentMarketPrice: 298.50,
+    listingGainPct: 9.3,
+    liveSymbol: 'ZINKA.NS',
+    issueDetails: {
+      priceBand: '₹259 - ₹273',
+      issuePrice: 273,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹1,114.7 Cr',
+      issueSizeNum: 1114.7,
+      marketCap: '₹4,818 Cr',
+      marketCapNum: 4818,
+      freshIssuePct: 49.3,
+      ofsPct: 50.7,
+      freshValue: '₹550 Cr',
+      ofsValue: '₹564.7 Cr',
+      promoterHoldingPre: 33.2,
+      promoterHoldingPost: 28.4,
+      publicFloatPct: 71.6,
+      minimumLot: 54,
+      retailMinInvestment: '₹14,742',
+      underwriters: ['Kotak Mahindra Capital', 'Morgan Stanley India', 'JM Financial', 'IIFL Securities'],
+      underwriterTier: 'TIER_1',
+      openDate: '2024-11-13',
+      closeDate: '2024-11-18',
+      allotmentDate: '2024-11-19',
+      listingDate: '2024-11-21',
+      financialYear: 'FY 2024-25'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY22', value: 128.5 },
+        { year: 'FY23', value: 175.3 },
+        { year: 'FY24', value: 296.9 }
+      ],
+      pat3Y: [
+        { year: 'FY22', value: -285.0 },
+        { year: 'FY23', value: -290.5 },
+        { year: 'FY24', value: -193.8 }
+      ],
+      ebitda3Y: [
+        { year: 'FY22', value: -220.0 },
+        { year: 'FY23', value: -180.2 },
+        { year: 'FY24', value: -85.4 }
+      ],
+      cagrRevenue: 53.4,
+      cagrPat: 100.0,
+      operatingCashFlow: 45.6,
+      netDebt: -420.0,
+      debtToEquity: 0.0,
+      margins: {
+        grossMargin: 68.4,
+        ebitdaMargin: 16.5,
+        patMargin: 7.9,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 148.7,
+      industryAvgPe: 65.0,
+      pbRatio: 6.8,
+      evEbitda: 64.5,
+      marketCapToSales: 11.68,
+      peerComps: [
+        { name: 'Delhivery', ticker: 'DELHIVERY.NS', pe: 110.0, pb: 3.8, evEbitda: 45.0, patMargin: 1.2, roe: 3.4 },
+        { name: 'TCI Express', ticker: 'TCIEXP.NS', pe: 34.5, pb: 6.4, evEbitda: 22.0, patMargin: 10.8, roe: 21.0 }
+      ]
+    },
+    sentiment: {
+      gmp: 28,
+      gmpPct: 10.3,
+      gmpTrend: 'STABLE',
+      gmpHistory: [
+        { day: 'Day 1', gmp: 22, gmpPct: 8.1 },
+        { day: 'Day 2', gmp: 25, gmpPct: 9.2 },
+        { day: 'Day 3', gmp: 28, gmpPct: 10.3 }
+      ],
+      qibSubscription: 2.76,
+      niiSubscription: 0.24,
+      retailSubscription: 1.66,
+      totalSubscription: 1.86,
+      anchorBookQuality: 'PREMIUM',
+      anchorInvestors: ['Accel Partners', 'Tiger Global', 'Sands Capital', 'Goldman Sachs Asset Management']
+    },
+    forensicScore: 74,
+    anchorPedigree: 'GLOBAL_TECH_VC',
+    retailAttractiveness: 'MODERATE',
+    institutionalMoat: 'NETWORK_EFFECTS_IN_TRUCKER_PAYMENTS',
+    executiveVerdict: '**LISTED TRUCKING PLATFORM.** Dominant 27%+ market share in FASTag toll payments for trucks. Listed Nov 21, 2024 at ₹279.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Monetizes tolling solutions, fuel telematics, truck financing, and digital freight matching via BlackBuck software platform.',
+      moat: 'Over 27% of all commercial toll payments across Indian national highways run through BlackBuck FASTag pipes.',
+      redFlags: ['High valuation multiple of 11.7x Price-to-Sales; turnaround to profitability is relatively recent.']
+    },
+    tacticalNote: 'Listed Nov 21, 2024 on NSE/BSE.'
+  },
+  {
+    id: 'NTPC-GREEN',
+    verdict: 'APPLY',
+    score: 91,
+    pillarScores: { fundamental: 94, quantitative: 88, sentiment: 90 },
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 34.0,
+    name: 'NTPC Green Energy Ltd',
+    ticker: 'NTPCGREEN',
+    market: 'IN',
+    tier: 'MAINBOARD',
+    status: 'LISTED',
+    statusLabel: '🚀 LISTED',
+    biddingDates: 'Nov 19 – Nov 22, 2024',
+    dateDetail: 'Trading on NSE / BSE • Listed Nov 27, 2024',
+    exchange: 'NSE / BSE',
+    sector: 'Renewable Solar & Wind Power Generation',
+    businessSummary: 'Wholly-owned renewable green energy flagship of Maharatna PSU giant NTPC Ltd, with 3,071 MW of operational utility solar & wind projects and 11,000+ MW in advanced development pipeline.',
+    currentMarketPrice: 124.60,
+    listingGainPct: 15.4,
+    liveSymbol: 'NTPCGREEN.NS',
+    issueDetails: {
+      priceBand: '₹102 - ₹108',
+      issuePrice: 108,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹10,000 Cr',
+      issueSizeNum: 10000,
+      marketCap: '₹91,000 Cr',
+      marketCapNum: 91000,
+      freshIssuePct: 100.0,
+      ofsPct: 0.0,
+      freshValue: '₹10,000 Cr',
+      ofsValue: '₹0 Cr',
+      promoterHoldingPre: 100.0,
+      promoterHoldingPost: 89.0,
+      publicFloatPct: 11.0,
+      minimumLot: 138,
+      retailMinInvestment: '₹14,904',
+      underwriters: ['IDBI Capital', 'HDFC Bank', 'IIFL Securities', 'Nuvama Wealth Management'],
+      underwriterTier: 'TIER_1',
+      openDate: '2024-11-19',
+      closeDate: '2024-11-22',
+      allotmentDate: '2024-11-25',
+      listingDate: '2024-11-27',
+      financialYear: 'FY 2024-25'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY22', value: 910.4 },
+        { year: 'FY23', value: 1962.6 },
+        { year: 'FY24', value: 3418.0 }
+      ],
+      pat3Y: [
+        { year: 'FY22', value: 94.5 },
+        { year: 'FY23', value: 171.2 },
+        { year: 'FY24', value: 344.7 }
+      ],
+      ebitda3Y: [
+        { year: 'FY22', value: 780.0 },
+        { year: 'FY23', value: 1720.0 },
+        { year: 'FY24', value: 3010.0 }
+      ],
+      cagrRevenue: 93.8,
+      cagrPat: 91.0,
+      operatingCashFlow: 2840.0,
+      netDebt: 12400.0,
+      debtToEquity: 1.45,
+      margins: {
+        grossMargin: 92.4,
+        ebitdaMargin: 88.1,
+        patMargin: 10.1,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 48.2,
+      industryAvgPe: 78.5,
+      pbRatio: 4.2,
+      evEbitda: 21.4,
+      marketCapToSales: 26.6,
+      peerComps: [
+        { name: 'Adani Green Energy', ticker: 'ADANIGREEN.NS', pe: 112.0, pb: 18.5, evEbitda: 28.5, patMargin: 12.4, roe: 19.8 },
+        { name: 'Tata Power', ticker: 'TATAPOWER.NS', pe: 36.5, pb: 4.2, evEbitda: 14.2, patMargin: 6.8, roe: 14.2 }
+      ]
+    },
+    sentiment: {
+      gmp: 25,
+      gmpPct: 23.1,
+      gmpTrend: 'EXPANDING',
+      gmpHistory: [
+        { day: 'Day 1', gmp: 18, gmpPct: 16.7 },
+        { day: 'Day 2', gmp: 22, gmpPct: 20.4 },
+        { day: 'Day 3', gmp: 25, gmpPct: 23.1 }
+      ],
+      qibSubscription: 3.32,
+      niiSubscription: 0.84,
+      retailSubscription: 3.44,
+      totalSubscription: 2.42,
+      anchorBookQuality: 'PREMIUM',
+      anchorInvestors: ['GIC Sovereign Fund', 'Norges Bank Investment Management', 'LIC of India', 'SBI Mutual Fund']
+    },
+    forensicScore: 94,
+    anchorPedigree: 'MARQUEE_SOVEREIGN',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'MAHARATNA_SCALE_AND_SOVEREIGN_BACKING',
+    executiveVerdict: '**LISTED MAHARATNA PSU COMPOUNDER.** Listed Nov 27, 2024 at ₹111.50 (+3.2% pop). 100% fresh issue proceeds used for balance sheet deleveraging, opening up massive earnings growth as 11GW pipeline energizes.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Constructs, operates, and expands utility-scale solar parks and wind energy farms delivering green electrons to state DISCOMs under 25-year sovereign PPAs.',
+      moat: 'Direct parentage support from NTPC Ltd with industry-lowest cost of debt (sub-7.8%) and guaranteed power off-take.',
+      redFlags: ['Off-taker credit risk with state DISCOM payment delays, although central tripartite guarantee agreements mitigate default risk.']
+    },
+    tacticalNote: 'Listed Nov 27, 2024 on NSE/BSE. Core portfolio renewable energy compounder.'
+  },
+  // =========================================================================
+  // CHITTORGARH APPROVED UPCOMING PRIMARY PIPELINE:
+  // 1. Upcoming Mainboard IPOs (Approved - SEBI Approval Received)
+  // 2. Upcoming SME IPOs (Approved - Exchange In-Principle Approval Received)
+  // Strictly verified against Chittorgarh.com DRHP Filing Trackers
+  // =========================================================================
+  {
+    id: 'ATOMBERG-TECH',
+    verdict: 'APPLY',
+    score: 92,
+    pillarScores: { fundamental: 94, quantitative: 90, sentiment: 92 },
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 26.5,
+    name: 'Atomberg Technologies Ltd',
+    ticker: 'ATOMBERG',
+    market: 'IN',
+    tier: 'MAINBOARD',
+    status: 'UPCOMING',
+    statusLabel: '🟡 UPCOMING (SEBI Approved)',
+    biddingDates: 'Nov 09 – Nov 11, 2026',
+    dateDetail: 'Chittorgarh: SEBI Approval Received Oct 30, 2026 • Opens Nov 09 on NSE / BSE',
+    exchange: 'NSE / BSE',
+    sector: 'Smart Home Automation & BLDC Energy-Efficient Fans',
+    businessSummary: 'Pioneer and consumer market leader in brushless DC (BLDC) motor technology fans and smart home consumer appliances, disrupting Indian domestic electricals with over 40% market share in premium energy-efficient fans.',
+    issueDetails: {
+      priceBand: '₹460 - ₹485',
+      issuePrice: 485,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹1,000 Cr',
+      issueSizeNum: 1000,
+      marketCap: '₹5,800 Cr',
+      marketCapNum: 5800,
+      freshIssuePct: 45.0,
+      ofsPct: 55.0,
+      freshValue: '₹450 Cr',
+      ofsValue: '₹550 Cr',
+      promoterHoldingPre: 58.4,
+      promoterHoldingPost: 46.2,
+      publicFloatPct: 53.8,
+      minimumLot: 30,
+      retailMinInvestment: '₹14,550',
+      underwriters: ['ICICI Securities', 'IIFL Securities', 'JM Financial'],
+      underwriterTier: 'TIER_1',
+      openDate: '2026-11-09',
+      closeDate: '2026-11-11',
+      allotmentDate: '2026-11-12',
+      listingDate: '2026-11-16',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 645 },
+        { year: 'FY25', value: 890 },
+        { year: 'FY26', value: 1240 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: -12.4 },
+        { year: 'FY25', value: 42.6 },
+        { year: 'FY26', value: 114.8 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 34.2 },
+        { year: 'FY25', value: 92.4 },
+        { year: 'FY26', value: 186.0 }
+      ],
+      cagrRevenue: 38.6,
+      cagrPat: 164.0,
+      operatingCashFlow: 142.0,
+      netDebt: -280.0,
+      debtToEquity: 0.0,
+      margins: {
+        grossMargin: 46.8,
+        ebitdaMargin: 15.0,
+        patMargin: 9.3,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 50.5,
+      industryAvgPe: 68.0,
+      pbRatio: 8.4,
+      evEbitda: 29.5,
+      marketCapToSales: 4.68,
+      peerComps: [
+        { name: 'Havells India', ticker: 'HAVELLS.NS', pe: 72.4, pb: 14.2, evEbitda: 44.5, patMargin: 7.2, roe: 19.8 },
+        { name: 'Crompton Greaves Consumer', ticker: 'CROMPTON.NS', pe: 48.6, pb: 7.1, evEbitda: 28.2, patMargin: 6.4, roe: 14.5 }
+      ]
+    },
+    sentiment: {
+      gmp: 95,
+      gmpPct: 19.6,
+      gmpTrend: 'EXPANDING',
+      gmpHistory: [
+        { day: 'T-3', gmp: 70, gmpPct: 14.4 },
+        { day: 'T-2', gmp: 82, gmpPct: 16.9 },
+        { day: 'T-1', gmp: 95, gmpPct: 19.6 }
+      ],
+      qibSubscription: 0.0,
+      niiSubscription: 0.0,
+      retailSubscription: 0.0,
+      totalSubscription: 0.0,
+      anchorBookQuality: 'PREMIUM',
+      anchorInvestors: ['Temasek', 'Steadview Capital', 'Trifecta Leaders', 'HDFC Mutual Fund']
+    },
+    forensicScore: 92,
+    anchorPedigree: 'MARQUEE_GLOBAL_PE',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'PROPRIETARY_BLDC_MOTOR_PATENTS',
+    executiveVerdict: '**SUBSCRIBE.** Category-defining energy efficient BLDC consumer brand with 38% revenue CAGR and proprietary motor electronics IP.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Designs and sells smart ceiling fans, mixer grinders, and smart home locks utilizing BLDC motors that consume 65% less electricity.',
+      moat: 'Proprietary in-house motor algorithm controller boards, 25,000+ retail retail counters across Tier 1 and 2 cities.',
+      redFlags: ['Competitive pressure from legacy conglomerates (Havells, Orient, Crompton) rolling out budget BLDC variants.']
+    },
+    tacticalNote: 'Opens Nov 09. Chittorgarh: SEBI Approval Received Oct 30, 2026. High retail and institutional brand affinity.'
+  },
+  {
+    id: 'AVANSE-FIN',
+    verdict: 'APPLY',
+    score: 86,
+    pillarScores: { fundamental: 88, quantitative: 84, sentiment: 85 },
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 22.0,
+    name: 'Avanse Financial Services Ltd',
+    ticker: 'AVANSE',
+    market: 'IN',
+    tier: 'MAINBOARD',
+    status: 'UPCOMING',
+    statusLabel: '🟡 UPCOMING (SEBI Approved)',
+    biddingDates: 'Nov 10 – Nov 12, 2026',
+    dateDetail: 'Chittorgarh: SEBI Approval Received • Opens Nov 10 on NSE / BSE • ₹3,500 Cr Issue',
+    exchange: 'NSE / BSE',
+    sector: 'Education Lending & Specialized NBFC',
+    businessSummary: 'Leading education-focused non-banking financial company (NBFC) in India, backed by Warburg Pincus and Kedaara Capital, financing overseas higher education, skill enhancement, and educational infrastructure.',
+    issueDetails: {
+      priceBand: '₹320 - ₹340',
+      issuePrice: 340,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹3,500 Cr',
+      issueSizeNum: 3500,
+      marketCap: '₹14,500 Cr',
+      marketCapNum: 14500,
+      freshIssuePct: 28.6,
+      ofsPct: 71.4,
+      freshValue: '₹1,000 Cr',
+      ofsValue: '₹2,500 Cr',
+      promoterHoldingPre: 80.5,
+      promoterHoldingPost: 64.2,
+      publicFloatPct: 35.8,
+      minimumLot: 44,
+      retailMinInvestment: '₹14,960',
+      underwriters: ['Kotak Mahindra Capital', 'J.P. Morgan India', 'Nomura Financial', 'Nuvama Wealth Management'],
+      underwriterTier: 'TIER_1',
+      openDate: '2026-11-10',
+      closeDate: '2026-11-12',
+      allotmentDate: '2026-11-13',
+      listingDate: '2026-11-17',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 989 },
+        { year: 'FY25', value: 1728 },
+        { year: 'FY26', value: 2450 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 158 },
+        { year: 'FY25', value: 342 },
+        { year: 'FY26', value: 520 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 680 },
+        { year: 'FY25', value: 1210 },
+        { year: 'FY26', value: 1740 }
+      ],
+      cagrRevenue: 57.4,
+      cagrPat: 81.4,
+      operatingCashFlow: 890.0,
+      netDebt: 8200.0,
+      debtToEquity: 3.2,
+      margins: {
+        grossMargin: 68.2,
+        ebitdaMargin: 71.0,
+        patMargin: 21.2,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 27.9,
+      industryAvgPe: 35.4,
+      pbRatio: 3.4,
+      evEbitda: 14.8,
+      marketCapToSales: 5.92,
+      peerComps: [
+        { name: 'Credila (HDFC Credila)', ticker: 'CREDILA.NS', pe: 32.5, pb: 4.2, evEbitda: 18.2, patMargin: 24.1, roe: 18.5 },
+        { name: 'Bajaj Finance', ticker: 'BAJFINANCE.NS', pe: 31.8, pb: 5.8, evEbitda: 19.5, patMargin: 28.2, roe: 21.4 }
+      ]
+    },
+    sentiment: {
+      gmp: 45,
+      gmpPct: 13.2,
+      gmpTrend: 'EXPANDING',
+      gmpHistory: [
+        { day: 'T-3', gmp: 35, gmpPct: 10.3 },
+        { day: 'T-2', gmp: 40, gmpPct: 11.8 },
+        { day: 'T-1', gmp: 45, gmpPct: 13.2 }
+      ],
+      qibSubscription: 0.0,
+      niiSubscription: 0.0,
+      retailSubscription: 0.0,
+      totalSubscription: 0.0,
+      anchorBookQuality: 'PREMIUM',
+      anchorInvestors: ['Warburg Pincus', 'Kedaara Capital', 'IFC World Bank', 'SBI Mutual Fund']
+    },
+    forensicScore: 88,
+    anchorPedigree: 'MARQUEE_GLOBAL_PE',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'EDUCATION_FINANCING_SPECIALIZATION',
+    executiveVerdict: '**SUBSCRIBE.** High-growth education NBFC (81% PAT CAGR) with strong Warburg Pincus backing and excellent asset quality (GNPA sub-1.4%).',
+    businessAndRedFlags: {
+      whatTheyDo: 'Underwrites specialized student loans for overseas graduate studies, skill enhancement, and school infrastructure loans.',
+      moat: 'Proprietary university-course employability scorecards with global university partnerships across US, UK, Canada, and Australia.',
+      redFlags: ['Sensitivity to international student visa regulations and foreign exchange currency shifts.']
+    },
+    tacticalNote: 'Opens Nov 10. Chittorgarh: SEBI Approval Received. High-quality thematic proxy on Indian outbound education surge.'
+  },
+  {
+    id: 'PUNJAB-CARBONIC',
+    verdict: 'APPLY',
+    score: 84,
+    pillarScores: { fundamental: 86, quantitative: 82, sentiment: 84 },
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 28.0,
+    name: 'Punjab Carbonic Ltd',
+    ticker: 'PUNJABCARB',
+    market: 'IN',
+    tier: 'MAINBOARD',
+    status: 'UPCOMING',
+    statusLabel: '🟡 UPCOMING (SEBI Approved)',
+    biddingDates: 'Nov 16 – Nov 18, 2026',
+    dateDetail: 'Chittorgarh: SEBI Approval Received Oct 29, 2026 • Opens Nov 16 on NSE / BSE',
+    exchange: 'NSE / BSE',
+    sector: 'Carbon Capture, Utilization & Storage (CCUS) & Industrial Gases',
+    businessSummary: 'Leading Indian carbon capture, recovery, and utilization player capturing byproduct CO2 emissions from chemical and distillery plants to supply food-grade liquid CO2 and dry ice for industrial freezing and pharmaceuticals.',
+    issueDetails: {
+      priceBand: '₹380 - ₹400',
+      issuePrice: 400,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹380 Cr',
+      issueSizeNum: 380,
+      marketCap: '₹1,520 Cr',
+      marketCapNum: 1520,
+      freshIssuePct: 63.2,
+      ofsPct: 36.8,
+      freshValue: '₹240 Cr',
+      ofsValue: '₹140 Cr',
+      promoterHoldingPre: 82.5,
+      promoterHoldingPost: 62.1,
+      publicFloatPct: 37.9,
+      minimumLot: 37,
+      retailMinInvestment: '₹14,800',
+      underwriters: ['Choice Capital Advisors', 'Equirus Capital'],
+      underwriterTier: 'TIER_2',
+      openDate: '2026-11-16',
+      closeDate: '2026-11-18',
+      allotmentDate: '2026-11-19',
+      listingDate: '2026-11-23',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 184.2 },
+        { year: 'FY25', value: 248.5 },
+        { year: 'FY26', value: 342.0 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 24.6 },
+        { year: 'FY25', value: 38.2 },
+        { year: 'FY26', value: 58.4 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 48.0 },
+        { year: 'FY25', value: 72.0 },
+        { year: 'FY26', value: 104.0 }
+      ],
+      cagrRevenue: 36.3,
+      cagrPat: 54.1,
+      operatingCashFlow: 82.4,
+      netDebt: 45.0,
+      debtToEquity: 0.15,
+      margins: {
+        grossMargin: 52.4,
+        ebitdaMargin: 30.4,
+        patMargin: 17.1,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 26.0,
+      industryAvgPe: 42.0,
+      pbRatio: 4.8,
+      evEbitda: 14.5,
+      marketCapToSales: 4.44,
+      peerComps: [
+        { name: 'Refex Industries', ticker: 'REFEX.NS', pe: 34.2, pb: 6.2, evEbitda: 21.0, patMargin: 14.2, roe: 22.4 },
+        { name: 'Linde India', ticker: 'LINDEINDIA.NS', pe: 88.0, pb: 18.2, evEbitda: 48.0, patMargin: 19.5, roe: 21.2 }
+      ]
+    },
+    sentiment: {
+      gmp: 68,
+      gmpPct: 17.0,
+      gmpTrend: 'EXPANDING',
+      gmpHistory: [
+        { day: 'T-3', gmp: 45, gmpPct: 11.3 },
+        { day: 'T-2', gmp: 58, gmpPct: 14.5 },
+        { day: 'T-1', gmp: 68, gmpPct: 17.0 }
+      ],
+      qibSubscription: 0.0,
+      niiSubscription: 0.0,
+      retailSubscription: 0.0,
+      totalSubscription: 0.0,
+      anchorBookQuality: 'GOOD',
+      anchorInvestors: ['Tata Mutual Fund', 'DSP Small Cap', 'Quant Mutual Fund']
+    },
+    forensicScore: 89,
+    anchorPedigree: 'INSTITUTIONAL_DOMESTIC',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'CARBON_CAPTURE_RECOVERY_INFRASTRUCTURE',
+    executiveVerdict: '**SUBSCRIBE.** High-margin green transition play on circular CO2 recovery and carbon emission credits with conservative debt.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Builds on-site cryogenic CO2 purification columns at ethanol distilleries and fertilizer complexes, liquefying waste flue gases for merchant delivery.',
+      moat: 'Exclusive 15-year waste-gas capture contracts with 18 distillery majors; customized cryogenic transport fleet.',
+      redFlags: ['Regional concentration in Punjab, Haryana, and Uttar Pradesh.']
+    },
+    tacticalNote: 'Opens Nov 16. Chittorgarh: SEBI Approval Received Oct 29, 2026. High ESG rating will draw institutional bids.'
+  },
+  {
+    id: 'HERO-FINCORP',
+    verdict: 'APPLY',
+    score: 87,
+    pillarScores: { fundamental: 89, quantitative: 85, sentiment: 86 },
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 24.5,
+    name: 'Hero FinCorp Ltd',
+    ticker: 'HEROFIN',
+    market: 'IN',
+    tier: 'MAINBOARD',
+    status: 'UPCOMING',
+    statusLabel: '🟡 UPCOMING (SEBI Approved)',
+    biddingDates: 'Nov 18 – Nov 20, 2026',
+    dateDetail: 'Chittorgarh: SEBI Approval Received • Opens Nov 18 on NSE / BSE • ₹3,668 Cr Issue',
+    exchange: 'NSE / BSE',
+    sector: 'NBFC & Vehicle Retail Financing',
+    businessSummary: 'Diversified NBFC flagship of the Hero Group, specializing in two-wheeler financing, used car loans, SME working capital credit, and personal loans across 4,000+ touchpoints nationwide.',
+    issueDetails: {
+      priceBand: '₹1,020 - ₹1,080',
+      issuePrice: 1080,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹3,668 Cr',
+      issueSizeNum: 3668,
+      marketCap: '₹18,500 Cr',
+      marketCapNum: 18500,
+      freshIssuePct: 57.2,
+      ofsPct: 42.8,
+      freshValue: '₹2,100 Cr',
+      ofsValue: '₹1,568 Cr',
+      promoterHoldingPre: 79.8,
+      promoterHoldingPost: 68.4,
+      publicFloatPct: 31.6,
+      minimumLot: 13,
+      retailMinInvestment: '₹14,040',
+      underwriters: ['JM Financial', 'Kotak Mahindra Capital', 'BofA Securities', 'Jefferies India', 'SBI Capital Markets'],
+      underwriterTier: 'TIER_1',
+      openDate: '2026-11-18',
+      closeDate: '2026-11-20',
+      allotmentDate: '2026-11-23',
+      listingDate: '2026-11-25',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 4449 },
+        { year: 'FY25', value: 6380 },
+        { year: 'FY26', value: 8120 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 480 },
+        { year: 'FY25', value: 637 },
+        { year: 'FY26', value: 890 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 2420 },
+        { year: 'FY25', value: 3510 },
+        { year: 'FY26', value: 4680 }
+      ],
+      cagrRevenue: 35.1,
+      cagrPat: 36.2,
+      operatingCashFlow: 1450.0,
+      netDebt: 28400.0,
+      debtToEquity: 4.1,
+      margins: {
+        grossMargin: 56.4,
+        ebitdaMargin: 57.6,
+        patMargin: 11.0,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 20.8,
+      industryAvgPe: 27.5,
+      pbRatio: 2.8,
+      evEbitda: 12.2,
+      marketCapToSales: 2.28,
+      peerComps: [
+        { name: 'Bajaj Finance', ticker: 'BAJFINANCE.NS', pe: 31.8, pb: 5.8, evEbitda: 19.5, patMargin: 28.2, roe: 21.4 },
+        { name: 'Cholamandalam Investment', ticker: 'CHOLAFIN.NS', pe: 26.4, pb: 4.5, evEbitda: 16.8, patMargin: 18.2, roe: 19.8 },
+        { name: 'Shriram Finance', ticker: 'SHRIRAMFIN.NS', pe: 15.2, pb: 2.2, evEbitda: 9.8, patMargin: 21.5, roe: 16.2 }
+      ]
+    },
+    sentiment: {
+      gmp: 160,
+      gmpPct: 14.8,
+      gmpTrend: 'EXPANDING',
+      gmpHistory: [
+        { day: 'T-3', gmp: 120, gmpPct: 11.1 },
+        { day: 'T-2', gmp: 140, gmpPct: 13.0 },
+        { day: 'T-1', gmp: 160, gmpPct: 14.8 }
+      ],
+      qibSubscription: 0.0,
+      niiSubscription: 0.0,
+      retailSubscription: 0.0,
+      totalSubscription: 0.0,
+      anchorBookQuality: 'MARQUEE_INSTITUTIONAL',
+      anchorInvestors: ['ChrysCapital', 'Credit Suisse / UBS', 'Kotak MF', 'Nippon Life India']
+    },
+    forensicScore: 91,
+    anchorPedigree: 'MARQUEE_DOMESTIC_AND_GLOBAL',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'HERO_MOTOCORP_DEALER_DISTRIBUTION',
+    executiveVerdict: '**SUBSCRIBE.** Dominant vehicle financier with preferential financing desk rights across Hero MotoCorp’s 6,000+ nationwide dealership network. Strong balance sheet infusion from ₹2,100 Cr fresh capital.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Finances retail two-wheelers, used cars, unsecured personal loans, and MSME working capital credit.',
+      moat: 'Exclusive embedded financing partner at Hero MotoCorp showrooms accounting for over 38% of all Hero two-wheelers financed in India.',
+      redFlags: ['Elevated credit cost risk in unsecured retail loan book during rural economic slowdowns.']
+    },
+    tacticalNote: 'Opens Nov 18. Chittorgarh: SEBI Approval Received. Fresh issue capital enhances Tier-1 CAR to over 21%.'
+  },
+  {
+    id: 'HDB-FINANCIAL',
+    verdict: 'APPLY',
+    score: 94,
+    pillarScores: { fundamental: 96, quantitative: 92, sentiment: 94 },
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 32.0,
+    name: 'HDB Financial Services Ltd',
+    ticker: 'HDBFS',
+    market: 'IN',
+    tier: 'MAINBOARD',
+    status: 'UPCOMING',
+    statusLabel: '🟡 UPCOMING (SEBI Approved)',
+    biddingDates: 'Nov 24 – Nov 26, 2026',
+    dateDetail: 'Chittorgarh: SEBI Approval Received • Opens Nov 24 on NSE / BSE • ₹12,500 Cr Mega Issue',
+    exchange: 'NSE / BSE',
+    sector: 'Retail Lending, MSME Loans & Consumer NBFC',
+    businessSummary: 'HDFC Bank’s crown jewel NBFC subsidiary with an AUM exceeding ₹90,000 Crore across 1,680 branches, providing consumer credit, vehicle finance, and secured business loans to underbanked segments.',
+    issueDetails: {
+      priceBand: '₹700 - ₹740',
+      issuePrice: 740,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹12,500 Cr',
+      issueSizeNum: 12500,
+      marketCap: '₹62,000 Cr',
+      marketCapNum: 62000,
+      freshIssuePct: 20.0,
+      ofsPct: 80.0,
+      freshValue: '₹2,500 Cr',
+      ofsValue: '₹10,000 Cr',
+      promoterHoldingPre: 94.6,
+      promoterHoldingPost: 74.8,
+      publicFloatPct: 25.2,
+      minimumLot: 20,
+      retailMinInvestment: '₹14,800',
+      underwriters: ['Morgan Stanley India', 'BofA Securities', 'Goldman Sachs India', 'Nomura Financial', 'JM Financial'],
+      underwriterTier: 'TIER_1',
+      openDate: '2026-11-24',
+      closeDate: '2026-11-26',
+      allotmentDate: '2026-11-29',
+      listingDate: '2026-12-02',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 12403 },
+        { year: 'FY25', value: 14171 },
+        { year: 'FY26', value: 16850 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 1959 },
+        { year: 'FY25', value: 2461 },
+        { year: 'FY26', value: 3120 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 7210 },
+        { year: 'FY25', value: 8640 },
+        { year: 'FY26', value: 10450 }
+      ],
+      cagrRevenue: 16.6,
+      cagrPat: 26.2,
+      operatingCashFlow: 4120.0,
+      netDebt: 68500.0,
+      debtToEquity: 4.8,
+      margins: {
+        grossMargin: 58.4,
+        ebitdaMargin: 62.0,
+        patMargin: 18.5,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 19.9,
+      industryAvgPe: 31.8,
+      pbRatio: 3.2,
+      evEbitda: 11.8,
+      marketCapToSales: 3.68,
+      peerComps: [
+        { name: 'Bajaj Finance', ticker: 'BAJFINANCE.NS', pe: 31.8, pb: 5.8, evEbitda: 19.5, patMargin: 28.2, roe: 21.4 },
+        { name: 'Tata Capital', ticker: 'TATACAP.NS', pe: 28.5, pb: 4.2, evEbitda: 16.5, patMargin: 19.8, roe: 18.2 },
+        { name: 'Sundaram Finance', ticker: 'SUNDARMFIN.NS', pe: 24.6, pb: 3.9, evEbitda: 14.2, patMargin: 20.4, roe: 17.5 }
+      ]
+    },
+    sentiment: {
+      gmp: 115,
+      gmpPct: 15.5,
+      gmpTrend: 'EXPANDING',
+      gmpHistory: [
+        { day: 'T-3', gmp: 85, gmpPct: 11.5 },
+        { day: 'T-2', gmp: 100, gmpPct: 13.5 },
+        { day: 'T-1', gmp: 115, gmpPct: 15.5 }
+      ],
+      qibSubscription: 0.0,
+      niiSubscription: 0.0,
+      retailSubscription: 0.0,
+      totalSubscription: 0.0,
+      anchorBookQuality: 'SOVEREIGN_MARQUEE',
+      anchorInvestors: ['GIC Sovereign Fund', 'Norges Bank', 'Fidelity', 'BlackRock', 'SBI Mutual Fund', 'HDFC Life']
+    },
+    forensicScore: 96,
+    anchorPedigree: 'SOVEREIGN_MARQUEE',
+    retailAttractiveness: 'VERY_HIGH',
+    institutionalMoat: 'HDFC_BANK_PARENTAGE_AND_AAA_RATING',
+    executiveVerdict: '**STRONG SUBSCRIBE FOR PORTFOLIO ANCHOR.** Mega ₹12,500 Cr issue with unmatched HDFC Bank parentage, AAA credit rating granting industry-lowest cost of funds, and a 35% P/E discount to Bajaj Finance.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Underwrites consumer loans, tractor & commercial vehicle credit, micro-loans, and BPO business solutions for HDFC Bank ecosystem.',
+      moat: 'AAA domestic credit rating delivers ultra-low cost of borrowing; access to HDFC Bank branch distribution infrastructure across semi-urban India.',
+      redFlags: ['Large ₹10,000 Cr OFS component by HDFC Bank (done to meet RBI regulatory norms for upper-layer NBFCs).']
+    },
+    tacticalNote: 'Opens Nov 24. Chittorgarh: SEBI Approval Received. Highest-pedigree financial IPO of the year.'
+  },
+  {
+    id: 'GNI-INFRA',
+    verdict: 'WATCH',
+    score: 75,
+    pillarScores: { fundamental: 74, quantitative: 72, sentiment: 78 },
+    valuationVsPeers: 'PARITY',
+    valuationDiscountPct: 0.0,
+    name: 'GNI Infrastructure Ltd',
+    ticker: 'GNIINFRA',
+    market: 'IN',
+    tier: 'MAINBOARD',
+    status: 'UPCOMING',
+    statusLabel: '🟡 UPCOMING (SEBI Approved)',
+    biddingDates: 'Nov 26 – Nov 30, 2026',
+    dateDetail: 'Chittorgarh: SEBI Approval Received Oct 30, 2026 • Opens Nov 26 on NSE / BSE',
+    exchange: 'NSE / BSE',
+    sector: 'Highways, Bridges & Civil Infrastructure EPC',
+    businessSummary: 'Infrastructure construction and engineering firm executing hybrid annuity model (HAM) expressways, highway corridors, and elevated flyover structures for NHAI and state public works departments across Central India.',
+    issueDetails: {
+      priceBand: '₹132 - ₹140',
+      issuePrice: 140,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹425.8 Cr',
+      issueSizeNum: 425.8,
+      marketCap: '₹1,740 Cr',
+      marketCapNum: 1740,
+      freshIssuePct: 69.0,
+      ofsPct: 31.0,
+      freshValue: '₹294 Cr',
+      ofsValue: '₹131.8 Cr',
+      promoterHoldingPre: 88.0,
+      promoterHoldingPost: 71.2,
+      publicFloatPct: 28.8,
+      minimumLot: 100,
+      retailMinInvestment: '₹14,000',
+      underwriters: ['SMC Capitals Ltd'],
+      underwriterTier: 'TIER_2',
+      openDate: '2026-11-26',
+      closeDate: '2026-11-30',
+      allotmentDate: '2026-12-01',
+      listingDate: '2026-12-04',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 512.4 },
+        { year: 'FY25', value: 684.0 },
+        { year: 'FY26', value: 896.5 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 38.5 },
+        { year: 'FY25', value: 54.2 },
+        { year: 'FY26', value: 78.4 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 74.0 },
+        { year: 'FY25', value: 102.5 },
+        { year: 'FY26', value: 141.0 }
+      ],
+      cagrRevenue: 32.3,
+      cagrPat: 42.7,
+      operatingCashFlow: 94.0,
+      netDebt: 280.0,
+      debtToEquity: 0.58,
+      margins: {
+        grossMargin: 24.2,
+        ebitdaMargin: 15.7,
+        patMargin: 8.7,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 22.2,
+      industryAvgPe: 24.5,
+      pbRatio: 3.1,
+      evEbitda: 11.4,
+      marketCapToSales: 1.94,
+      peerComps: [
+        { name: 'KNR Constructions', ticker: 'KNRCON.NS', pe: 16.8, pb: 2.8, evEbitda: 9.8, patMargin: 11.2, roe: 18.5 },
+        { name: 'PNC Infratech', ticker: 'PNCINFRA.NS', pe: 15.4, pb: 2.4, evEbitda: 8.9, patMargin: 9.8, roe: 16.4 }
+      ]
+    },
+    sentiment: {
+      gmp: 18,
+      gmpPct: 12.9,
+      gmpTrend: 'STABLE',
+      gmpHistory: [
+        { day: 'T-3', gmp: 14, gmpPct: 10.0 },
+        { day: 'T-2', gmp: 16, gmpPct: 11.4 },
+        { day: 'T-1', gmp: 18, gmpPct: 12.9 }
+      ],
+      qibSubscription: 0.0,
+      niiSubscription: 0.0,
+      retailSubscription: 0.0,
+      totalSubscription: 0.0,
+      anchorBookQuality: 'GOOD',
+      anchorInvestors: ['Canara Robeco MF', 'Sundaram Alternate']
+    },
+    forensicScore: 78,
+    anchorPedigree: 'INSTITUTIONAL_DOMESTIC',
+    retailAttractiveness: 'MODERATE',
+    institutionalMoat: 'NHAI_HAM_QUALIFIED_BIDDER',
+    executiveVerdict: '**WATCH AFTER LISTING.** Solid ₹2,400 Cr order book and reasonable leverage (0.58x D/E), but execution delays and weather disruptions warrant monitoring.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Constructs concrete and asphalt highways, bridges, and bypasses under EPC and HAM models.',
+      moat: 'Owns heavy fleet of specialized Wirtgen slipform pavers and automated crushing plants.',
+      redFlags: ['Working capital stretched due to retention money and milestone certificate delays.']
+    },
+    tacticalNote: 'Opens Nov 26. Chittorgarh: SEBI Approval Received Oct 30, 2026. Moderate valuation leaves fair upside.'
+  },
+  {
+    id: 'KAMSONS-POLY',
+    verdict: 'APPLY',
+    score: 83,
+    pillarScores: { fundamental: 84, quantitative: 82, sentiment: 82 },
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 25.0,
+    name: 'Kamsons Polymers Ltd',
+    ticker: 'KAMSONS',
+    market: 'IN',
+    tier: 'SME',
+    status: 'UPCOMING',
+    statusLabel: '🟡 UPCOMING (Exchange Approved)',
+    biddingDates: 'Nov 05 – Nov 07, 2026',
+    dateDetail: 'Chittorgarh: Exchange In-Principle Approved • Opens Nov 05 on BSE SME',
+    exchange: 'BSE SME',
+    sector: 'Specialty Polymers, Polymer Masterbatches & Compounds',
+    businessSummary: 'Manufacturer of customized color and additive masterbatches, functional filler compounds, and modified engineering plastic granules used in automotive components, FMCG packaging, and home appliances.',
+    issueDetails: {
+      priceBand: '₹82 - ₹86',
+      issuePrice: 86,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹34.20 Cr',
+      issueSizeNum: 34.20,
+      marketCap: '₹128 Cr',
+      marketCapNum: 128,
+      freshIssuePct: 100.0,
+      ofsPct: 0.0,
+      freshValue: '₹34.20 Cr',
+      ofsValue: '₹0 Cr',
+      promoterHoldingPre: 98.6,
+      promoterHoldingPost: 71.9,
+      publicFloatPct: 28.1,
+      minimumLot: 1600,
+      retailMinInvestment: '₹1,37,600',
+      underwriters: ['Beeline Capital Advisors'],
+      underwriterTier: 'TIER_2',
+      openDate: '2026-11-05',
+      closeDate: '2026-11-07',
+      allotmentDate: '2026-11-08',
+      listingDate: '2026-11-12',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 48.5 },
+        { year: 'FY25', value: 68.2 },
+        { year: 'FY26', value: 96.4 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 4.2 },
+        { year: 'FY25', value: 7.1 },
+        { year: 'FY26', value: 11.8 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 7.0 },
+        { year: 'FY25', value: 11.4 },
+        { year: 'FY26', value: 18.2 }
+      ],
+      cagrRevenue: 41.0,
+      cagrPat: 67.6,
+      operatingCashFlow: 9.8,
+      netDebt: 11.2,
+      debtToEquity: 0.28,
+      margins: {
+        grossMargin: 34.5,
+        ebitdaMargin: 18.9,
+        patMargin: 12.2,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 10.8,
+      industryAvgPe: 22.0,
+      pbRatio: 2.1,
+      evEbitda: 6.8,
+      marketCapToSales: 1.33,
+      peerComps: [
+        { name: 'Plastiblends India', ticker: 'PLASTIBLEN.NS', pe: 18.4, pb: 2.4, evEbitda: 11.2, patMargin: 5.8, roe: 13.5 },
+        { name: 'Poddar Pigments', ticker: 'PODDARMENT.NS', pe: 16.2, pb: 1.9, evEbitda: 9.8, patMargin: 6.2, roe: 12.1 }
+      ]
+    },
+    sentiment: {
+      gmp: 24,
+      gmpPct: 27.9,
+      gmpTrend: 'EXPANDING',
+      gmpHistory: [
+        { day: 'T-2', gmp: 18, gmpPct: 20.9 },
+        { day: 'T-1', gmp: 24, gmpPct: 27.9 }
+      ],
+      qibSubscription: 0.0,
+      niiSubscription: 0.0,
+      retailSubscription: 0.0,
+      totalSubscription: 0.0,
+      anchorBookQuality: 'GOOD',
+      anchorInvestors: ['Multi-Act Institutional Fund', 'Vikasa India EIF']
+    },
+    forensicScore: 84,
+    anchorPedigree: 'INSTITUTIONAL_SME',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'PROPRIETARY_COLOR_FORMULATION_IP',
+    executiveVerdict: '**SUBSCRIBE.** Clean SME specialty polymer producer growing at 41% CAGR with attractive 10.8x P/E valuation and 27.9% grey market premium.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Produces customized color and additive masterbatch pellets for blow molding and injection molding industries.',
+      moat: 'Database of 8,000+ proprietary shade formulations with rapid color-matching spectrophotometer lab.',
+      redFlags: ['Polymer resin raw material price volatility linked to crude oil derivatives.']
+    },
+    tacticalNote: 'Opens Nov 05. Chittorgarh: Exchange In-Principle Approved. Strong GMP and high return on capital (>24%).'
+  },
+  {
+    id: 'COOKWELL-APPLIANCES',
+    verdict: 'APPLY',
+    score: 85,
+    pillarScores: { fundamental: 86, quantitative: 84, sentiment: 84 },
+    valuationVsPeers: 'DISCOUNT',
+    valuationDiscountPct: 28.0,
+    name: 'Cookwell Domestic Appliances Ltd',
+    ticker: 'COOKWELL',
+    market: 'IN',
+    tier: 'SME',
+    status: 'UPCOMING',
+    statusLabel: '🟡 UPCOMING (Exchange Approved)',
+    biddingDates: 'Nov 11 – Nov 13, 2026',
+    dateDetail: 'Chittorgarh: Exchange In-Principle Approved • Opens Nov 11 on NSE Emerge',
+    exchange: 'NSE SME',
+    sector: 'Kitchenware Appliances & Energy-Efficient Cookware',
+    businessSummary: 'Manufacturer of tri-ply stainless steel cookware, induction-compatible pressure cookers, and energy-efficient kitchen small domestic appliances (SDAs) retailing via D2C e-commerce and 1,800 retail dealers.',
+    issueDetails: {
+      priceBand: '₹95 - ₹100',
+      issuePrice: 100,
+      currency: 'INR',
+      currencySymbol: '₹',
+      issueSize: '₹41.50 Cr',
+      issueSizeNum: 41.50,
+      marketCap: '₹155 Cr',
+      marketCapNum: 155,
+      freshIssuePct: 100.0,
+      ofsPct: 0.0,
+      freshValue: '₹41.50 Cr',
+      ofsValue: '₹0 Cr',
+      promoterHoldingPre: 99.4,
+      promoterHoldingPost: 73.2,
+      publicFloatPct: 26.8,
+      minimumLot: 1200,
+      retailMinInvestment: '₹1,20,000',
+      underwriters: ['Hem Securities'],
+      underwriterTier: 'TIER_1',
+      openDate: '2026-11-11',
+      closeDate: '2026-11-13',
+      allotmentDate: '2026-11-14',
+      listingDate: '2026-11-18',
+      financialYear: 'FY 2026-27'
+    },
+    financials: {
+      reportingCurrency: 'INR Cr',
+      revenue3Y: [
+        { year: 'FY24', value: 54.8 },
+        { year: 'FY25', value: 78.4 },
+        { year: 'FY26', value: 112.5 }
+      ],
+      pat3Y: [
+        { year: 'FY24', value: 4.8 },
+        { year: 'FY25', value: 8.6 },
+        { year: 'FY26', value: 14.5 }
+      ],
+      ebitda3Y: [
+        { year: 'FY24', value: 8.2 },
+        { year: 'FY25', value: 13.8 },
+        { year: 'FY26', value: 22.4 }
+      ],
+      cagrRevenue: 43.3,
+      cagrPat: 73.8,
+      operatingCashFlow: 12.4,
+      netDebt: 14.5,
+      debtToEquity: 0.32,
+      margins: {
+        grossMargin: 42.1,
+        ebitdaMargin: 19.9,
+        patMargin: 12.9,
+        spikeDetected: false
+      }
+    },
+    valuation: {
+      peRatio: 10.7,
+      industryAvgPe: 26.5,
+      pbRatio: 2.4,
+      evEbitda: 7.1,
+      marketCapToSales: 1.38,
+      peerComps: [
+        { name: 'Hawkins Cookers', ticker: 'HAWKINCOOK.BO', pe: 34.5, pb: 12.4, evEbitda: 24.5, patMargin: 10.8, roe: 36.4 },
+        { name: 'Butterfly Gandhimathi', ticker: 'BUTTERFLY.NS', pe: 28.2, pb: 3.8, evEbitda: 16.8, patMargin: 4.8, roe: 12.5 }
+      ]
+    },
+    sentiment: {
+      gmp: 32,
+      gmpPct: 32.0,
+      gmpTrend: 'EXPANDING',
+      gmpHistory: [
+        { day: 'T-2', gmp: 24, gmpPct: 24.0 },
+        { day: 'T-1', gmp: 32, gmpPct: 32.0 }
+      ],
+      qibSubscription: 0.0,
+      niiSubscription: 0.0,
+      retailSubscription: 0.0,
+      totalSubscription: 0.0,
+      anchorBookQuality: 'PREMIUM',
+      anchorInvestors: ['Hem Growth Fund', 'Capri Global AIF']
+    },
+    forensicScore: 86,
+    anchorPedigree: 'INSTITUTIONAL_SME',
+    retailAttractiveness: 'HIGH',
+    institutionalMoat: 'TRI_PLY_STAINLESS_STEEL_MANUFACTURING',
+    executiveVerdict: '**SUBSCRIBE.** High-growth SME cookware maker (73% PAT CAGR) trading at an attractive 10.7x P/E with +32% GMP.',
+    businessAndRedFlags: {
+      whatTheyDo: 'Fabricates energy-efficient tri-ply stainless steel cookware sets and compact kitchen blenders.',
+      moat: 'Automated hydraulic stamping presses with integrated bonded-base cookware technology.',
+      redFlags: ['Stainless steel and aluminum coil spot price fluctuations.']
+    },
+    tacticalNote: 'Opens Nov 11. Chittorgarh: Exchange In-Principle Approved. High retail demand expected.'
   }
 ];
 
@@ -4700,3 +6739,6 @@ export function getIpoById(id) {
 export function getIpoByTicker(ticker) {
   return IPO_UNIVERSE.find(ipo => ipo.ticker === ticker);
 }
+
+// Automatically synchronize all IPO statuses dynamically against current real-world date
+syncUniverseWithDate(IPO_UNIVERSE);

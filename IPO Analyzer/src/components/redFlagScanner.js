@@ -6,13 +6,14 @@
 
 import { IpoEvaluationEngine } from '../quant/ipoEvaluationEngine.js';
 import { openIpoDetailModal } from './ipoDetailReport.js';
+import { getIstTimeString } from '../utils/dateUtils.js';
 
 export class RedFlagScanner {
   constructor({ containerId, universe, marketFeed }) {
     this.container = document.getElementById(containerId);
     this.universe = universe;
     this.marketFeed = marketFeed;
-    this.lastSync = new Date().toLocaleTimeString();
+    this.lastSync = getIstTimeString();
     this.recalculateEvaluations();
   }
 
@@ -48,7 +49,8 @@ export class RedFlagScanner {
             <span class="live-pulse-dot"></span>
             <span class="rt-feed-title">REAL-TIME FORENSIC SURVEILLANCE ACTIVE</span>
             <span class="rt-feed-divider">•</span>
-            <span class="rt-sync-time">Last Ticked: <strong>${this.lastSync}</strong></span>
+            <span class="rt-feed-badge" style="background: rgba(14, 165, 233, 0.15); border: 1px solid rgba(14, 165, 233, 0.4); color: #38bdf8; font-weight: 700;">🇮🇳 Indian Standard Time (IST • UTC+05:30) Active</span>
+            <span class="rt-sync-time">Last Ticked (IST): <strong>${this.lastSync}</strong></span>
             <span class="rt-feed-badge" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4); color: #34d399; font-weight: 700;">📅 Current Financial Year (FY 2026–27 Only)</span>
             <span class="rt-feed-badge">Continuous Accounting & Volatility Anomaly Detection</span>
           </div>

@@ -3,7 +3,7 @@
  * Orchestrates real-time data feeds, reactive tab views, and live market updates.
  */
 
-import { IPO_UNIVERSE } from './data/ipoUniverse.js';
+import { IPO_UNIVERSE, syncUniverseWithDate } from './data/ipoUniverse.js';
 import { MarketDataFeed } from './data/marketDataFeed.js';
 import { IpoRadarView } from './components/ipoRadarView.js';
 import { GmpTrackerView } from './components/gmpTrackerView.js';
@@ -13,7 +13,7 @@ import { showToast } from './components/toast.js';
 
 class IpoAnalyzerApp {
   constructor() {
-    this.universe = [...IPO_UNIVERSE];
+    this.universe = syncUniverseWithDate([...IPO_UNIVERSE], new Date());
     this.marketFeed = MarketDataFeed;
     this.activeTab = 'radar';
 

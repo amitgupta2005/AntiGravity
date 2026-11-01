@@ -4,13 +4,16 @@
  */
 
 import { openIpoDetailModal } from './ipoDetailReport.js';
+import { syncUniverseWithDate } from '../data/ipoUniverse.js';
+import { getIstTimeString, getIstDateString } from '../utils/dateUtils.js';
+import { IpoEvaluationEngine } from '../quant/ipoEvaluationEngine.js';
 
 export class GmpTrackerView {
   constructor({ containerId, universe, marketFeed }) {
     this.container = document.getElementById(containerId);
     this.universe = universe;
     this.marketFeed = marketFeed;
-    this.lastSync = new Date().toLocaleTimeString();
+    this.lastSync = getIstTimeString();
     this.filterStatus = 'ALL'; // 'ALL', 'ONGOING', 'MAINBOARD', 'SME', 'US'
   }
 
@@ -22,18 +25,52 @@ export class GmpTrackerView {
     }
   }
 
+  _getIpoDates(ipo) {
+    const d = ipo.issueDetails || {};
+    return {
+      openDate: d.openDate || ipo.openDate,
+      closeDate: d.closeDate || ipo.closeDate,
+      listingDate: d.listingDate || ipo.listingDate
+    };
+  }
+
+  _isUpcoming(ipo, todayStr = getIstDateString()) {
+    const { openDate, listingDate } = this._getIpoDates(ipo);
+    const isAlreadyListed = ipo.status === 'LISTED' || (listingDate && listingDate <= todayStr);
+    return Boolean(!isAlreadyListed && openDate && openDate > todayStr);
+  }
+
+  _isClosed(ipo, todayStr = getIstDateString()) {
+    const { closeDate, listingDate } = this._getIpoDates(ipo);
+    const isNotListed = ipo.status !== 'LISTED' && (!listingDate || listingDate > todayStr);
+    return Boolean(isNotListed && closeDate && closeDate < todayStr);
+  }
+
+  _isOngoing(ipo, todayStr = getIstDateString()) {
+    const { openDate, closeDate } = this._getIpoDates(ipo);
+    return Boolean(openDate && closeDate && openDate <= todayStr && todayStr <= closeDate);
+  }
+
+  _isListed(ipo, todayStr = getIstDateString()) {
+    const { listingDate } = this._getIpoDates(ipo);
+    return Boolean(ipo.status === 'LISTED' || (listingDate && listingDate <= todayStr));
+  }
+
   render() {
     if (!this.container) return;
 
+    syncUniverseWithDate(this.universe, new Date());
+    const todayStr = getIstDateString();
+
     let items = [...this.universe];
     if (this.filterStatus === 'ONGOING') {
-      items = items.filter(i => i.status === 'ONGOING');
+      items = items.filter(i => this._isOngoing(i, todayStr));
     } else if (this.filterStatus === 'UPCOMING') {
-      items = items.filter(i => i.status === 'UPCOMING');
+      items = items.filter(i => this._isUpcoming(i, todayStr));
     } else if (this.filterStatus === 'CLOSED') {
-      items = items.filter(i => i.status === 'CLOSED');
+      items = items.filter(i => this._isClosed(i, todayStr));
     } else if (this.filterStatus === 'LISTED') {
-      items = items.filter(i => i.status === 'LISTED');
+      items = items.filter(i => this._isListed(i, todayStr));
     } else if (this.filterStatus === 'MAINBOARD') {
       items = items.filter(i => i.tier === 'MAINBOARD');
     } else if (this.filterStatus === 'SME') {
@@ -56,7 +93,8 @@ export class GmpTrackerView {
             <span class="live-pulse-dot"></span>
             <span class="rt-feed-title">REAL-TIME GMP & BOOK BUILDING ENGINE</span>
             <span class="rt-feed-divider">•</span>
-            <span class="rt-sync-time">Last Synced: <strong>${this.lastSync}</strong></span>
+            <span class="rt-feed-badge" style="background: rgba(14, 165, 233, 0.15); border: 1px solid rgba(14, 165, 233, 0.4); color: #38bdf8; font-weight: 700;">🇮🇳 Indian Standard Time (IST • UTC+05:30) Active</span>
+            <span class="rt-sync-time">Last Synced (IST): <strong>${this.lastSync}</strong></span>
             <span class="rt-feed-badge" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4); color: #34d399; font-weight: 700;">📅 Current Financial Year (FY 2026–27 Only)</span>
             <span class="rt-feed-badge">BSE India • NSE Emerge • Chittorgarh • Groww Grey Market Desk</span>
           </div>
@@ -83,16 +121,16 @@ export class GmpTrackerView {
         <div class="gmp-filter-bar mt-3">
           <button class="filter-pill ${this.filterStatus === 'ALL' ? 'active' : ''}" data-filter="ALL">All Issues (${this.universe.length})</button>
           <button class="filter-pill pill-ongoing ${this.filterStatus === 'ONGOING' ? 'active' : ''}" data-filter="ONGOING">
-            🔴 Live Ongoing (${this.universe.filter(i => i.status === 'ONGOING').length})
+            🔴 Live Ongoing (${this.universe.filter(i => this._isOngoing(i, todayStr)).length})
           </button>
           <button class="filter-pill pill-upcoming ${this.filterStatus === 'UPCOMING' ? 'active' : ''}" data-filter="UPCOMING">
-            🟡 Upcoming Pipeline (${this.universe.filter(i => i.status === 'UPCOMING').length})
+            🟡 Upcoming Pipeline (${this.universe.filter(i => this._isUpcoming(i, todayStr)).length})
           </button>
           <button class="filter-pill pill-closed ${this.filterStatus === 'CLOSED' ? 'active' : ''}" data-filter="CLOSED">
-            🔵 Closed / Allotment (${this.universe.filter(i => i.status === 'CLOSED').length})
+            🔵 Closed / Allotment (${this.universe.filter(i => this._isClosed(i, todayStr)).length})
           </button>
           <button class="filter-pill ${this.filterStatus === 'LISTED' ? 'active' : ''}" data-filter="LISTED">
-            ⚪ Recently Listed (${this.universe.filter(i => i.status === 'LISTED').length})
+            ⚪ Recently Listed (${this.universe.filter(i => this._isListed(i, todayStr)).length})
           </button>
           <button class="filter-pill ${this.filterStatus === 'MAINBOARD' ? 'active' : ''}" data-filter="MAINBOARD">India Mainboard</button>
           <button class="filter-pill ${this.filterStatus === 'SME' ? 'active' : ''}" data-filter="SME">India SME</button>
@@ -157,6 +195,14 @@ export class GmpTrackerView {
                       <div class="company-cell-flex">
                         <strong>${escapeHtml(ipo.name)}</strong>
                         <span class="ticker-badge">${escapeHtml(ipo.ticker)}</span>
+                        ${isOngoing && ipo.verdict === 'APPLY' ? (() => {
+                          const allotment = IpoEvaluationEngine.computeAllotmentProbability(ipo, 'APPLY');
+                          return allotment ? `
+                            <div class="allotment-gmp-tag" title="${escapeHtml(allotment.strategyRationale)}">
+                              🎯 Best Odds: <strong>${escapeHtml(allotment.bestCategory)}</strong> (${allotment.bestProbabilityPct}%)
+                            </div>
+                          ` : '';
+                        })() : ''}
                       </div>
                     </td>
                     <td>
