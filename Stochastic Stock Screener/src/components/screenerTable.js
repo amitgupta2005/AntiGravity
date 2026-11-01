@@ -14,8 +14,11 @@ export class ScreenerTable {
     this.currentFilter = 'all';
     this.searchQuery = '';
     this.sortCol = 'spread';
-    this.sortDir = 'desc'; // 'asc' or 'desc'
+    // Display table in Full Screen by default (Context Window as per resolution of the device)
+    const savedFs = typeof localStorage !== 'undefined' ? localStorage.getItem('antigravity_table_fullscreen') : null;
+    this.isFullscreen = savedFs !== null ? savedFs === 'on' : true;
     this.onExportOversold = options.onExportOversold || null;
+    this.setupKeyboardNavigation();
   }
 
   setResults(results) {
@@ -102,11 +105,12 @@ export class ScreenerTable {
   render() {
     if (!this.container) return;
 
+    const previousScrollLeft = this.container.querySelector('.table-responsive')?.scrollLeft || 0;
     const filtered = this.getFilteredAndSortedResults();
     const counts = this.calculateCounts();
 
     this.container.innerHTML = `
-      <div class="screener-table-card">
+      <div class="screener-table-card ${this.isFullscreen ? 'is-fullscreen' : ''}">
         <!-- Controls & Filters Toolbar -->
         <div class="table-toolbar">
           <div class="filter-tabs">
@@ -138,6 +142,27 @@ export class ScreenerTable {
               <span class="badge-mini bg-cyan text-dark">${counts.oversold}</span>
             </button>
 
+            <!-- Table Navigation & Fullscreen Controls -->
+            <div class="table-nav-controls">
+              <div class="scroll-hint-pill" title="Scroll horizontally across table columns (Use Left / Right Arrow Keys)">
+                <button type="button" class="nav-arrow-btn" id="tableScrollLeftBtn" title="Scroll Left (Left Arrow Key)">
+                  <i data-lucide="chevron-left"></i>
+                </button>
+                <span class="scroll-keys-label">
+                  <kbd class="kbd-key">◀</kbd> <kbd class="kbd-key">▶</kbd> Scroll
+                </span>
+                <button type="button" class="nav-arrow-btn" id="tableScrollRightBtn" title="Scroll Right (Right Arrow Key)">
+                  <i data-lucide="chevron-right"></i>
+                </button>
+              </div>
+
+              <!-- Fullscreen Toggle Button -->
+              <button type="button" class="btn btn-sm btn-fullscreen ${this.isFullscreen ? 'active' : ''}" id="tableFullscreenBtn" title="${this.isFullscreen ? 'Exit Full Screen Table View (Esc)' : 'Display Table in Full Screen (Press F)'}">
+                <i data-lucide="${this.isFullscreen ? 'minimize-2' : 'maximize-2'}"></i>
+                <span class="fullscreen-text">${this.isFullscreen ? 'Exit Full Screen' : 'Full Screen'}</span>
+              </button>
+            </div>
+
             <div class="search-box">
               <i data-lucide="search" class="search-icon"></i>
               <input 
@@ -152,11 +177,11 @@ export class ScreenerTable {
         </div>
 
         <!-- Table Display -->
-        <div class="table-responsive">
+        <div class="table-responsive" tabindex="0" role="region" aria-label="Stochastic Screener Table with Left and Right arrow key navigation">
           <table class="screener-table">
             <thead>
               <tr>
-                <th class="sortable ${this.getSortClass('ticker')}" data-col="ticker">Stock / Ticker</th>
+                <th class="sortable col-fixed-first ${this.getSortClass('ticker')}" data-col="ticker">Stock / Ticker</th>
                 <th class="sortable ${this.getSortClass('price')}" data-col="price">Close Price</th>
                 <th class="sortable ${this.getSortClass('changePct')}" data-col="changePct">Day %</th>
                 <th class="sortable ${this.getSortClass('slowK')}" data-col="slowK">Stoch %K (14,3)</th>
@@ -164,7 +189,7 @@ export class ScreenerTable {
                 <th class="sortable ${this.getSortClass('spread')}" data-col="spread">Spread (%K-%D)</th>
                 <th>Oscillator Gauge (0-100)</th>
                 <th class="sortable ${this.getSortClass('signal')}" data-col="signal">Signal</th>
-                <th>Quantitative Entry &amp; Exit Strategy (Buy Zone | SL | Targets)</th>
+                <th>Quantitative Strategy (Buy / Short Zone | SL | Targets)</th>
                 <th class="text-center">Actions</th>
               </tr>
             </thead>
@@ -180,14 +205,20 @@ export class ScreenerTable {
             Showing <strong>${filtered.length}</strong> of <strong>${this.allResults.length}</strong> stocks 
             ${this.currentFilter === 'oversold' ? '<span class="text-cyan font-bold">(Filtered: Below Oversold Threshold 20)</span>' : ''}
           </span>
-          <span class="formula-note">Stochastic Basis: <code>LowestClose(4)</code> &amp; <code>HighestClose(4)</code> smoothed by 3-period SMA</span>
+          <span class="formula-note">Stochastic Basis: <code>LowestClose(14)</code> &amp; <code>HighestClose(14)</code> smoothed by 3-period SMA</span>
         </div>
       </div>
     `;
 
+    document.body.classList.toggle('table-fullscreen-active', this.isFullscreen);
     this.attachEvents();
     if (window.lucide && typeof window.lucide.createIcons === 'function') {
       window.lucide.createIcons();
+    }
+
+    const tableResponsive = this.container.querySelector('.table-responsive');
+    if (tableResponsive && previousScrollLeft > 0) {
+      tableResponsive.scrollLeft = previousScrollLeft;
     }
   }
 
@@ -209,6 +240,8 @@ export class ScreenerTable {
     const d = r.d ?? r.stoch?.d ?? 50;
     const spread = r.spread ?? (k - d);
     const isOversold = k < 20;
+    const isOverbought = k > 80;
+    const isShort = r.strategy?.direction === 'SHORT' || isOverbought;
 
     // %K color
     let kColorClass = 'text-neutral';
@@ -225,14 +258,21 @@ export class ScreenerTable {
 
     return `
       <tr class="stock-row ${isOversold ? 'row-oversold-highlight' : ''}" data-ticker="${sym}">
-        <td>
-          <div class="stock-primary">
-            <span class="stock-sym">${sym}</span>
-            <span class="stock-sector">${sector}</span>
-            ${isOversold ? '<span class="oversold-pill-mini">OVERSOLD</span>' : ''}
-            ${r.isLive ? '<span class="live-dot-tag" title="Live real-time feed active"><span class="live-dot-ping"></span>LIVE</span>' : ''}
+        <td class="col-fixed-first">
+          <div class="stock-cell-wrap">
+            <div class="stock-primary">
+              <span class="stock-sym">${sym}</span>
+              <div class="stock-badges">
+                ${isOversold ? '<span class="oversold-pill-mini">OVERSOLD</span>' : ''}
+                ${r.isLive ? '<span class="live-dot-tag" title="Live real-time feed active"><span class="live-dot-ping"></span>LIVE</span>' : ''}
+              </div>
+            </div>
+            <div class="stock-secondary">
+              <span class="stock-name" title="${this.escapeHtml(name)}">${this.escapeHtml(name)}</span>
+              <span class="stock-meta-dot">•</span>
+              <span class="stock-sector" title="${this.escapeHtml(sector)}">${this.escapeHtml(sector)}</span>
+            </div>
           </div>
-          <div class="stock-name" title="${this.escapeHtml(name)}">${this.escapeHtml(name)}</div>
         </td>
         <td class="font-mono font-semibold">${priceStr}</td>
         <td class="font-mono ${chgClass}">
@@ -274,27 +314,27 @@ export class ScreenerTable {
           ${signalBadge}
         </td>
         <td>
-          <div class="table-strategy-card ${isOversold ? 'strat-oversold-card' : ''}">
+          <div class="table-strategy-card ${isOversold ? 'strat-oversold-card' : isShort ? 'strat-overbought-card' : ''}">
             <div class="strat-action-line">
-              <span class="strat-action-tag ${r.strategy?.actionBadge || 'badge-neutral'}">${r.strategy?.actionLabel || 'Watchlist'}</span>
+              <span class="strat-action-tag ${r.strategy?.actionBadge || 'badge-neutral'}">${r.strategy?.actionLabel || (isShort ? 'Overbought Short' : 'Watchlist')}</span>
               <span class="strat-rr-pill font-mono" title="Risk-to-Reward Ratio">${r.strategy?.rrRatio || '1 : 2.5'}</span>
             </div>
             <div class="strat-levels-compact font-mono">
               <div class="strat-lvl-row">
-                <span class="strat-lvl-lbl">Buy:</span> 
-                <span class="text-cyan font-semibold">${r.strategy?.entryRangeStr || `${isINR ? '₹' : '$'}${priceVal.toFixed(2)}`}</span>
+                <span class="strat-lvl-lbl">${isShort ? 'Short:' : 'Buy:'}</span> 
+                <span class="${isShort ? 'text-amber font-semibold' : 'text-cyan font-semibold'}">${r.strategy?.entryRangeStr || `${isINR ? '₹' : '$'}${priceVal.toFixed(2)}`}</span>
               </div>
               <div class="strat-lvl-row">
                 <span class="strat-lvl-lbl">SL:</span> 
-                <span class="text-rose font-semibold">${isINR ? '₹' : '$'}${r.strategy?.stopLoss != null ? r.strategy.stopLoss.toLocaleString() : '-'} (-${r.strategy?.riskPct || 0}%)</span>
+                <span class="text-rose font-semibold">${isINR ? '₹' : '$'}${r.strategy?.stopLoss != null ? r.strategy.stopLoss.toLocaleString() : '-'} (${isShort ? '+' : '-'}${r.strategy?.riskPct || 0}%)</span>
               </div>
               <div class="strat-lvl-row">
                 <span class="strat-lvl-lbl">T1:</span> 
-                <span class="text-emerald font-semibold">${isINR ? '₹' : '$'}${r.strategy?.target1 != null ? r.strategy.target1.toLocaleString() : '-'} (+${r.strategy?.target1GainPct || 0}%)</span>
+                <span class="text-emerald font-semibold">${isINR ? '₹' : '$'}${r.strategy?.target1 != null ? r.strategy.target1.toLocaleString() : '-'} (${isShort ? '-' : '+'}${r.strategy?.target1GainPct || 0}%)</span>
               </div>
               <div class="strat-lvl-row">
                 <span class="strat-lvl-lbl">T2:</span> 
-                <span class="text-emerald font-semibold">${isINR ? '₹' : '$'}${r.strategy?.target2 != null ? r.strategy.target2.toLocaleString() : '-'} (+${r.strategy?.target2GainPct || 0}%)</span>
+                <span class="text-emerald font-semibold">${isINR ? '₹' : '$'}${r.strategy?.target2 != null ? r.strategy.target2.toLocaleString() : '-'} (${isShort ? '-' : '+'}${r.strategy?.target2GainPct || 0}%)</span>
               </div>
             </div>
           </div>
@@ -531,6 +571,39 @@ export class ScreenerTable {
       });
     }
 
+    // Fullscreen toggle button
+    const fsBtn = this.container.querySelector('#tableFullscreenBtn');
+    if (fsBtn) {
+      fsBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.toggleFullscreen();
+      });
+    }
+
+    // Scroll Left button
+    const scrollLeftBtn = this.container.querySelector('#tableScrollLeftBtn');
+    if (scrollLeftBtn) {
+      scrollLeftBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const scrollEl = this.container.querySelector('.table-responsive');
+        if (scrollEl) {
+          scrollEl.scrollBy({ left: -220, behavior: 'smooth' });
+        }
+      });
+    }
+
+    // Scroll Right button
+    const scrollRightBtn = this.container.querySelector('#tableScrollRightBtn');
+    if (scrollRightBtn) {
+      scrollRightBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const scrollEl = this.container.querySelector('.table-responsive');
+        if (scrollEl) {
+          scrollEl.scrollBy({ left: 220, behavior: 'smooth' });
+        }
+      });
+    }
+
     // Column sorting headers
     const headers = this.container.querySelectorAll('th.sortable');
     headers.forEach(th => {
@@ -588,6 +661,107 @@ export class ScreenerTable {
       if (item) {
         const isDark = document.body.classList.contains('dark-theme') || !document.body.classList.contains('light-theme');
         openStockChartModal(item, isDark);
+      }
+    });
+  }
+
+  toggleFullscreen(targetState = null) {
+    this.isFullscreen = typeof targetState === 'boolean' ? targetState : !this.isFullscreen;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('antigravity_table_fullscreen', this.isFullscreen ? 'on' : 'off');
+    }
+    this.updateFullscreenUI();
+  }
+
+  updateFullscreenUI() {
+    const card = this.container?.querySelector('.screener-table-card');
+    if (card) {
+      card.classList.toggle('is-fullscreen', this.isFullscreen);
+    }
+    document.body.classList.toggle('table-fullscreen-active', this.isFullscreen);
+
+    // Update table toolbar button
+    const btn = this.container?.querySelector('#tableFullscreenBtn');
+    if (btn) {
+      btn.classList.toggle('active', this.isFullscreen);
+      btn.setAttribute('title', this.isFullscreen ? 'Exit Full Screen Table View (Esc)' : 'Display Table in Full Screen (Press F)');
+      const icon = btn.querySelector('i');
+      if (icon) {
+        icon.setAttribute('data-lucide', this.isFullscreen ? 'minimize-2' : 'maximize-2');
+      }
+      const label = btn.querySelector('.fullscreen-text');
+      if (label) {
+        label.textContent = this.isFullscreen ? 'Exit Full Screen' : 'Full Screen';
+      }
+    }
+
+    // Sync header fullscreen button if present
+    const headerBtn = document.getElementById('headerFullscreenBtn');
+    if (headerBtn) {
+      headerBtn.classList.toggle('active', this.isFullscreen);
+      headerBtn.setAttribute('title', this.isFullscreen ? 'Exit Full Screen Table View (Esc)' : 'Display Table in Full Screen (Press F)');
+      const headerIcon = document.getElementById('headerFsIcon') || headerBtn.querySelector('i');
+      if (headerIcon) {
+        headerIcon.setAttribute('data-lucide', this.isFullscreen ? 'minimize-2' : 'maximize-2');
+      }
+      const headerText = document.getElementById('headerFsText') || headerBtn.querySelector('span');
+      if (headerText) {
+        headerText.textContent = this.isFullscreen ? 'Exit Full Screen' : 'Full Screen';
+      }
+    }
+
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons();
+    }
+  }
+
+  setupKeyboardNavigation() {
+    if (typeof window === 'undefined') return;
+
+    window.addEventListener('keydown', (e) => {
+      // If a modal overlay is active, do not intercept keys
+      if (document.querySelector('.modal-overlay.active')) return;
+
+      // If activeElement is an input, textarea, or contentEditable element, do NOT intercept
+      const activeEl = document.activeElement;
+      const isInput = activeEl && (['INPUT', 'TEXTAREA', 'SELECT'].includes(activeEl.tagName) || activeEl.isContentEditable);
+      if (isInput) return;
+
+      // Toggle fullscreen with 'F' or 'f'
+      if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        this.toggleFullscreen();
+        return;
+      }
+
+      // Exit fullscreen with 'Escape'
+      if (e.key === 'Escape' && this.isFullscreen) {
+        e.preventDefault();
+        this.toggleFullscreen(false);
+        return;
+      }
+
+      // Horizontal scrolling with Left / Right Arrow keys
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        const scrollEl = this.container?.querySelector('.table-responsive');
+        if (!scrollEl) return;
+
+        e.preventDefault();
+        const step = e.shiftKey ? 380 : 220;
+        const delta = e.key === 'ArrowRight' ? step : -step;
+
+        scrollEl.scrollBy({ left: delta, behavior: 'smooth' });
+
+        // Visual pulse feedback on arrow navigation buttons
+        const leftBtn = this.container?.querySelector('#tableScrollLeftBtn');
+        const rightBtn = this.container?.querySelector('#tableScrollRightBtn');
+        if (e.key === 'ArrowLeft' && leftBtn) {
+          leftBtn.classList.add('nav-arrow-active');
+          setTimeout(() => leftBtn.classList.remove('nav-arrow-active'), 180);
+        } else if (e.key === 'ArrowRight' && rightBtn) {
+          rightBtn.classList.add('nav-arrow-active');
+          setTimeout(() => rightBtn.classList.remove('nav-arrow-active'), 180);
+        }
       }
     });
   }

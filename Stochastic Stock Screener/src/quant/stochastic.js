@@ -281,17 +281,27 @@ export function computeEntryExitStrategy(ticker, currentPrice, series, opts = {}
   const dVal = latest?.d ?? 50;
   const spread = latest?.spread ?? (kVal - dVal);
   const isGoldenCross = latest?.signalType?.includes('BULLISH_CROSSOVER');
+  const isDeathCross = latest?.signalType?.includes('BEARISH_CROSSOVER');
   const isOversold = kVal <= (opts.oversoldThreshold || 20);
   const isDeepOversold = kVal <= 10;
+  const isOverbought = kVal >= (opts.overboughtThreshold || 80);
+  const isDeepOverbought = kVal >= 90;
+
+  // Determine Strategy Direction:
+  // Short Selling Strategy is activated when in Overbought territory (>= 80) or upon Bearish Death Cross from elevated zone (> 60)
+  const isShort = isOverbought || (isDeathCross && kVal > 60);
+  const direction = isShort ? 'SHORT' : 'LONG';
 
   // 50-SMA Baseline Trend Filter
   const sma50 = opts.sma50 ?? null;
   const isBelowSma50 = sma50 != null && currentPrice < sma50 * 0.95;
+  const isAboveSma50 = sma50 != null && currentPrice > sma50 * 1.05;
   const sma50DiffPct = sma50 != null ? Number((((currentPrice - sma50) / sma50) * 100).toFixed(2)) : null;
 
   // Calculate Support & Range
   const kWindow = Math.max(4, opts.kPeriod || 14);
   const minCloseWindow = Math.min(...closes.slice(-kWindow));
+  const maxCloseWindow = Math.max(...closes.slice(-kWindow));
   const swingLow = Math.min(...closes);
   const swingHigh = Math.max(...closes);
 
@@ -304,87 +314,155 @@ export function computeEntryExitStrategy(ticker, currentPrice, series, opts = {}
   }
   const avgMove = moveCount > 0 ? (sumMoves / moveCount) : (currentPrice * 0.015);
 
-  // Strategy Action State
-  let action = 'WATCHLIST';
-  let actionLabel = 'Pending Reversal (Watch for %K > %D)';
-  let actionBadge = 'badge-neutral';
-  let conviction = 'Moderate';
-
-  if (isGoldenCross) {
-    if (isBelowSma50) {
-      // Trend Filter: Downgrade when fighting primary downtrend (>5% below 50-SMA)
-      action = 'COUNTER_TREND_WATCH';
-      actionLabel = 'Counter-Trend Watch (Below 50-SMA)';
-      actionBadge = 'badge-counter-trend';
-      conviction = 'Low - Fighting Primary Downtrend';
-    } else if (isOversold) {
-      action = 'BUY_CONFIRMED';
-      actionLabel = '★ Actionable Buy (Golden Cross in Oversold)';
-      actionBadge = 'badge-golden-cross';
-      conviction = 'High (Momentum Reversal Trigger)';
-    } else {
-      action = 'BUY_MOMENTUM';
-      actionLabel = 'Bullish Crossover Entry';
-      actionBadge = 'badge-bullish-cross';
-      conviction = 'Moderate-High';
-    }
-  } else if (isDeepOversold) {
-    action = 'ACCUMULATE_DIP';
-    actionLabel = 'Extreme Capitulation Buy Bracket (%K < 10)';
-    actionBadge = 'badge-deep-oversold';
-    conviction = 'High Reversal Discount';
-  } else if (isOversold) {
-    action = 'OVERSOLD_WATCH';
-    actionLabel = 'Oversold Discount (Await %K Cross Above %D)';
-    actionBadge = 'badge-oversold';
-    conviction = 'Moderate (Wait for Hook)';
-  } else if (kVal > 80) {
-    action = 'OVERBOUGHT_EXIT';
-    actionLabel = 'Overbought Zone (Take Profits / Avoid Longs)';
-    actionBadge = 'badge-overbought';
-    conviction = 'Exhaustion Warning';
-  }
-
-  // Exact Price Levels
-  const entryMin = Number(Math.min(currentPrice, minCloseWindow * 0.998).toFixed(2));
-  const entryMax = Number((currentPrice * 1.004).toFixed(2));
-  const entryMid = currentPrice;
-
-  // Stop Loss: Below Lowest Close / Swing Low with safety buffer (1.2% - 2.5% risk)
-  const technicalFloor = Math.min(minCloseWindow, swingLow);
-  const rawSL = Math.min(currentPrice - avgMove * 1.2, technicalFloor * 0.985);
-  const stopLoss = Number(Math.max(0.01, rawSL).toFixed(2));
-  const riskAmount = Number(Math.max(0.01, currentPrice - stopLoss).toFixed(2));
-  const riskPct = Number(((riskAmount / currentPrice) * 100).toFixed(2));
-
-  // Profit Target 1: Mid-Band Rebound (%K = 50 area -> ~1.5R or 45% of swing range)
-  const target1Distance = Math.max(riskAmount * 1.5, (swingHigh - currentPrice) * 0.45);
-  const target1 = Number((currentPrice + target1Distance).toFixed(2));
-  const target1GainPct = Number((((target1 - currentPrice) / currentPrice) * 100).toFixed(2));
-
-  // Profit Target 2: Overbought Exhaustion (%K > 80 area -> ~2.8R - 3.2R or swing high test)
-  const target2Distance = Math.max(riskAmount * 2.8, (swingHigh - currentPrice) * 0.95);
-  const target2 = Number((currentPrice + Math.max(target1Distance * 1.8, target2Distance)).toFixed(2));
-  const target2GainPct = Number((((target2 - currentPrice) / currentPrice) * 100).toFixed(2));
-
-  // Risk to Reward Ratio
-  const rrRatio = riskAmount > 0 ? Number(((target2 - currentPrice) / riskAmount).toFixed(1)) : 2.5;
-
   const isINR = ticker.endsWith('.NS') || ticker.endsWith('.BO');
   const curr = isINR ? '₹' : '$';
 
-  // Step-by-Step Tactical Rules Playbook
-  const playbook = [
-    isBelowSma50
-      ? `1. Counter-Trend Warning: Price (${curr}${currentPrice.toLocaleString()}) is trading ${Math.abs(sma50DiffPct)}% below its 50-day SMA (${curr}${sma50.toLocaleString()}). Fighting primary downtrend; consider watching for base confirmation or keep position size minimal.`
-      : `1. Entry Zone: Initiate long positions inside ${curr}${entryMin.toLocaleString()} - ${curr}${entryMax.toLocaleString()} as Stochastic %K confirms upward momentum.`,
-    `2. Capital Protection: Place hard Stop Loss at ${curr}${stopLoss.toLocaleString()} (-${riskPct}%). Risk strictly limited to 1-2% portfolio allocation.`,
-    `3. Profit Taking Milestone 1: At Target 1 (${curr}${target1.toLocaleString()}, +${target1GainPct}%), liquidate 50% position and advance Stop Loss to Breakeven (${curr}${currentPrice.toLocaleString()}).`,
-    `4. Profit Taking Milestone 2: At Target 2 (${curr}${target2.toLocaleString()}, +${target2GainPct}%), liquidate remaining 50% as Stochastic %K touches the 80 overbought exhaustion band.`,
-    `5. Invalidation Rule: Exit position immediately if daily closing price closes below Stop Loss (${curr}${stopLoss.toLocaleString()}) before %K reclaims 50.`
-  ];
+  let action = 'WATCHLIST';
+  let actionLabel = 'Pending Reversal (Watch for Hook)';
+  let actionBadge = 'badge-neutral';
+  let conviction = 'Moderate';
+
+  let entryMin, entryMax, entryMid, stopLoss, riskAmount, riskPct, target1, target1GainPct, target2, target2GainPct, rrRatio;
+  let playbook = [];
+
+  if (isShort) {
+    // =========================================================================
+    // OVERBOUGHT SHORT SELLING QUANTITATIVE STRATEGY
+    // =========================================================================
+    if (isDeathCross && isOverbought) {
+      action = 'SHORT_CONFIRMED';
+      actionLabel = '★ Actionable Short (Death Cross in Overbought)';
+      actionBadge = 'badge-death-cross';
+      conviction = 'High (Momentum Reversal Short)';
+    } else if (isDeepOverbought) {
+      action = 'SHORT_FADE';
+      actionLabel = 'Extreme Exhaustion Short Bracket (%K > 90)';
+      actionBadge = 'badge-deep-overbought';
+      conviction = 'High Reversal Premium';
+    } else if (isOverbought) {
+      action = 'OVERBOUGHT_SHORT_WATCH';
+      actionLabel = 'Overbought Short Watch (Await %K Cross Below %D)';
+      actionBadge = 'badge-overbought';
+      conviction = 'Moderate (Wait for Bearish Hook)';
+    } else {
+      action = 'SHORT_MOMENTUM';
+      actionLabel = 'Bearish Crossover Short Entry';
+      actionBadge = 'badge-bearish-cross';
+      conviction = 'Moderate-High';
+    }
+
+    // Trend alignment check for Short Selling:
+    if (isAboveSma50 && isDeathCross) {
+      conviction = 'Moderate (Counter-Trend Pullback against 50-SMA)';
+    } else if (isBelowSma50) {
+      conviction = 'High (Trend-Aligned Short with 50-SMA)';
+    }
+
+    // Short Entry Price Range: around current price / recent resistance test
+    entryMin = Number((currentPrice * 0.996).toFixed(2));
+    entryMax = Number(Math.max(currentPrice * 1.006, maxCloseWindow * 1.002).toFixed(2));
+    entryMid = currentPrice;
+
+    // Stop Loss (Buy-to-Cover Stop): Placed ABOVE recent swing high / resistance ceiling (+1.5% to +2.5% risk)
+    const technicalCeiling = Math.max(maxCloseWindow, swingHigh);
+    const rawSL = Math.max(currentPrice + avgMove * 1.25, technicalCeiling * 1.015);
+    stopLoss = Number(rawSL.toFixed(2));
+    riskAmount = Number((stopLoss - currentPrice).toFixed(2));
+    riskPct = Number(((riskAmount / currentPrice) * 100).toFixed(2));
+
+    // Profit Target 1: Mean Reversion to Equilibrium Midline (%K ~ 50 area -> ~1.5R or 45% of swing range down)
+    const target1Distance = Math.max(riskAmount * 1.5, (currentPrice - swingLow) * 0.45);
+    target1 = Number(Math.max(0.01, currentPrice - target1Distance).toFixed(2));
+    target1GainPct = Number((((currentPrice - target1) / currentPrice) * 100).toFixed(2));
+
+    // Profit Target 2: Plunge into Oversold Discount (%K < 20 area -> ~2.8R - 3.2R or swing low test)
+    const target2Distance = Math.max(riskAmount * 2.8, (currentPrice - swingLow) * 0.90);
+    target2 = Number(Math.max(0.01, currentPrice - Math.max(target1Distance * 1.8, target2Distance)).toFixed(2));
+    target2GainPct = Number((((currentPrice - target2) / currentPrice) * 100).toFixed(2));
+
+    rrRatio = riskAmount > 0 ? Number(((currentPrice - target2) / riskAmount).toFixed(1)) : 2.5;
+
+    playbook = [
+      `1. Short Entry Zone: Initiate short selling position inside ${curr}${entryMin.toLocaleString()} - ${curr}${entryMax.toLocaleString()} as Stochastic %K (${kVal.toFixed(1)}) rolls over below %D in overbought territory (>80).`,
+      `2. Capital Protection (Buy-to-Cover Stop): Place hard Buy Stop Loss at ${curr}${stopLoss.toLocaleString()} (+${riskPct}% above entry). Risk strictly limited to 1-2% portfolio capital.`,
+      `3. Profit Taking Milestone 1: At Target 1 (${curr}${target1.toLocaleString()}, -${target1GainPct}% price drop), buy to cover 50% short position and trail Stop Loss down to Breakeven (${curr}${currentPrice.toLocaleString()}).`,
+      `4. Profit Taking Milestone 2: At Target 2 (${curr}${target2.toLocaleString()}, -${target2GainPct}% price drop), buy to cover remaining 50% position as Stochastic %K plunges into the <20 oversold discount zone.`,
+      `5. Invalidation Rule: Close short position immediately if daily closing price closes above Stop Loss (${curr}${stopLoss.toLocaleString()}) before %K reclaims the 50 midline.`
+    ];
+  } else {
+    // =========================================================================
+    // OVERSOLD / BULLISH LONG QUANTITATIVE STRATEGY
+    // =========================================================================
+    if (isGoldenCross) {
+      if (isBelowSma50) {
+        // Trend Filter: Downgrade when fighting primary downtrend (>5% below 50-SMA)
+        action = 'COUNTER_TREND_WATCH';
+        actionLabel = 'Counter-Trend Watch (Below 50-SMA)';
+        actionBadge = 'badge-counter-trend';
+        conviction = 'Low - Fighting Primary Downtrend';
+      } else if (isOversold) {
+        action = 'BUY_CONFIRMED';
+        actionLabel = '★ Actionable Buy (Golden Cross in Oversold)';
+        actionBadge = 'badge-golden-cross';
+        conviction = 'High (Momentum Reversal Trigger)';
+      } else {
+        action = 'BUY_MOMENTUM';
+        actionLabel = 'Bullish Crossover Entry';
+        actionBadge = 'badge-bullish-cross';
+        conviction = 'Moderate-High';
+      }
+    } else if (isDeepOversold) {
+      action = 'ACCUMULATE_DIP';
+      actionLabel = 'Extreme Capitulation Buy Bracket (%K < 10)';
+      actionBadge = 'badge-deep-oversold';
+      conviction = 'High Reversal Discount';
+    } else if (isOversold) {
+      action = 'OVERSOLD_WATCH';
+      actionLabel = 'Oversold Discount (Await %K Cross Above %D)';
+      actionBadge = 'badge-oversold';
+      conviction = 'Moderate (Wait for Hook)';
+    }
+
+    // Exact Price Levels
+    entryMin = Number(Math.min(currentPrice, minCloseWindow * 0.998).toFixed(2));
+    entryMax = Number((currentPrice * 1.004).toFixed(2));
+    entryMid = currentPrice;
+
+    // Stop Loss: Below Lowest Close / Swing Low with safety buffer (1.2% - 2.5% risk)
+    const technicalFloor = Math.min(minCloseWindow, swingLow);
+    const rawSL = Math.min(currentPrice - avgMove * 1.2, technicalFloor * 0.985);
+    stopLoss = Number(Math.max(0.01, rawSL).toFixed(2));
+    riskAmount = Number(Math.max(0.01, currentPrice - stopLoss).toFixed(2));
+    riskPct = Number(((riskAmount / currentPrice) * 100).toFixed(2));
+
+    // Profit Target 1: Mid-Band Rebound (%K = 50 area -> ~1.5R or 45% of swing range)
+    const target1Distance = Math.max(riskAmount * 1.5, (swingHigh - currentPrice) * 0.45);
+    target1 = Number((currentPrice + target1Distance).toFixed(2));
+    target1GainPct = Number((((target1 - currentPrice) / currentPrice) * 100).toFixed(2));
+
+    // Profit Target 2: Overbought Exhaustion (%K > 80 area -> ~2.8R - 3.2R or swing high test)
+    const target2Distance = Math.max(riskAmount * 2.8, (swingHigh - currentPrice) * 0.95);
+    target2 = Number((currentPrice + Math.max(target1Distance * 1.8, target2Distance)).toFixed(2));
+    target2GainPct = Number((((target2 - currentPrice) / currentPrice) * 100).toFixed(2));
+
+    // Risk to Reward Ratio
+    rrRatio = riskAmount > 0 ? Number(((target2 - currentPrice) / riskAmount).toFixed(1)) : 2.5;
+
+    // Step-by-Step Tactical Rules Playbook
+    playbook = [
+      isBelowSma50
+        ? `1. Counter-Trend Warning: Price (${curr}${currentPrice.toLocaleString()}) is trading ${Math.abs(sma50DiffPct)}% below its 50-day SMA (${curr}${sma50.toLocaleString()}). Fighting primary downtrend; consider watching for base confirmation or keep position size minimal.`
+        : `1. Entry Zone: Initiate long positions inside ${curr}${entryMin.toLocaleString()} - ${curr}${entryMax.toLocaleString()} as Stochastic %K confirms upward momentum.`,
+      `2. Capital Protection: Place hard Stop Loss at ${curr}${stopLoss.toLocaleString()} (-${riskPct}%). Risk strictly limited to 1-2% portfolio allocation.`,
+      `3. Profit Taking Milestone 1: At Target 1 (${curr}${target1.toLocaleString()}, +${target1GainPct}%), liquidate 50% position and advance Stop Loss to Breakeven (${curr}${currentPrice.toLocaleString()}).`,
+      `4. Profit Taking Milestone 2: At Target 2 (${curr}${target2.toLocaleString()}, +${target2GainPct}%), liquidate remaining 50% as Stochastic %K touches the 80 overbought exhaustion band.`,
+      `5. Invalidation Rule: Exit position immediately if daily closing price closes below Stop Loss (${curr}${stopLoss.toLocaleString()}) before %K reclaims 50.`
+    ];
+  }
 
   return {
+    direction,
+    isShort,
     action,
     actionLabel,
     actionBadge,
@@ -398,14 +476,15 @@ export function computeEntryExitStrategy(ticker, currentPrice, series, opts = {}
     riskPct,
     target1,
     target1GainPct,
-    target1Condition: 'Mid-Band Equilibrium (%K ~ 50)',
+    target1Condition: isShort ? 'Mid-Band Equilibrium (%K ~ 50)' : 'Mid-Band Equilibrium (%K ~ 50)',
     target2,
     target2GainPct,
-    target2Condition: 'Overbought Peak (%K > 80)',
+    target2Condition: isShort ? 'Oversold Discount (%K < 20)' : 'Overbought Peak (%K > 80)',
     rrRatio: `1 : ${rrRatio}`,
     rrValue: rrRatio,
     sma50,
     isBelowSma50,
+    isAboveSma50,
     sma50DiffPct,
     playbook
   };

@@ -289,16 +289,17 @@ function renderBreakdownTable(history, curr, stock) {
 
   const recent = history.slice(-10).reverse();
   const strat = stock.strategy || {};
+  const isShort = strat.direction === 'SHORT' || (stock.slowK ?? 50) > 80;
 
   container.innerHTML = `
     <!-- Quantitative Entry & Exit Strategy Blueprint Card -->
-    <div class="strategy-blueprint-card">
+    <div class="strategy-blueprint-card ${isShort ? 'blueprint-short-card' : ''}">
       <div class="strategy-blueprint-header">
         <div class="blueprint-badge-wrap">
-          <span class="blueprint-icon text-cyan"><i data-lucide="crosshair"></i></span>
+          <span class="blueprint-icon ${isShort ? 'text-amber' : 'text-cyan'}"><i data-lucide="crosshair"></i></span>
           <div>
-            <h4 class="blueprint-title">Quantitative Entry &amp; Exit Strategy Blueprint</h4>
-            <span class="signal-badge ${strat.actionBadge || 'badge-cyan'}">${strat.actionLabel || 'Oversold Reversal Protocol'}</span>
+            <h4 class="blueprint-title">${isShort ? 'Quantitative Short Selling Strategy Blueprint' : 'Quantitative Entry &amp; Exit Strategy Blueprint'}</h4>
+            <span class="signal-badge ${strat.actionBadge || (isShort ? 'badge-overbought' : 'badge-cyan')}">${strat.actionLabel || (isShort ? 'Overbought Short Protocol' : 'Oversold Reversal Protocol')}</span>
           </div>
         </div>
         <div class="blueprint-rr-badge">
@@ -310,38 +311,38 @@ function renderBreakdownTable(history, curr, stock) {
       <div class="strategy-levels-grid">
         <div class="level-box entry-box">
           <div class="level-header">
-            <span class="level-title"><i data-lucide="log-in"></i> Buy Entry Zone</span>
-            <span class="level-tag tag-cyan">Limit / Market</span>
+            <span class="level-title"><i data-lucide="${isShort ? 'trending-down' : 'log-in'}"></i> ${isShort ? 'Short Entry Zone' : 'Buy Entry Zone'}</span>
+            <span class="level-tag ${isShort ? 'tag-amber' : 'tag-cyan'}">${isShort ? 'Sell Short' : 'Limit / Market'}</span>
           </div>
-          <div class="level-price text-cyan font-mono">${strat.entryRangeStr || `${curr}${stock.price.toFixed(2)}`}</div>
-          <div class="level-desc">Optimal accumulation zone as %K (${(stock.slowK ?? 50).toFixed(1)}) turns upward above ${stock.kPeriod || 14}-period lowest close.</div>
+          <div class="level-price ${isShort ? 'text-amber' : 'text-cyan'} font-mono">${strat.entryRangeStr || `${curr}${stock.price.toFixed(2)}`}</div>
+          <div class="level-desc">${isShort ? `Optimal short execution zone as Stochastic %K (${(stock.slowK ?? 50).toFixed(1)}) rolls over below %D in overbought territory.` : `Optimal accumulation zone as %K (${(stock.slowK ?? 50).toFixed(1)}) turns upward above ${stock.kPeriod || 14}-period lowest close.`}</div>
         </div>
 
         <div class="level-box sl-box">
           <div class="level-header">
-            <span class="level-title"><i data-lucide="shield-alert"></i> Stop Loss (Risk Floor)</span>
-            <span class="level-tag tag-rose font-bold">-${strat.riskPct || 0}%</span>
+            <span class="level-title"><i data-lucide="shield-alert"></i> ${isShort ? 'Stop Loss (Buy-to-Cover Stop)' : 'Stop Loss (Risk Floor)'}</span>
+            <span class="level-tag tag-rose font-bold">${isShort ? '+' : '-'}${strat.riskPct || 0}%</span>
           </div>
           <div class="level-price text-rose font-mono">${curr}${strat.stopLoss != null ? strat.stopLoss.toLocaleString() : 'N/A'}</div>
-          <div class="level-desc">Technical support floor. Invalidate strategy if daily closing price closes below this level.</div>
+          <div class="level-desc">${isShort ? 'Technical resistance ceiling. Close short immediately if daily closing price closes above this level.' : 'Technical support floor. Invalidate strategy if daily closing price closes below this level.'}</div>
         </div>
 
         <div class="level-box target-box">
           <div class="level-header">
-            <span class="level-title"><i data-lucide="flag"></i> Target 1 (Mid-Band Exit)</span>
+            <span class="level-title"><i data-lucide="flag"></i> ${isShort ? 'Target 1 (Mid-Band Cover 50%)' : 'Target 1 (Mid-Band Exit)'}</span>
             <span class="level-tag tag-emerald font-bold">+${strat.target1GainPct || 0}%</span>
           </div>
           <div class="level-price text-emerald font-mono">${curr}${strat.target1 != null ? strat.target1.toLocaleString() : 'N/A'}</div>
-          <div class="level-desc">Liquidate 50% position as %K reclaims 50 mid-band equilibrium; advance Stop Loss to Breakeven.</div>
+          <div class="level-desc">${isShort ? 'Buy to cover 50% short position as %K pulls back to 50 equilibrium; advance Stop Loss down to Breakeven.' : 'Liquidate 50% position as %K reclaims 50 mid-band equilibrium; advance Stop Loss to Breakeven.'}</div>
         </div>
 
         <div class="level-box target2-box">
           <div class="level-header">
-            <span class="level-title"><i data-lucide="trophy"></i> Target 2 (Overbought 80 Exit)</span>
+            <span class="level-title"><i data-lucide="trophy"></i> ${isShort ? 'Target 2 (Oversold &lt;20 Cover)' : 'Target 2 (Overbought 80 Exit)'}</span>
             <span class="level-tag tag-emerald font-bold">+${strat.target2GainPct || 0}%</span>
           </div>
           <div class="level-price text-emerald font-mono">${curr}${strat.target2 != null ? strat.target2.toLocaleString() : 'N/A'}</div>
-          <div class="level-desc">Liquidate remaining 50% position as Stochastic %K enters the 80+ overbought exhaustion band.</div>
+          <div class="level-desc">${isShort ? 'Buy to cover remaining 50% short position as Stochastic %K plunges into the &lt;20 oversold discount zone.' : 'Liquidate remaining 50% position as Stochastic %K enters the 80+ overbought exhaustion band.'}</div>
         </div>
       </div>
 

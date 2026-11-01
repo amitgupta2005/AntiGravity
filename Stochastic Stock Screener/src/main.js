@@ -70,6 +70,7 @@ function initApp() {
   setupSettingsModal();
   setupExportDropdown();
   setupThemeToggle();
+  setupHeaderFullscreen();
   setupUniverseSelector();
   setupOversoldQuickFilter();
   setupAutoRefresh();
@@ -639,4 +640,23 @@ function setupThemeToggle() {
     localStorage.setItem('antigravity_stoch_theme', isNowLight ? 'light' : 'dark');
     updateThemeButtonUI(isNowLight);
   });
+}
+
+/**
+ * Setup Header Fullscreen Toggle Button
+ */
+function setupHeaderFullscreen() {
+  const btn = document.getElementById('headerFullscreenBtn');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    if (state.screenerTable) {
+      state.screenerTable.toggleFullscreen();
+    }
+  });
+
+  // Sync initial UI state from screenerTable
+  if (state.screenerTable) {
+    state.screenerTable.updateFullscreenUI();
+  }
 }

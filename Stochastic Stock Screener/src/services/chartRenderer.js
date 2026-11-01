@@ -199,33 +199,40 @@ function drawStrategyStrip(ctx, x, y, w, h, strat, curr, isDark, cyan, amber, em
   ctx.fillText(strat.actionLabel || 'Oversold Momentum Blueprint', x + 185, y + 24);
 
   // Levels row
-  ctx.font = '500 11px "Inter", sans-serif';
-  ctx.fillStyle = textMuted;
-  ctx.fillText('BUY ZONE:', x + 16, y + 48);
-  ctx.fillStyle = cyan;
-  ctx.font = 'bold 12px "JetBrains Mono", monospace';
-  ctx.fillText(strat.entryRangeStr || 'Market', x + 84, y + 48);
+  const isShort = strat.direction === 'SHORT';
+  const entryLbl = isShort ? 'SHORT ZONE:' : 'BUY ZONE:';
+  const entryColor = isShort ? amber : cyan;
+  const slSign = isShort ? '+' : '-';
+  const t1Lbl = isShort ? 'TARGET 1 (COVER 50%):' : 'TARGET 1 (50%):';
+  const t2Lbl = isShort ? 'TARGET 2 (COVER 80%):' : 'TARGET 2 (80%):';
 
   ctx.font = '500 11px "Inter", sans-serif';
   ctx.fillStyle = textMuted;
-  ctx.fillText('STOP LOSS:', x + 260, y + 48);
+  ctx.fillText(entryLbl, x + 16, y + 48);
+  ctx.fillStyle = entryColor;
+  ctx.font = 'bold 12px "JetBrains Mono", monospace';
+  ctx.fillText(strat.entryRangeStr || 'Market', x + 96, y + 48);
+
+  ctx.font = '500 11px "Inter", sans-serif';
+  ctx.fillStyle = textMuted;
+  ctx.fillText('STOP LOSS:', x + 270, y + 48);
   ctx.fillStyle = rose;
   ctx.font = 'bold 12px "JetBrains Mono", monospace';
-  ctx.fillText(`${curr}${strat.stopLoss || 'N/A'} (-${strat.riskPct || 0}%)`, x + 335, y + 48);
+  ctx.fillText(`${curr}${strat.stopLoss || 'N/A'} (${slSign}${strat.riskPct || 0}%)`, x + 345, y + 48);
 
   ctx.font = '500 11px "Inter", sans-serif';
   ctx.fillStyle = textMuted;
-  ctx.fillText('TARGET 1 (50%):', x + 490, y + 48);
+  ctx.fillText(t1Lbl, x + 500, y + 48);
   ctx.fillStyle = emerald;
   ctx.font = 'bold 12px "JetBrains Mono", monospace';
-  ctx.fillText(`${curr}${strat.target1 || 'N/A'} (+${strat.target1GainPct || 0}%)`, x + 595, y + 48);
+  ctx.fillText(`${curr}${strat.target1 || 'N/A'} (+${strat.target1GainPct || 0}%)`, x + 635, y + 48);
 
   ctx.font = '500 11px "Inter", sans-serif';
   ctx.fillStyle = textMuted;
-  ctx.fillText('TARGET 2 (80%):', x + 740, y + 48);
+  ctx.fillText(t2Lbl, x + 760, y + 48);
   ctx.fillStyle = emerald;
   ctx.font = 'bold 12px "JetBrains Mono", monospace';
-  ctx.fillText(`${curr}${strat.target2 || 'N/A'} (+${strat.target2GainPct || 0}%)`, x + 845, y + 48);
+  ctx.fillText(`${curr}${strat.target2 || 'N/A'} (+${strat.target2GainPct || 0}%)`, x + 895, y + 48);
 
   ctx.font = 'bold 11px "JetBrains Mono", monospace';
   ctx.fillStyle = amber;

@@ -8,7 +8,8 @@ import {
   DEFAULT_STOCHASTIC_PARAMS, 
   calculateStochasticSeries, 
   screenStockStochastic,
-  detectDivergence 
+  detectDivergence,
+  computeEntryExitStrategy 
 } from './src/quant/stochastic.js';
 import { 
   parseStockDocument, 
@@ -439,7 +440,41 @@ console.log('\n▶ Test 11: IST (Indian Standard Time) Localization Verification
   console.log(`  ✅ getISTDateISOSlice rollover sample: "${istSlice}"`);
 }
 
-console.log('\n🎉 ALL 11 TESTS PASSED SUCCESSFULLY! Stochastic Engine & IST Localization Fully Verified.\n');
+// TEST 12: Quantitative Overbought Short Selling Strategy Formulation
+console.log('\n▶ Test 12: Quantitative Overbought Short Selling Strategy Formulation');
+{
+  const overboughtSeries = [
+    { date: '2026-10-01', close: 3200, slowK: 65, d: 60, spread: 5 },
+    { date: '2026-10-02', close: 3350, slowK: 75, d: 68, spread: 7 },
+    { date: '2026-10-03', close: 3420, slowK: 85, d: 76, spread: 9 },
+    { date: '2026-10-04', close: 3500, slowK: 92, d: 84, spread: 8 },
+    { date: '2026-10-05', close: 3480, slowK: 86, d: 88, spread: -2, signalType: 'BEARISH_CROSSOVER_OVERBOUGHT' }
+  ];
+
+  const shortStrat = computeEntryExitStrategy('TCS.NS', 3480, overboughtSeries);
+
+  assert.strictEqual(shortStrat.direction, 'SHORT', 'Strategy direction must be SHORT for overbought stocks');
+  assert.strictEqual(shortStrat.isShort, true, 'isShort must be true');
+  assert(shortStrat.stopLoss > 3480, `Stop loss (${shortStrat.stopLoss}) must be ABOVE current price (3480) for a short sell`);
+  assert(shortStrat.target1 < 3480, `Target 1 (${shortStrat.target1}) must be BELOW current price (3480) for a short sell`);
+  assert(shortStrat.target2 < shortStrat.target1, `Target 2 (${shortStrat.target2}) must be BELOW Target 1 (${shortStrat.target1})`);
+  assert(shortStrat.riskPct > 0, 'Risk percent must be positive');
+  assert(shortStrat.target1GainPct > 0, 'Target 1 gain percent must be positive');
+  assert(shortStrat.target2GainPct > shortStrat.target1GainPct, 'Target 2 gain percent must exceed Target 1 gain percent');
+  assert(shortStrat.rrValue >= 1.5, `Risk-to-Reward ratio (${shortStrat.rrValue}) must be >= 1.5`);
+  assert(Array.isArray(shortStrat.playbook) && shortStrat.playbook.length === 5, 'Short playbook must contain 5 tactical execution steps');
+
+  console.log(`  ✅ Overbought Short Stock: TCS.NS (Close: ₹3,480)`);
+  console.log(`     Action Signal  : ${shortStrat.actionLabel}`);
+  console.log(`     Short Entry    : ${shortStrat.entryRangeStr}`);
+  console.log(`     Stop Loss (SL) : ₹${shortStrat.stopLoss} (+${shortStrat.riskPct}% above entry)`);
+  console.log(`     Target 1 (50%) : ₹${shortStrat.target1} (-${shortStrat.target1GainPct}% drop) [Mid-Band %K=50 Cover]`);
+  console.log(`     Target 2 (80%) : ₹${shortStrat.target2} (-${shortStrat.target2GainPct}% drop) [Oversold %K<20 Cover]`);
+  console.log(`     Target R:R     : ${shortStrat.rrRatio}`);
+  console.log(`     Playbook Rules : ${shortStrat.playbook.length} tactical short execution steps verified.`);
+}
+
+console.log('\n🎉 ALL 12 TESTS PASSED SUCCESSFULLY! Stochastic Engine, Long/Short Strategies & IST Verified.\n');
 
 
 

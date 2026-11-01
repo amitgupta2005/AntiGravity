@@ -122,6 +122,12 @@
         </div>
       </div>
 
+      <!-- Full Screen Toggle Button in Header -->
+      <button id="headerFullscreenBtn" class="btn btn-secondary theme-toggle-btn active" title="Display Table in Full Screen (Context Window) [Press 'F']">
+        <i data-lucide="minimize-2" id="headerFsIcon"></i>
+        <span id="headerFsText">Exit Full Screen</span>
+      </button>
+
       <!-- Settings / Parameters Drawer Trigger -->
       <button id="openSettingsBtn" class="btn btn-secondary btn-icon" title="Configure Stochastic Parameters (14,3,3)">
         <i data-lucide="sliders"></i>
@@ -159,7 +165,7 @@
         <h1 class="page-title">Close-Only Stochastic Stock Screener</h1>
         <p class="page-description">
           Scanning equities using mathematical Stochastic Oscillator evaluated strictly on <strong>Closing Prices</strong>: 
-          <code>LowestClose(4)</code> and <code>HighestClose(4)</code> with <code>3-period SMA Smoothing</code>.
+          <code>LowestClose(14)</code> and <code>HighestClose(14)</code> with <code>3-period SMA Smoothing</code>.
           Eliminates intra-day wick noise to deliver pristine momentum reversal and divergence signals.
         </p>
       </div>
