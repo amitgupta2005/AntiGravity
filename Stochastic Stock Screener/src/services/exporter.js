@@ -10,12 +10,13 @@
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 import { generateStockChartBlob } from './chartRenderer.js';
+import { formatISTDateTime, getISTDateISOSlice } from '../utils/dateUtils.js';
 
 /**
  * Common data row generator for Excel/CSV/XLS
  */
 function buildStockDataRows(screenedStocks, params = {}) {
-  const kP = params.kPeriod || 4;
+  const kP = params.kPeriod || 14;
   const kS = params.kSmoothing || 3;
   const dP = params.dPeriod || 3;
 
@@ -88,7 +89,7 @@ export function exportResultsToExcel(screenedStocks, params = {}, customFilename
     return;
   }
 
-  const kP = params.kPeriod || 4;
+  const kP = params.kPeriod || 14;
   const kS = params.kSmoothing || 3;
   const dP = params.dPeriod || 3;
   const rows = buildStockDataRows(screenedStocks, params);
@@ -99,7 +100,7 @@ export function exportResultsToExcel(screenedStocks, params = {}, customFilename
 
   XLSX.utils.book_append_sheet(wb, ws, `Stochastic_${kP}_${kS}_${dP}`);
 
-  const fileName = customFilename || `Stochastic_Screener_${kP}_${kS}_${dP}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  const fileName = customFilename || `Stochastic_Screener_${kP}_${kS}_${dP}_${getISTDateISOSlice()}.xlsx`;
   XLSX.writeFile(wb, fileName);
 }
 
@@ -112,7 +113,7 @@ export function exportResultsToXLS(screenedStocks, params = {}, customFilename =
     return;
   }
 
-  const kP = params.kPeriod || 4;
+  const kP = params.kPeriod || 14;
   const kS = params.kSmoothing || 3;
   const dP = params.dPeriod || 3;
   const rows = buildStockDataRows(screenedStocks, params);
@@ -126,7 +127,7 @@ export function exportResultsToXLS(screenedStocks, params = {}, customFilename =
   const xlsBuffer = XLSX.write(wb, { bookType: 'biff8', type: 'array' });
   const blob = new Blob([xlsBuffer], { type: 'application/vnd.ms-excel' });
 
-  const fileName = customFilename || `Stochastic_Screener_${kP}_${kS}_${dP}_${new Date().toISOString().slice(0, 10)}.xls`;
+  const fileName = customFilename || `Stochastic_Screener_${kP}_${kS}_${dP}_${getISTDateISOSlice()}.xls`;
   downloadBlob(blob, fileName);
 }
 
@@ -139,7 +140,7 @@ export function exportResultsToCSV(screenedStocks, params = {}, customFilename =
     return;
   }
 
-  const kP = params.kPeriod || 4;
+  const kP = params.kPeriod || 14;
   const kS = params.kSmoothing || 3;
   const dP = params.dPeriod || 3;
   const rows = buildStockDataRows(screenedStocks, params);
@@ -148,7 +149,7 @@ export function exportResultsToCSV(screenedStocks, params = {}, customFilename =
   const csv = XLSX.utils.sheet_to_csv(ws);
 
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const fileName = customFilename || `Stochastic_Screener_${kP}_${kS}_${dP}_${new Date().toISOString().slice(0, 10)}.csv`;
+  const fileName = customFilename || `Stochastic_Screener_${kP}_${kS}_${dP}_${getISTDateISOSlice()}.csv`;
   downloadBlob(blob, fileName);
 }
 
@@ -177,11 +178,11 @@ export async function exportPackageWithChartScreenshots(
 
   const isChartsOnly = options.chartsOnly === true;
   const zip = new JSZip();
-  const kP = params.kPeriod || 4;
+  const kP = params.kPeriod || 14;
   const kS = params.kSmoothing || 3;
   const dP = params.dPeriod || 3;
   const total = screenedStocks.length;
-  const timestamp = new Date().toISOString().slice(0, 10);
+  const timestamp = getISTDateISOSlice();
 
   // 1. Generate Spreadsheets (Only if not chartsOnly)
   if (!isChartsOnly) {
@@ -254,7 +255,7 @@ export async function exportPackageWithChartScreenshots(
       '=========================================================================',
       `AntiGravity Stochastic Screener — Quantitative Entry & Exit Strategy Report`,
       '=========================================================================',
-      `Generated On      : ${new Date().toLocaleString()}`,
+      `Generated On      : ${formatISTDateTime(new Date())}`,
       `Strategy Model    : Stochastic on Closing Basis (${kP}, ${kS}, ${dP})`,
       `Total Stocks      : ${total}`,
       `Oversold (< 20)   : ${oversoldBelow20}`,

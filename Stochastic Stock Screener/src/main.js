@@ -1,6 +1,6 @@
 /**
  * Main Application Controller
- * Orchestrates Quantitative Stochastic Screener (4, 3, 3) on a strict Closing Basis,
+ * Orchestrates Quantitative Stochastic Screener (14, 3, 3) on a strict Closing Basis,
  * dynamic real-time live stock price streaming, auto-refresh polling,
  * Light/Dark mode switching, oversold screening (<20), multi-format exports (.xlsx, .xls, .csv),
  * and high-res chart screenshots packaging.
@@ -22,6 +22,7 @@ import {
 } from './services/marketData.js';
 import { DEFAULT_STOCHASTIC_PARAMS } from './quant/stochastic.js';
 import { PRESET_UNIVERSES, getUniverseList } from './data/presets.js';
+import { formatISTTime } from './utils/dateUtils.js';
 
 // Attach safe lucide helper globally with icons bundle automatically pre-configured
 window.lucide = {
@@ -161,9 +162,9 @@ async function startScreening(stocks, universeLabel = '', isBackgroundRefresh = 
     // Refresh KPI card click filters
     setupKpiCardClickFilters();
 
-    const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const nowStr = formatISTTime(new Date());
     if (liveStatusText) {
-      liveStatusText.textContent = state.autoRefreshEnabled ? `LIVE (${nowStr})` : `SYNCED (${nowStr})`;
+      liveStatusText.textContent = state.autoRefreshEnabled ? `LIVE (${nowStr} IST)` : `SYNCED (${nowStr} IST)`;
     }
 
     if (banner) banner.classList.add('hidden');

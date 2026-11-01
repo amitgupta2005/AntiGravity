@@ -209,7 +209,7 @@ function renderStochasticSubChart(history, isDarkMode, stock) {
   const slowKs = history.map(h => h.slowK);
   const ds = history.map(h => h.d);
 
-  const kP = stock.kPeriod || 4;
+  const kP = stock.kPeriod || 14;
   const kS = stock.kSmoothing || 3;
   const dP = stock.dPeriod || 3;
 
@@ -314,7 +314,7 @@ function renderBreakdownTable(history, curr, stock) {
             <span class="level-tag tag-cyan">Limit / Market</span>
           </div>
           <div class="level-price text-cyan font-mono">${strat.entryRangeStr || `${curr}${stock.price.toFixed(2)}`}</div>
-          <div class="level-desc">Optimal accumulation zone as %K (${(stock.slowK ?? 50).toFixed(1)}) turns upward above 4-period lowest close.</div>
+          <div class="level-desc">Optimal accumulation zone as %K (${(stock.slowK ?? 50).toFixed(1)}) turns upward above ${stock.kPeriod || 14}-period lowest close.</div>
         </div>
 
         <div class="level-box sl-box">

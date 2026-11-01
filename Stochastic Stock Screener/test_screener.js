@@ -1,5 +1,5 @@
 /**
- * Comprehensive Automated Test Suite for Stochastic Stock Screener (4, 3, 3)
+ * Comprehensive Automated Test Suite for Stochastic Stock Screener (14, 3, 3)
  */
 
 import assert from 'assert';
@@ -17,8 +17,15 @@ import {
 } from './src/services/fileParser.js';
 import { runBatchScreening } from './src/services/marketData.js';
 import { PRESET_UNIVERSES, getUniverseList } from './src/data/presets.js';
+import { 
+  IST_TIMEZONE, 
+  formatISTDate, 
+  formatISTTime, 
+  formatISTDateTime, 
+  getISTDateISOSlice 
+} from './src/utils/dateUtils.js';
 
-console.log('🧪 Starting Stochastic (4, 3, 3) Test Suite...\n');
+console.log('🧪 Starting Stochastic (14, 3, 3) Test Suite...\n');
 
 // TEST 1: Math Verification of Closing-Basis Stochastic (4,3,3)
 console.log('▶ Test 1: Mathematical Accuracy of Stochastic (4, 3, 3) on Closing Basis');
@@ -160,7 +167,7 @@ console.log('\n▶ Test 5: Batch Screening Pipeline Execution');
     assert(s.slowK >= 0 && s.slowK <= 100, `${s.ticker} %K should be in [0, 100]`);
     assert(s.d >= 0 && s.d <= 100, `${s.ticker} %D should be in [0, 100]`);
     assert(s.history.length > 0, `${s.ticker} should contain history bars`);
-    console.log(`  ✅ Screened ${s.ticker}: Close=${s.price}, %K(4,3)=${s.slowK}, %D(3)=${s.d}, Spread=${s.spread}, Signal=${s.signalLabel}`);
+    console.log(`  ✅ Screened ${s.ticker}: Close=${s.price}, %K(14,3)=${s.slowK}, %D(3)=${s.d}, Spread=${s.spread}, Signal=${s.signalLabel}`);
   }
 }
 
@@ -405,7 +412,34 @@ console.log('\n▶ Test 10: 50-SMA Baseline Trend Filter in screenStockStochasti
   console.log('  ✅ Pre-calculated candles.sma50 parameter properly accepted and validated.');
 }
 
-console.log('\n🎉 ALL 10 TESTS PASSED SUCCESSFULLY! Stochastic Engine Refactoring Fully Verified.\n');
+// TEST 11: IST (Indian Standard Time) Time Zone Verification
+console.log('\n▶ Test 11: IST (Indian Standard Time) Localization Verification');
+{
+  assert.strictEqual(IST_TIMEZONE, 'Asia/Kolkata', 'Timezone constant must be Asia/Kolkata');
+
+  // Specific UTC timestamp: 2026-11-01T00:30:00Z -> IST is +05:30 -> 2026-11-01 06:00:00 AM IST
+  const utcDate = new Date('2026-11-01T00:30:00Z');
+  const istTimeStr = formatISTTime(utcDate);
+  assert(istTimeStr.includes('06:00') || istTimeStr.includes('6:00'), `Expected 06:00 AM IST, got: ${istTimeStr}`);
+
+  // UTC evening timestamp crossing midnight into next day in IST:
+  // 2026-10-31T20:00:00Z -> +05:30 -> 2026-11-01 01:30:00 AM IST
+  const eveningUtc = new Date('2026-10-31T20:00:00Z');
+  const istSlice = getISTDateISOSlice(eveningUtc);
+  assert.strictEqual(istSlice, '2026-11-01', `Expected 2026-11-01 in IST, got: ${istSlice}`);
+
+  const formattedDateTime = formatISTDateTime(utcDate);
+  assert(formattedDateTime.includes('IST'), `Expected IST in formatted string, got: ${formattedDateTime}`);
+
+  const formattedDate = formatISTDate(utcDate);
+  assert(formattedDate.length > 0, 'Formatted IST date should not be empty');
+
+  console.log(`  ✅ IST Timezone verified: ${IST_TIMEZONE}`);
+  console.log(`  ✅ formatISTDateTime sample: "${formattedDateTime}"`);
+  console.log(`  ✅ getISTDateISOSlice rollover sample: "${istSlice}"`);
+}
+
+console.log('\n🎉 ALL 11 TESTS PASSED SUCCESSFULLY! Stochastic Engine & IST Localization Fully Verified.\n');
 
 
 

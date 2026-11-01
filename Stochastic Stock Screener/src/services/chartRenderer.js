@@ -1,8 +1,10 @@
 /**
  * High-Resolution Stock Chart Screenshot Generator
- * Renders professional, publication-ready dual charts (Price + Stochastic 4,3,3)
+ * Renders professional, publication-ready dual charts (Price + Stochastic 14,3,3)
  * with an integrated Quantitative Entry & Exit Strategy Blueprint.
  */
+
+import { formatISTDateTime, getISTDateISOSlice } from '../utils/dateUtils.js';
 
 /**
  * Render a complete dual-chart screenshot on an offscreen canvas
@@ -159,12 +161,12 @@ export function renderStockChartCanvas(stock, options = {}) {
   };
 
   drawPanelFrame(ctx, sArea, isDark, `STOCHASTIC (${kP}, ${kS}, ${dP}) OSCILLATOR SUB-CHART (0-100)`, textMuted, bgCard);
-  drawStochasticSubChart(ctx, sArea, history, cyan, amber, isDark, gridColor, textMuted);
+  drawStochasticSubChart(ctx, sArea, history, cyan, amber, isDark, gridColor, textMuted, kP, kS, dP);
 
   // 6. Draw Footer Info & Watermark
   ctx.fillStyle = isDark ? '#475569' : '#94a3b8';
   ctx.font = '500 11px "Inter", sans-serif';
-  const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const dateStr = formatISTDateTime(new Date());
   ctx.fillText(`AntiGravity Stochastic Screener • Closing Basis (${kP},${kS},${dP}) • Generated ${dateStr}`, 28, height - 20);
 
   ctx.textAlign = 'right';
@@ -256,7 +258,10 @@ export function generateStockChartDataUrl(stock, options = {}) {
 export async function downloadStockChartScreenshot(stock) {
   const blob = await generateStockChartBlob(stock);
   const tickerClean = (stock.ticker || 'STOCK').replace(/[^a-zA-Z0-9_-]/g, '_');
-  const filename = `${tickerClean}_Stochastic_4_3_3_${new Date().toISOString().slice(0, 10)}.png`;
+  const kP = stock.kPeriod || 14;
+  const kS = stock.kSmoothing || 3;
+  const dP = stock.dPeriod || 3;
+  const filename = `${tickerClean}_Stochastic_${kP}_${kS}_${dP}_${getISTDateISOSlice()}.png`;
 
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -371,7 +376,7 @@ function drawPriceChart(ctx, area, history, curr, lineColor, isDark, gridColor, 
   }
 }
 
-function drawStochasticSubChart(ctx, area, history, cyan, amber, isDark, gridColor, textColor) {
+function drawStochasticSubChart(ctx, area, history, cyan, amber, isDark, gridColor, textColor, kP = 14, kS = 3, dP = 3) {
   const innerX = area.x + 20;
   const innerY = area.y + 38;
   const innerW = area.w - 85;
@@ -471,9 +476,9 @@ function drawStochasticSubChart(ctx, area, history, cyan, amber, isDark, gridCol
   // Draw Legend
   ctx.font = 'bold 10px "Inter", sans-serif';
   ctx.fillStyle = cyan;
-  ctx.fillText('— %K (4, 3)', area.x + 28, area.y + 18);
+  ctx.fillText(`— %K (${kP}, ${kS})`, area.x + 28, area.y + 18);
   ctx.fillStyle = amber;
-  ctx.fillText('— %D (3 Signal)', area.x + 115, area.y + 18);
+  ctx.fillText(`— %D (${dP} Signal)`, area.x + 120, area.y + 18);
 }
 
 function generateDummyHistory(basePrice = 100) {

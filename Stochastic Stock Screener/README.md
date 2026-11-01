@@ -1,19 +1,19 @@
-# Stochastic Stock Screener (4, 3, 3) — Closing Basis
+# Stochastic Stock Screener (14, 3, 3) — Closing Basis
 
-A professional quantitative stock screening platform built under the **AntiGravity** ecosystem to analyze equities on a strict **closing basis** using the **Stochastic Oscillator with input values 4, 3, 3**. Features dedicated screening for stocks below the **oversold threshold of 20**, automated **Quantitative Entry and Exit Strategy Blueprints**, multi-format exports (`.xlsx`, `.xls`, `.csv`), and high-resolution chart screenshots bundled into automated ZIP archives.
+A professional quantitative stock screening platform built under the **AntiGravity** ecosystem to analyze equities on a strict **closing basis** using the **Stochastic Oscillator with standard input values 14, 3, 3**. Features dedicated screening for stocks below the **oversold threshold of 20**, automated **Quantitative Entry and Exit Strategy Blueprints**, multi-format exports (`.xlsx`, `.xls`, `.csv`), all data and timestamps formatted in **Indian Standard Time (IST • UTC+05:30)**, and high-resolution chart screenshots bundled into automated ZIP archives.
 
 ---
 
 ## 🎯 Key Features
 
-1. **Closing-Basis Stochastic (4, 3, 3) Engine**:
-   - **Fast %K Period**: `4` closing prices.
+1. **Closing-Basis Stochastic (14, 3, 3) Engine**:
+   - **Fast %K Period**: `14` closing prices.
    - **%K Smoothing (Slow %K)**: `3`-period Simple Moving Average.
    - **%D Signal Line**: `3`-period Simple Moving Average of Slow %K.
    - **Formula**:
-     $$\text{LowestClose}_4 = \min(\text{Close}_t, \text{Close}_{t-1}, \text{Close}_{t-2}, \text{Close}_{t-3})$$
-     $$\text{HighestClose}_4 = \max(\text{Close}_t, \text{Close}_{t-1}, \text{Close}_{t-2}, \text{Close}_{t-3})$$
-     $$\text{Fast \%K} = \frac{\text{Close}_t - \text{LowestClose}_4}{\text{HighestClose}_4 - \text{LowestClose}_4} \times 100$$
+     $$\text{LowestClose}_{14} = \min(\text{Close}_t, \text{Close}_{t-1}, \dots, \text{Close}_{t-13})$$
+     $$\text{HighestClose}_{14} = \max(\text{Close}_t, \text{Close}_{t-1}, \dots, \text{Close}_{t-13})$$
+     $$\text{Fast \%K} = \frac{\text{Close}_t - \text{LowestClose}_{14}}{\text{HighestClose}_{14} - \text{LowestClose}_{14}} \times 100$$
      $$\text{Slow \%K} = \text{SMA}_3(\text{Fast \%K})$$
      $$\text{\%D} = \text{SMA}_3(\text{Slow \%K})$$
    - Evaluated strictly using closing prices, eliminating intraday wick distortions and providing clean momentum reversal signals.
@@ -25,7 +25,7 @@ A professional quantitative stock screening platform built under the **AntiGravi
 
 3. **Quantitative Entry & Exit Strategy Blueprint**:
    - Automatically formulates an institutional trading blueprint for every identified oversold stock:
-     - **Buy Entry Zone**: Calculated buy bracket between current close and 4-period lowest close as %K turns upward.
+     - **Buy Entry Zone**: Calculated buy bracket between current close and 14-period lowest close as %K turns upward.
      - **Stop Loss (Risk Floor)**: Hard stop placed beneath technical support / swing low with safety buffer (typically 1.5% - 2.5% risk).
      - **Target 1 (Mid-Band %K=50 Exit)**: Conservative profit-taking level (+2.5% to +4.5%) to liquidate 50% position and advance stop loss to breakeven.
      - **Target 2 (Overbought %K>80 Exit)**: Swing expansion target (+5.0% to +10.0%) to exit remaining position upon reaching the 80 overbought exhaustion threshold.
@@ -33,13 +33,16 @@ A professional quantitative stock screening platform built under the **AntiGravi
      - **Tactical Execution Playbook**: Step-by-step 5-phase rules for trade entry, position scaling, trailing stops, and invalidation.
    - Visible directly in the **Screener Table**, **Deep-Dive Modal**, **Exported Spreadsheets**, and rendered on the **Chart Screenshots**!
 
-4. **Multi-Format Exporting (`.xlsx`, `.xls`, `.csv`) & Chart Screenshots**:
+4. **IST (Indian Standard Time) Native Time Zone**:
+   - All historical candle dates, live feed sync timestamps, chart axes, exported filenames, and tactical strategy reports are strictly displayed in **IST (`Asia/Kolkata` • UTC+05:30)**.
+
+5. **Multi-Format Exporting (`.xlsx`, `.xls`, `.csv`) & Chart Screenshots**:
    - **Modern Excel (`.xlsx`)**: Full OpenXML formatted spreadsheet with column widths, percentages, entry/exit levels, and tactical playbooks.
    - **Legacy Excel 97-2004 (`.xls`)**: Native BIFF8 binary format for legacy Excel compatibility.
    - **Comma-Separated Values (`.csv`)**: Clean flat file format for downstream analytical pipelines.
    - **High-Res Chart Screenshots Archive (`.zip`)**:
      - Automatically generates 1080x720 publication-ready PNG chart screenshots for every screened or oversold stock with an integrated Strategy Blueprint strip.
-     - Dual sub-charts: Closing Price history + Stochastic Oscillator (4,3,3) sub-chart with shaded oversold zone, %K cyan line, %D amber line, and quantitative signal stamps.
+     - Dual sub-charts: Closing Price history + Stochastic Oscillator (14,3,3) sub-chart with shaded oversold zone, %K cyan line, %D amber line, and quantitative signal stamps.
      - Bundles `.xlsx`, `.xls`, `.csv` plus all generated PNG chart screenshots into an organized `.zip` archive.
    - **Single Stock Screenshot Download**: Instant PNG chart screenshot download directly from table rows or the deep-dive chart modal.
 
@@ -131,7 +134,7 @@ Stochastic Stock Screener/
     ├── data/
     │   └── presets.js          # Built-in Nifty 50, Nifty Next 50, US Tech, & ETFs
     ├── quant/
-    │   └── stochastic.js       # Close-only Stochastic (4,3,3) engine & Entry/Exit Strategy formula
+    │   └── stochastic.js       # Close-only Stochastic (14,3,3) engine & Entry/Exit Strategy formula
     └── services/
         ├── chartRenderer.js    # Canvas-based high-res PNG chart screenshot generator with strategy overlay
         ├── fileParser.js       # SheetJS parser for custom XLSX/CSV files

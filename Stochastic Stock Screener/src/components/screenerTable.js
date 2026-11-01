@@ -159,7 +159,7 @@ export class ScreenerTable {
                 <th class="sortable ${this.getSortClass('ticker')}" data-col="ticker">Stock / Ticker</th>
                 <th class="sortable ${this.getSortClass('price')}" data-col="price">Close Price</th>
                 <th class="sortable ${this.getSortClass('changePct')}" data-col="changePct">Day %</th>
-                <th class="sortable ${this.getSortClass('slowK')}" data-col="slowK">Stoch %K (4,3)</th>
+                <th class="sortable ${this.getSortClass('slowK')}" data-col="slowK">Stoch %K (14,3)</th>
                 <th class="sortable ${this.getSortClass('d')}" data-col="d">Signal %D (3)</th>
                 <th class="sortable ${this.getSortClass('spread')}" data-col="spread">Spread (%K-%D)</th>
                 <th>Oscillator Gauge (0-100)</th>
@@ -301,7 +301,7 @@ export class ScreenerTable {
         </td>
         <td class="text-center">
           <div class="row-actions-group">
-            <button class="btn-inspect" data-action="inspect" data-ticker="${sym}" title="Open Full Stochastic 4,3,3 Dual Chart & Breakdown">
+            <button class="btn-inspect" data-action="inspect" data-ticker="${sym}" title="Open Full Stochastic 14,3,3 Dual Chart & Breakdown">
               <i data-lucide="line-chart"></i> Chart
             </button>
             <button class="btn-screenshot-action" data-action="screenshot" data-ticker="${sym}" title="Download High-Res Chart Screenshot PNG for ${sym}">

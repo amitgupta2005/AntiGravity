@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Institutional Quantitative Stock Screener on a Closing Basis using Stochastic (4,3,3) with XLSX/CSV Document Upload",
+  "description": "Institutional Quantitative Stock Screener on a Closing Basis using Stochastic (14,3,3) with XLSX/CSV Document Upload",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

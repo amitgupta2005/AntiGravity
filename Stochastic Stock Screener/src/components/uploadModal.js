@@ -159,7 +159,7 @@ export function setupUploadModal(onApplyUploadedStocks) {
           </tbody>
         </table>
       </div>
-      ${result.stocks.length > 8 ? `<p class="preview-more text-muted">+ ${result.stocks.length - 8} more stocks ready for Stochastic (4,3,3) screening</p>` : ''}
+      ${result.stocks.length > 8 ? `<p class="preview-more text-muted">+ ${result.stocks.length - 8} more stocks ready for Stochastic (14,3,3) screening</p>` : ''}
     `;
     previewContainer.style.display = 'block';
   }

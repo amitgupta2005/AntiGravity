@@ -5,6 +5,7 @@
  */
 
 import { screenStockStochastic } from '../quant/stochastic.js';
+import { formatISTDate } from '../utils/dateUtils.js';
 
 const getBaseUrl = () => (typeof window !== 'undefined' ? '' : 'http://localhost:5175');
 
@@ -56,7 +57,7 @@ export async function fetchStockCandles(symbol, range = '3mo', interval = '1d', 
       const c = closes[i];
       if (c != null && !isNaN(c)) {
         const d = new Date(timestamps[i] * 1000);
-        const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const dateStr = formatISTDate(d);
         candles.push({
           date: dateStr,
           timestamp: timestamps[i],
@@ -158,7 +159,7 @@ export function generateSyntheticCandles(symbol, isINR = false) {
     const range = current * 0.015;
 
     candles.push({
-      date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      date: formatISTDate(d),
       timestamp: Math.floor(d.getTime() / 1000),
       open: Number((current - range * 0.3).toFixed(2)),
       high: Number((current + range).toFixed(2)),
