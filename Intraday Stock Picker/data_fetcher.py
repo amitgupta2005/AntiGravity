@@ -280,6 +280,14 @@ def get_stock_raw_intraday(ticker: str, interval: str = "1m", live_quote: Option
     df = df[~df.index.duplicated(keep='last')]
     df = df.sort_index()
 
+    # Timezone normalization: Indian stocks strictly use Asia/Kolkata (IST), US stocks use America/New_York (EST)
+    is_india = bool(".NS" in clean_ticker or ".BO" in clean_ticker)
+    target_tz = "Asia/Kolkata" if is_india else "America/New_York"
+    if df.index.tz is None:
+        df.index = df.index.tz_localize(target_tz)
+    else:
+        df.index = df.index.tz_convert(target_tz)
+
     # 4. Synthesize latest bar with live tick from Angel One SmartAPI if available
     if live_quote and live_quote.get("price", 0) > 0:
         feed_source = "ANGEL_ONE_SMART_API"

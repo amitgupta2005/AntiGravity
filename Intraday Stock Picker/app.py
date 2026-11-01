@@ -139,11 +139,27 @@ def scan_stocks(
     Scans stocks in real-time, calculates technical setups, scores momentum,
     and returns ranked opportunities with Stop Loss and Targets.
     """
-    custom_list = [c.strip().upper() for c in custom.split(",") if c.strip()] if custom else None
-    results = scan_watchlist(market, custom_tickers=custom_list)
+    market_str = market if isinstance(market, str) else "NSE_MOMENTUM"
+    custom_list = [c.strip().upper() for c in custom.split(",") if c.strip()] if isinstance(custom, str) and custom.strip() else None
+    results = scan_watchlist(market_str, custom_tickers=custom_list)
+
+    # Timezone normalization: IST for India stocks, EST for US stocks
+    is_india = ("NSE" in market_str) or (custom_list and any((".NS" in c or ".BO" in c) for c in custom_list)) or (len(results) > 0 and results[0].get("is_india"))
+    now_utc = datetime.now(timezone.utc)
+    if is_india:
+        scan_time_str = now_utc.astimezone(pytz.timezone("Asia/Kolkata")).strftime("%I:%M:%S %p IST")
+        scan_tz = "IST"
+    else:
+        scan_time_str = now_utc.astimezone(pytz.timezone("America/New_York")).strftime("%I:%M:%S %p EST")
+        scan_tz = "EST"
+
     return {
         "status": "OK",
         "market": market,
+        "is_india": bool(is_india),
+        "market_tz": "Asia/Kolkata" if is_india else "America/New_York",
+        "tz_label": scan_tz,
+        "scan_time": scan_time_str,
         "scanned_count": len(results),
         "stocks": results
     }
@@ -156,8 +172,22 @@ def custom_scan(payload: CustomScanRequest):
     if not tickers:
         raise HTTPException(status_code=400, detail="No tickers provided.")
     results = scan_watchlist("CUSTOM", custom_tickers=tickers)
+
+    is_india = any((".NS" in t or ".BO" in t) for t in tickers)
+    now_utc = datetime.now(timezone.utc)
+    if is_india:
+        scan_time_str = now_utc.astimezone(pytz.timezone("Asia/Kolkata")).strftime("%I:%M:%S %p IST")
+        scan_tz = "IST"
+    else:
+        scan_time_str = now_utc.astimezone(pytz.timezone("America/New_York")).strftime("%I:%M:%S %p EST")
+        scan_tz = "EST"
+
     return {
         "status": "OK",
+        "is_india": bool(is_india),
+        "market_tz": "Asia/Kolkata" if is_india else "America/New_York",
+        "tz_label": scan_tz,
+        "scan_time": scan_time_str,
         "scanned_count": len(results),
         "stocks": results
     }

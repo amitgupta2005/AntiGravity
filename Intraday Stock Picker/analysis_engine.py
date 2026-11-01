@@ -168,6 +168,7 @@ def analyze_stock_setup(
     # Check share volume and turnover (to accommodate high-priced midcaps like DIXON, POLYCAB, PAGEIND, etc.)
     is_inr = (".NS" in ticker or ".BO" in ticker)
     curr_sym = "₹" if is_inr else "$"
+    currency_symbol = curr_sym
     min_turnover = 250000.0 if is_inr else 20000.0  # ₹2.5 Lakhs/min or $20k/min
     turnover_ma = vol_ma20 * close
     has_sufficient_liquidity = (vol_ma20 >= min_liquidity_vol_ma) or (turnover_ma >= min_turnover and (vol_ma20 >= 10.0 or close >= 500.0))
@@ -425,15 +426,18 @@ def analyze_stock_setup(
     # If time falls within mid-day doldrums (12:00 PM to 13:30 PM local market time), subtract 15 points.
     candle_ts = curr.name
     local_time = None
+    is_india_stock = bool(".NS" in ticker or ".BO" in ticker or currency_symbol == "₹")
+    market_tz_name = "Asia/Kolkata" if is_india_stock else "America/New_York"
+    market_tz_label = "IST" if is_india_stock else "EST"
+    market_tz = pytz.timezone(market_tz_name)
+
     if hasattr(candle_ts, 'time'):
-        if hasattr(candle_ts, 'tzinfo') and candle_ts.tzinfo is not None:
-            tz_str = str(candle_ts.tz).upper()
-            if "UTC" in tz_str:
-                market_tz = pytz.timezone("Asia/Kolkata") if (".NS" in ticker or ".BO" in ticker) else pytz.timezone("America/New_York")
+        try:
+            if hasattr(candle_ts, 'tzinfo') and candle_ts.tzinfo is not None:
                 local_time = candle_ts.astimezone(market_tz).time()
             else:
                 local_time = candle_ts.time()
-        else:
+        except Exception:
             local_time = candle_ts.time()
 
     if local_time is not None:
@@ -441,9 +445,16 @@ def analyze_stock_setup(
             score -= 15
             checks.append({
                 "factor": "Time of Day",
-                "status": "Mid-day Chop Zone",
+                "status": f"Mid-day Chop Zone ({market_tz_label})",
                 "score": "-15",
-                "detail": "Mid-day Chop Zone: Volume traditionally dries up; requiring perfect structure to trigger."
+                "detail": f"Mid-day Chop Zone (12:00 PM to 1:30 PM {market_tz_label}): Volume traditionally dries up; requiring perfect structure to trigger."
+            })
+        else:
+            checks.append({
+                "factor": "Time of Day",
+                "status": f"Active Session ({market_tz_label})",
+                "score": "+5",
+                "detail": f"High liquidity intraday session ({local_time.strftime('%I:%M %p')} {market_tz_label}). Optimal institutional momentum window."
             })
 
     # 4. Factor MTF Alignment into the Score
@@ -778,14 +789,43 @@ def analyze_stock_setup(
     # Detect visual chart markers for patterns & triggers
     markers = detect_candlestick_patterns_and_markers(df, action=action)
 
+    # Timezone Normalization:
+    # Intraday stocks picked for INDIA strictly use IST (Asia/Kolkata).
+    # US stocks strictly use EST (America/New_York) and do not use IST.
+    is_india = bool(".NS" in ticker or ".BO" in ticker or currency_symbol == "₹")
+    target_tz_name = "Asia/Kolkata" if is_india else "America/New_York"
+    target_tz_label = "IST" if is_india else "EST"
+    target_tz = pytz.timezone(target_tz_name)
+
+    dt_local = None
+    if hasattr(curr.name, 'tzinfo') and curr.name.tzinfo is not None:
+        dt_local = curr.name.astimezone(target_tz)
+    elif hasattr(curr.name, 'timestamp'):
+        try:
+            dt_local = curr.name.tz_localize(target_tz) if hasattr(curr.name, 'tz_localize') else target_tz.localize(curr.name)
+        except Exception:
+            dt_local = datetime.fromtimestamp(curr.name.timestamp(), tz=pytz.utc).astimezone(target_tz)
+    else:
+        dt_local = datetime.now(tz=target_tz)
+
+    timestamp_sec = int(dt_local.timestamp())
+    formatted_time = dt_local.strftime('%I:%M:%S %p') + f" {target_tz_label}"
+    formatted_short_time = dt_local.strftime('%I:%M %p') + f" {target_tz_label}"
+    formatted_datetime = dt_local.strftime('%Y-%m-%d %I:%M:%S %p') + f" {target_tz_label}"
+
     return {
         "ticker": ticker,
         "company_name": company_name or ticker,
         "cap": cap,
         "status": "OK",
         "currency_symbol": currency_symbol,
-        "timestamp": int(curr.name.timestamp()) if hasattr(curr.name, 'timestamp') else 0,
-        "time_str": curr.name.strftime('%Y-%m-%d %H:%M:%S') if hasattr(curr.name, 'strftime') else str(curr.name),
+        "is_india": is_india,
+        "market_tz": target_tz_name,
+        "tz_label": target_tz_label,
+        "timestamp": timestamp_sec,
+        "time_str": formatted_datetime,
+        "pick_time": formatted_time,
+        "pick_time_short": formatted_short_time,
         "price": entry_price,
         "change_pct": round(day_change_pct, 2),
         "day_high": day_high,

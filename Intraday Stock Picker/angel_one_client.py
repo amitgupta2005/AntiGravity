@@ -448,8 +448,13 @@ class AngelOneSmartAPI:
                 # Format: [datetime_str, open, high, low, close, volume]
                 records = []
                 for c in candles:
+                    dt = pd.to_datetime(c[0])
+                    if dt.tzinfo is None:
+                        dt = dt.tz_localize("Asia/Kolkata")
+                    else:
+                        dt = dt.tz_convert("Asia/Kolkata")
                     records.append({
-                        "Datetime": pd.to_datetime(c[0]),
+                        "Datetime": dt,
                         "Open": float(c[1]),
                         "High": float(c[2]),
                         "Low": float(c[3]),

@@ -87,6 +87,18 @@ Provides clear institutional commentary explaining *why* the stock was chosen:
 ### 5. 🧮 Intraday Position Sizing Calculator
 - Live interactive calculator: Enter trading capital and max risk percentage (e.g. 1%), and the terminal instantly calculates the exact number of shares to trade, max capital at risk, and potential gains.
 
+### 6. 🕒 Market-Specific Timezone Localization (IST for India Only)
+- **Indian Stock Picks Strictly in IST (`Asia/Kolkata` • UTC+05:30)**:
+  - All Indian stocks (`.NS`, `.BO`, NSE watchlists) strictly display timestamps, signal trigger times, and bar times in **Indian Standard Time (IST)**.
+  - **Stock Radar Cards**: Signal pick time pill (`🕒 hh:mm AM/PM IST`) and `🇮🇳 IST` flag badge.
+  - **Chart Crosshair & Axes**: Lightweight Charts crosshair tooltips and x-axis bottom tick marks localized to IST (e.g. `09:15 AM`, `03:30 PM`).
+  - **Active Quote Bar**: Displays active candle time pill in IST.
+  - **Session Replay Simulator**: Bar-by-bar progression labeled in IST.
+  - **Trade Blueprint Signal Banner**: High-visibility time pill with exact scan timestamp in IST.
+  - **Analysis Engine Time-of-Day Filter**: Mid-day doldrum hours evaluated in IST (11:30 AM – 1:30 PM IST).
+- **US Stock Picks Strictly in EST/EDT (`America/New_York`)**:
+  - **IST is used for Indian stocks only**. US equities (`NVDA`, `TSLA`, `AAPL`, etc.) strictly preserve US Eastern Time (`EST` / `EDT`) across all cards, charts, and blueprints.
+
 ---
 
 ## 🚀 Quick Start Guide

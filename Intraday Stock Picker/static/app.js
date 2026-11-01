@@ -74,6 +74,83 @@ const btnThemeToggle = document.getElementById("btn-theme-toggle");
 const themeIcon = document.getElementById("theme-icon");
 const themeLabel = document.getElementById("theme-label");
 
+// Timezone and IST / EST formatting helpers
+// Requirement: All Intraday Stock Picked for INDIA are displayed in IST (Indian Standard Time).
+// IST should be used for Indian Stock Pick only.
+function isIndianStock(stockOrTicker) {
+  if (!stockOrTicker) return false;
+  if (typeof stockOrTicker === "object") {
+    if (stockOrTicker.is_india !== undefined) return Boolean(stockOrTicker.is_india);
+    const t = stockOrTicker.ticker || "";
+    const sym = stockOrTicker.currency_symbol || "";
+    return t.includes(".NS") || t.includes(".BO") || sym === "₹";
+  }
+  const str = String(stockOrTicker);
+  return str.includes(".NS") || str.includes(".BO");
+}
+
+function formatStockTime(timestampInSeconds, isIndia, withSeconds = true) {
+  if (!timestampInSeconds) return "--";
+  const d = new Date(timestampInSeconds * 1000);
+  if (isIndia) {
+    // Strictly Indian Standard Time (IST)
+    const timeStr = d.toLocaleTimeString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: withSeconds ? '2-digit' : undefined,
+      hour12: true
+    });
+    return `${timeStr} IST`;
+  } else {
+    // US Stock: Eastern Time (EST / EDT)
+    const timeStr = d.toLocaleTimeString('en-US', {
+      timeZone: 'America/New_York',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: withSeconds ? '2-digit' : undefined,
+      hour12: true
+    });
+    return `${timeStr} EST`;
+  }
+}
+
+function formatStockDateTime(timestampInSeconds, isIndia) {
+  if (!timestampInSeconds) return "--";
+  const d = new Date(timestampInSeconds * 1000);
+  if (isIndia) {
+    const dateStr = d.toLocaleDateString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit'
+    });
+    const timeStr = d.toLocaleTimeString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+    return `${dateStr} ${timeStr} IST`;
+  } else {
+    const dateStr = d.toLocaleDateString('en-US', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit'
+    });
+    const timeStr = d.toLocaleTimeString('en-US', {
+      timeZone: 'America/New_York',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+    return `${dateStr} ${timeStr} EST`;
+  }
+}
+
 // Chart elements
 const chartViewportContainer = document.getElementById("chart-viewport-container");
 const mainChartContainer = document.getElementById("main-candlestick-chart");
@@ -81,6 +158,7 @@ const rsiChartContainer = document.getElementById("rsi-sub-chart");
 const activeSymbolTicker = document.getElementById("active-symbol-ticker");
 const activeSymbolName = document.getElementById("active-symbol-name");
 const activePricePill = document.getElementById("active-price-pill");
+const activeSymbolTime = document.getElementById("active-symbol-time");
 
 // Controls
 const toggleVwapBtn = document.getElementById("toggle-vwap");
@@ -127,6 +205,7 @@ const signalBanner = document.getElementById("signal-banner");
 const detailSignalBadge = document.getElementById("detail-signal-badge");
 const detailSetupTitle = document.getElementById("detail-setup-title");
 const detailSetupDesc = document.getElementById("detail-setup-desc");
+const detailSetupTime = document.getElementById("detail-setup-time");
 const detailScoreNum = document.getElementById("detail-score-num");
 const scoreCircleBadge = document.getElementById("score-circle-badge");
 const mtfMatrixContainer = document.getElementById("mtf-matrix-container");
@@ -602,7 +681,9 @@ async function fetchScreener(marketKey = currentMarket, isAuto = false) {
 
     if (data.status === "OK") {
       currentStocks = data.stocks;
-      scanCountBadge.textContent = `${currentStocks.length} Stocks`;
+      const isIndiaMarket = Boolean(data.is_india || currentMarket.includes("NSE"));
+      const tzBadge = isIndiaMarket ? `<span class="tz-header-pill">🇮🇳 IST</span>` : `<span class="tz-header-pill pill-est">🇺🇸 EST</span>`;
+      scanCountBadge.innerHTML = `${currentStocks.length} Stocks ${tzBadge}`;
       mobBadgeCount.textContent = currentStocks.length;
       renderStockCards();
 
@@ -761,6 +842,13 @@ function renderStockCards() {
     const isAngelFeed = stock.feed_source === 'ANGEL_ONE_SMART_API';
     const feedBadge = isAngelFeed ? `<span class="badge-feed-angel" title="Live Angel One SmartAPI Feed (apiconnect.angelone.in)">⚡ ANGEL</span>` : "";
 
+    // Timezone & Pick Time: IST strictly for Indian stock picks, EST for US stock picks
+    const isIndia = isIndianStock(stock);
+    const pickTimeStr = stock.pick_time_short || formatStockTime(stock.timestamp, isIndia, false);
+    const tzBadge = isIndia 
+      ? `<span class="badge-tz badge-tz-ist" title="Indian Standard Time (IST • UTC+05:30)">🇮🇳 IST</span>`
+      : `<span class="badge-tz badge-tz-est" title="US Eastern Time (EST / EDT)">🇺🇸 EST</span>`;
+
     card.innerHTML = `
       <div class="card-top">
         <div>
@@ -770,6 +858,7 @@ function renderStockCards() {
         <div class="card-price-col">
           <div class="card-price">${stock.currency_symbol}${stock.price.toFixed(2)}</div>
           <div class="card-change ${changeClass}">${changeSign}${stock.change_pct.toFixed(2)}%</div>
+          <div class="card-time-micro ${isIndia ? 'time-ist' : 'time-est'}" title="Pick Time (${isIndia ? 'Indian Standard Time' : 'US Eastern Time'})">${pickTimeStr}</div>
         </div>
       </div>
 
@@ -777,8 +866,10 @@ function renderStockCards() {
         <span class="badge-signal ${sigClass}">${stock.signal}</span>
         ${recBadge}
         <span class="badge-cap cap-${(stock.cap || 'large').toLowerCase()}">${stock.cap || 'LARGE'}</span>
+        ${tzBadge}
         ${feedBadge}
         ${mtfBadge}
+        <span class="badge-time ${isIndia ? 'time-ist' : 'time-est'}" title="Pick Time (${isIndia ? 'Indian Standard Time' : 'US Eastern Time'})">🕒 ${pickTimeStr}</span>
         <span class="badge-roi" title="Projected Target 2 ROI">🎯 ROI: +${stockRoi.toFixed(1)}%</span>
         <span class="badge-rvol">${stock.rvol.toFixed(1)}x Vol</span>
         <span class="badge-setup">${stock.setup_name}</span>
@@ -870,13 +961,24 @@ async function loadChartData(ticker, tf = currentTimeframe, silent = false) {
     renderAnalysisBlueprint(data.analysis);
 
     // Update Toolbar Meta
-    const sym = data.analysis.currency_symbol || "₹";
+    const isIndia = isIndianStock(data.ticker || data.analysis);
+    const sym = data.analysis.currency_symbol || (isIndia ? "₹" : "$");
     const capTag = data.analysis.cap ? `<span class="badge-cap cap-${data.analysis.cap.toLowerCase()}" style="margin-left: 6px;">${data.analysis.cap}</span>` : "";
     activeSymbolTicker.textContent = data.ticker;
     activeSymbolName.innerHTML = `${data.analysis.company_name} ${capTag}`;
     activePricePill.textContent = `${sym}${data.analysis.price.toFixed(2)}`;
     const isUp = data.analysis.change_pct >= 0;
     activePricePill.style.color = isUp ? "#10b981" : "#ef4444";
+
+    // Update active time pill in toolbar (IST for India, EST for US)
+    if (activeSymbolTime) {
+      const formattedTime = formatStockTime(data.analysis.timestamp, isIndia, true);
+      activeSymbolTime.textContent = `🕒 ${formattedTime}`;
+      activeSymbolTime.className = `active-time-pill ${isIndia ? 'time-pill-ist' : 'time-pill-est'}`;
+      activeSymbolTime.title = isIndia
+        ? "Exchange Bar & Quote Time displayed strictly in Indian Standard Time (IST • UTC+05:30)"
+        : "Exchange Bar & Quote Time displayed in US Eastern Time (EST / EDT)";
+    }
 
     // Update active feed source pill
     if (activeFeedSourcePill) {
@@ -980,6 +1082,58 @@ function updateChartSeries(chartData) {
     clearPriceLevels();
   }
 
+  // Timezone formatting for chart time scale:
+  // Indian stocks strictly use IST (Asia/Kolkata), US stocks use EST (America/New_York)
+  const isIndia = isIndianStock(chartData.ticker || chartData.analysis);
+  const tzName = isIndia ? "Asia/Kolkata" : "America/New_York";
+  const tzLabel = isIndia ? "IST" : "EST";
+
+  const chartTimeOptions = {
+    localization: {
+      timeFormatter: (timestamp) => {
+        const d = new Date(timestamp * 1000);
+        const timePart = d.toLocaleTimeString(isIndia ? 'en-IN' : 'en-US', {
+          timeZone: tzName,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        });
+        const datePart = d.toLocaleDateString(isIndia ? 'en-IN' : 'en-US', {
+          timeZone: tzName,
+          month: 'short',
+          day: '2-digit'
+        });
+        return `${datePart} ${timePart} ${tzLabel}`;
+      }
+    },
+    timeScale: {
+      tickMarkFormatter: (time, tickMarkType, locale) => {
+        const d = new Date(time * 1000);
+        if (tickMarkType === LightweightCharts.TickMarkType.Time || tickMarkType === LightweightCharts.TickMarkType.TimeWithSeconds) {
+          return d.toLocaleTimeString(isIndia ? 'en-IN' : 'en-US', {
+            timeZone: tzName,
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          });
+        }
+        return d.toLocaleDateString(isIndia ? 'en-IN' : 'en-US', {
+          timeZone: tzName,
+          month: 'short',
+          day: 'numeric'
+        });
+      }
+    }
+  };
+
+  try {
+    mainChart.applyOptions(chartTimeOptions);
+    if (rsiChart) rsiChart.applyOptions(chartTimeOptions);
+  } catch (e) {
+    console.debug("Could not apply chart timezone formatting:", e);
+  }
+
   // FIT CHART TO FRAME:
   // Automatically fit the entire candlestick dataset into the full width of the frame without leaving empty space
   fitChartToFrame("fit-frame");
@@ -1041,6 +1195,19 @@ function renderAnalysisBlueprint(analysis) {
     : `<span style="color:#94a3b8; font-weight:700; margin-right:4px;">[AWAITING 4-TF CONFLUENCE]</span> `;
   detailSetupTitle.innerHTML = `${recPrefix}${analysis.setup_name}`;
   detailSetupDesc.textContent = analysis.setup_desc;
+
+  // Timezone and Pick Timestamp: IST strictly for Indian stock picks, EST for US stock picks
+  const isIndia = isIndianStock(analysis);
+  const formattedDateTime = formatStockDateTime(analysis.timestamp, isIndia);
+
+  if (detailSetupTime) {
+    detailSetupTime.style.display = "inline-flex";
+    detailSetupTime.className = `setup-time-pill ${isIndia ? 'time-pill-ist' : 'time-pill-est'}`;
+    detailSetupTime.innerHTML = `🕒 Pick / Signal Time: <strong>${formattedDateTime}</strong>`;
+    detailSetupTime.title = isIndia
+      ? "All Indian intraday stock picks are strictly timestamped in Indian Standard Time (IST • UTC+05:30)"
+      : "US intraday stock picks are timestamped in US Eastern Time (EST / EDT)";
+  }
   
   detailScoreNum.textContent = analysis.display_score;
   scoreCircleBadge.style.borderColor = analysis.color;
@@ -1222,10 +1389,12 @@ function applyReplayStep() {
   }
 
   const curr = slicedCandles[slicedCandles.length - 1];
-  const sym = activeStockAnalysis.currency_symbol || "₹";
+  const isIndia = isIndianStock(activeStockAnalysis || currentTicker);
+  const sym = (activeStockAnalysis && activeStockAnalysis.currency_symbol) || (isIndia ? "₹" : "$");
   activePricePill.textContent = `${sym}${curr.close.toFixed(2)}`;
 
-  replayTimeLabel.textContent = `Bar ${replayIndex} / ${total} (${new Date(lastTime * 1000).toLocaleTimeString()})`;
+  const formattedReplayTime = formatStockTime(lastTime, isIndia, true);
+  replayTimeLabel.textContent = `Bar ${replayIndex} / ${total} (${formattedReplayTime})`;
 }
 
 function playReplay() {
@@ -2054,7 +2223,17 @@ function promptCustomTickers() {
   .then(data => {
     if (data.status === "OK") {
       currentStocks = data.stocks;
-      scanCountBadge.textContent = `${currentStocks.length} Stocks`;
+      const hasIndianStock = currentStocks.some(s => isIndianStock(s));
+      const hasUsStock = currentStocks.some(s => !isIndianStock(s));
+      let tzBadge = "";
+      if (hasIndianStock && !hasUsStock) {
+        tzBadge = `<span class="tz-header-pill">🇮🇳 IST</span>`;
+      } else if (!hasIndianStock && hasUsStock) {
+        tzBadge = `<span class="tz-header-pill pill-est">🇺🇸 EST</span>`;
+      } else if (hasIndianStock && hasUsStock) {
+        tzBadge = `<span class="tz-header-pill">🇮🇳 IST</span> <span class="tz-header-pill pill-est">🇺🇸 EST</span>`;
+      }
+      scanCountBadge.innerHTML = `${currentStocks.length} Stocks ${tzBadge}`;
       mobBadgeCount.textContent = currentStocks.length;
       renderStockCards();
       if (currentStocks.length > 0) {
@@ -2099,9 +2278,9 @@ async function updateMarketStatus() {
       const nse = data.nse;
       const us = data.us;
       marketStatusText.innerHTML = `
-        <span style="color:${nse.is_open ? '#10b981' : '#94a3b8'};">NSE: ${nse.is_open ? 'LIVE' : 'CLOSED'}</span>
+        <span style="color:${nse.is_open ? '#10b981' : '#94a3b8'};">NSE: ${nse.is_open ? 'LIVE' : 'CLOSED'} (${nse.local_time || 'IST'})</span>
         &nbsp;|&nbsp;
-        <span style="color:${us.is_open ? '#10b981' : '#94a3b8'};">US: ${us.is_open ? 'LIVE' : 'CLOSED'}</span>
+        <span style="color:${us.is_open ? '#10b981' : '#94a3b8'};">US: ${us.is_open ? 'LIVE' : 'CLOSED'} (${us.local_time || 'EST'})</span>
       `;
     }
   } catch (err) {
