@@ -6,14 +6,15 @@
 
 ## 🏛️ Role & Persona Definition
 
-**IPO Analyzer** acts as an elite, institutional-grade buy-side underwriter and valuation engine. Its mandate is to cut through investment bank promotional hype, prospectus window-dressing, and retail euphoria to produce objective, data-backed underwriting verdicts.
+**IPO Analyzer** operates as an elite buy-side underwriter and valuation terminal. Its mandate is to cut through investment bank promotional hype, prospectus window-dressing, and retail euphoria to produce objective, data-backed underwriting verdicts.
 
 ### Scope of Operations:
 - **Markets:**
-  - 🇮🇳 **India Mainboard (NSE / BSE)**
-  - 🇮🇳 **India SME (BSE SME / NSE Emerge)**
-  - 🇺🇸 **US Market (NYSE / NASDAQ)**
-- **Analysis Pillars:** Fundamental, Quantitative, and Technical / Sentiment.
+  - 🏢 🇮🇳 **India Mainboard (NSE / BSE)**
+  - 🚀 🇮🇳 **India SME (NSE Emerge / BSE SME)**
+  - 🌐 🇺🇸 **US Market (NYSE / NASDAQ Tech)**
+- **Analysis Pillars:** Fundamental, Quantitative, and Technical / Grey Market Sentiment.
+- **Timezone Normalization:** Strict **Indian Standard Time (IST • UTC+05:30)** synchronization ensuring bidding windows (Open, Close, Allotment, Listing) are evaluated in real time without browser timezone skew.
 
 ---
 
@@ -23,17 +24,24 @@
 * **Moat & Revenue Predictability:** Does the company possess pricing power, high barriers to entry, switching costs, or predictable recurring revenue?
 * **Promoter & Management Track Record:** Are promoters cashing out aggressively via a massive **Offer for Sale (OFS)**, or is fresh capital entering the balance sheet for capex and growth?
 * **Forensic Red Flags (Especially for Indian SMEs):** Systematic detection of sudden, unexplainable surges in profit margins in the 12–24 months immediately preceding the IPO (window-dressing & circular vendor billing).
-* **Sector Tailwinds:** Secular sunrise sectors (clean tech, semiconductor connectivity, AI infrastructure) vs. disrupted cyclical models (dealerships, fast fashion footwear).
+* **Sector Tailwinds:** Secular sunrise sectors (smart home energy efficiency, education finance, specialty chemicals) vs. disrupted cyclical models.
 
 ### 2. Quantitative Analysis (The Valuation Check)
 * **Peer Comparison Matrix:** Is the issue priced at an attractive discount to leave money on the table for public investors, or is it priced to perfection leaving zero safety margin?
-* **Financial Trajectory:** Calculation of 3-Year CAGR for both Revenue and PAT.
+* **Financial Trajectory (3-Year Audited DRHP Data):** Comprehensive tracking of 3-Year audited Revenue, PAT, and EBITDA trends with CAGR calculations.
 * **Dilution & Float Liquidity Risk:** Post-issue promoter holding and public float liquidity analysis (especially critical for Indian SME IPOs where low float creates artificial scarcity followed by brutal 5% lower-circuit traps post-listing).
 
 ### 3. Technical & Market Sentiment (The Timing)
 * **Macro Regime:** Live market volatility context (**India VIX** and **US VIX**).
 * **Demand Metrics (India):** Retail, QIB, and NII subscription momentum alongside a **3-Day Grey Market Premium (GMP)** progression trend (expanding vs. collapsing).
 * **Demand Metrics (US):** Lead underwriter syndicate reputation (Tier-1 institutional bookrunners like Goldman Sachs, Morgan Stanley, J.P. Morgan vs. boutiques), anchor quality, and private market valuation markdowns.
+
+### 4. Statistical Allotment Probability Engine
+* For active/open offerings, calculates empirical allotment odds across:
+  - **Retail Category:** (Bid ≤ ₹2,00,000)
+  - **Small HNI (sHNI / SHNI):** (Bid ₹2,00,000 – ₹10,00,000)
+  - **Big HNI (bHNI / BHNI):** (Bid > ₹10,00,000)
+* Provides actionable tactical bidding guidance on which investor category yields the highest mathematical probability of securing shares.
 
 ---
 
@@ -53,83 +61,55 @@ Every analyzed IPO produces a comprehensive 5-part institutional memorandum:
 
 1. **Executive Verdict:** Bold verdict (`APPLY`, `AVOID`, `WATCH`) + a crisp 2-sentence underwriting rationale.
 2. **The Business & Red Flags:** Core business reality, economic moat, and itemized forensic risks.
-3. **Valuation vs. Peers:** Quantitative comparison table (P/E, P/B, EV/EBITDA, Net Margin, Market Cap) vs. 2–3 listed industry peers.
-4. **Market Sentiment:** 3-Day GMP progression, subscription multipliers (QIB / NII / Retail), and lead underwriter tier.
-5. **Tactical Listing Note:** Actionable listing day protocol (e.g., *"Take initial cost off table at +80% opening pop and ride remainder with trailing stop"*).
+3. **Audited 3-Year Financials (DRHP Disclosures):** Audited multi-year Revenue, EBITDA, and PAT figures with margin consistency checks and CAGR tracking.
+4. **Valuation vs. Peers:** Quantitative comparison table (P/E, P/B, EV/EBITDA, Net Margin, Market Cap) vs. 2–3 listed industry peers.
+5. **Market Sentiment & Tactical Listing Note:** 3-Day GMP progression, subscription multipliers (QIB / NII / Retail), and actionable listing day execution protocol.
 
 ---
 
 ## 💻 Terminal Features
 
-- **Real-Time Live Data & Ongoing IPO Tracking:** Dedicated `🔴 LIVE / ONGOING` and `🟡 UPCOMING` status filters displaying authentic bidding windows, countdowns, and live GMP updates. Includes a `🔄 Sync Live Quotes & GMP` engine and automatic 15-second polling timer.
-- **Institutional High-Density Radar (Default Table Format):** Sort and filter by Status (Ongoing vs. Upcoming vs. Listed), Market, Verdict, Score, GMP %, Issue Size, and 3Y PAT CAGR. Toggleable to modern Visual Cards.
-- **5-Part Dossier Modal with One-Click Markdown Memo:** Generates an investment committee memorandum ready to copy to clipboard or archive.
-- **GMP & Book Building Tracker:** Live grey market progression, estimated listing prices, and multi-tier subscription breakdowns.
-- **Forensic Red Flag Scanner:** Dedicated radar identifying pre-IPO margin window-dressing, sponsor liquidation risks, and low-float traps.
-- **Custom IPO Underwriter Form:** Interactive form with presets (e.g., *NTPC Green Energy*, *High-Risk SME*, *US AI SaaS Unicorn*) to evaluate any prospective IPO on demand.
+- **Dedicated Segment Switcher:**
+  - 🏢 **Mainboard IPOs:** Primary large-cap/mid-cap offerings on NSE & BSE.
+  - 🚀 **SME IPOs:** High-growth micro-cap offerings on NSE Emerge & BSE SME with dedicated lot sizes and liquidity flags.
+  - 🌐 **All IPOs:** Unified view across all market tiers.
+  - 🇺🇸 **US Tech & Global:** Silicon Valley tech, AI infrastructure, and global benchmarks.
+- **Chittorgarh.com Verified Upcoming Pipeline:**
+  - Filter strictly restricts upcoming issues to verified regulatory approvals: **Upcoming Mainboard IPOs (SEBI Approved)** and **Upcoming SME IPOs (Exchange In-Principle Approved)**.
+  - Verified banner displays regulatory status, dates, and exclusion of unapproved drafts.
+- **Live Secondary Market Quotes (NSE & BSE India):**
+  - Real-time market prices (Live CMP) and listing gains computed live via Yahoo Finance / NSE feeds for listed IPOs.
+- **Institutional High-Density Radar (Default Table Format):**
+  - Sort and filter by Status (`🔴 ONGOING`, `🟡 UPCOMING`, `🔵 CLOSED`, `🚀 LISTED`), Market Segment, Verdict, Score, GMP %, Issue Size, and 3Y PAT CAGR. Toggleable to Visual Cards.
+- **GMP & Book Building Tracker:**
+  - Live grey market progression, estimated listing prices, and multi-tier subscription breakdowns.
+- **Forensic Red Flag Scanner:**
+  - Dedicated scanner identifying pre-IPO margin window-dressing, sponsor liquidation risks, and low-float traps.
+- **Custom IPO Underwriter Form:**
+  - Interactive simulator with presets (*NTPC Green Energy*, *High-Risk SME*, *US AI SaaS Unicorn*) to evaluate any prospective IPO on demand.
 
 ---
 
-## 📡 Dual Real-Time Market Data Engine
+## 🟡 Chittorgarh.com Verified Upcoming Primary Pipeline
 
-IPO Analyzer employs a dual-source market data architecture to ensure data authenticity across primary and secondary markets:
+The Upcoming list strictly contains companies that have received official regulatory approval as tracked by [Chittorgarh.com](https://www.chittorgarh.com) DRHP filing trackers:
 
-1. **Live Secondary Market Feeds (NSE India & US Exchanges)**:
-   - Real-time market quotes and CMP fetched directly for listed IPOs (`SWIGGY.NS`, `NTPCGREEN.NS`, `AFCONS.NS`, `SAGILITY.NS`, `ACMESOLAR.NS`, `BLACKBUCK.NS`, `HYUNDAI.NS`, `WAAREE.NS`, `BAJAJHFL.NS`, `RDDT`, `ARM`, etc.).
-   - Computes live % gain/loss since IPO allotment price (`CMP vs Issue Price`).
-   - Polls continuously with a 12-second live refresh cycle and instant on-demand sync.
+### 🏢 Upcoming Mainboard IPOs (SEBI Approved)
+| Ticker | Company Name | Issue Size | Chittorgarh Approval Status | Tentative Open Date | Lead Underwriters |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`HDBFS`** | HDB Financial Services Ltd | ₹12,500 Cr | `🟡 UPCOMING (SEBI Approved)` | Nov 24, 2026 | Morgan Stanley, BofA, Nomura, Kotak |
+| **`ATOMBERG`** | Atomberg Technologies Ltd | ₹1,000 Cr | `🟡 UPCOMING (SEBI Approved)` (Oct 30, 2026) | Nov 09, 2026 | ICICI Securities, IIFL, JM Financial |
+| **`HEROFIN`** | Hero FinCorp Ltd | ₹3,668 Cr | `🟡 UPCOMING (SEBI Approved)` | Nov 18, 2026 | JM Financial, HSBC, SBI Capital |
+| **`AVANSE`** | Avanse Financial Services Ltd | ₹3,500 Cr | `🟡 UPCOMING (SEBI Approved)` | Nov 10, 2026 | Kotak, J.P. Morgan, Nomura, Avendus |
+| **`PUNJABCARB`** | Punjab Carbonic Ltd | ₹380 Cr | `🟡 UPCOMING (SEBI Approved)` (Oct 29, 2026) | Nov 16, 2026 | Equirus Capital, Anand Rathi |
+| **`GNIINFRA`** | GNI Infrastructure Ltd | ₹425.8 Cr | `🟡 UPCOMING (SEBI Approved)` (Oct 30, 2026) | Nov 26, 2026 | Motilal Oswal, Pantomath |
 
-2. **Primary Market IPO Book & Bidding Feed (BSE India / NSE / Chittorgarh / Groww / Zerodha)**:
-   - Live bidding windows, lot sizes, book-building subscriptions (QIB, NII, Retail), and Grey Market Premium (GMP) tracked via official exchange book-building logs and institutional dealer pipelines.
-   - Comprehensive SEBI Draft Red Herring Prospectus (DRHP) pipeline tracking (e.g. Jio Platforms).
-
----
-
-## 🟢 Institutional IPO Universe (25 Assets)
-
-### 🔴 1. Live Ongoing IPOs (Currently Open for Bidding)
-| Ticker | Company | Market / Tier | Status | Bidding Window | Issue Size | GMP % | Institutional Verdict |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **EAAA** | EAAA India Alternatives Ltd | IN Mainboard | 🔴 LIVE ONGOING | Oct 26 – Oct 28, 2026 | ₹1,200 Cr | +4.2% | **`[WATCH AFTER LISTING]`** |
-
-### 🟡 2. Upcoming IPO Pipeline (Scheduled Primary Issues)
-| Ticker | Company | Market / Tier | Status | Bidding Window | Issue Size | Price Band | GMP % | Institutional Verdict |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **BLSPOLY** | BLS Polymers Ltd | IN SME (BSE SME) | 🟡 OPENS OCT 27 | Oct 27 – Oct 29, 2026 | ₹42 Cr | ₹142 - ₹150 | +22.0% | **`[APPLY / SUBSCRIBE]`** |
-| **SFCENV** | SFC Environmental Technologies Ltd | IN Mainboard | 🟡 OPENS OCT 27 | Oct 27 – Oct 29, 2026 | ₹667.5 Cr | ₹425 - ₹450 | +44.4% | **`[APPLY / SUBSCRIBE]`** |
-| **MKSONS** | M.K. Sons Fine Jewels Ltd | IN SME (BSE SME) | 🟡 OPENS OCT 28 | Oct 28 – Oct 30, 2026 | ₹28.4 Cr | ₹115 - ₹122 | +3.3% | **`[AVOID]`** |
-| **BCSSL** | Bombay Coated & Special Steels Ltd | IN Mainboard | 🟡 OPENS OCT 29 | Oct 29 – Nov 02, 2026 | ₹183.1 Cr | ₹135 - ₹142 | +25.5% | **`[APPLY / SUBSCRIBE]`** |
-
-### 🔵 3. Closed IPOs (Bidding Closed / Allotment in Progress / Awaiting Listing)
-| Ticker | Company | Market / Tier | Status | Bidding Window | Issue Size | Price Band | GMP % | Institutional Verdict |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **JIO** | Jio Platforms Ltd | IN Mainboard | 🔵 CLOSED (Allotment Oct 26 • Listing Oct 28) | Closed Oct 23, 2026 | ₹30,213 Cr | ₹1,065 - ₹1,119 | +30.4% | **`[APPLY / SUBSCRIBE]`** |
-
-### ⚪ 4. Recently Listed Benchmark IPOs — Current Financial Year (FY 2026–27 Only)
-*Strictly covering issues listed in the active financial year (April 1, 2026 – October 26, 2026). All legacy 2024 / 2023 benchmark listings have been purged.*
-
-| Ticker | Company | Exchange | Listing Date | Issue Price | Live CMP (NSE) | Return Since Issue | Institutional Verdict |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **PREMIER** | Premier Energies Ltd | NSE / BSE | Sep 03, 2026 | ₹450 | ₹1,182.50 | +162.8% | **`[APPLY / SUBSCRIBE]`** |
-| **FIRSTCRY** | Brainbees Solutions Ltd (FirstCry) | NSE / BSE | Aug 13, 2026 | ₹465 | ₹592.40 | +27.4% | **`[WATCH AFTER LISTING]`** |
-| **OLA** | Ola Electric Mobility Ltd | NSE / BSE | Aug 09, 2026 | ₹76 | ₹78.40 | +3.2% | **`[WATCH AFTER LISTING]`** |
-| **ATHER** | Ather Energy Ltd | NSE / BSE | Aug 28, 2026 | ₹328 | ₹412.00 | +25.6% | **`[APPLY / SUBSCRIBE]`** |
-| **AKUMS** | Akums Drugs & Pharmaceuticals Ltd | NSE / BSE | Aug 06, 2026 | ₹679 | ₹846.00 | +24.6% | **`[APPLY / SUBSCRIBE]`** |
-| **EMCURE** | Emcure Pharmaceuticals Ltd | NSE / BSE | Jul 10, 2026 | ₹1,008 | ₹1,324.00 | +31.3% | **`[APPLY / SUBSCRIBE]`** |
-| **IXIGO** | Le Travenues Technology Ltd (ixigo) | NSE / BSE | Jun 18, 2026 | ₹93 | ₹154.50 | +66.1% | **`[APPLY / SUBSCRIBE]`** |
-| **SANSTAR** | Sanstar Ltd | NSE / BSE | Jul 26, 2026 | ₹95 | ₹122.40 | +28.8% | **`[APPLY / SUBSCRIBE]`** |
-| **BANSAL** | Bansal Wire Industries Ltd | NSE / BSE | Jul 10, 2026 | ₹256 | ₹386.00 | +50.8% | **`[APPLY / SUBSCRIBE]`** |
-| **STANLEY** | Stanley Lifestyles Ltd | NSE / BSE | Jun 28, 2026 | ₹369 | ₹446.50 | +21.0% | **`[WATCH AFTER LISTING]`** |
-| **DEE** | DEE Piping Systems Ltd | NSE / BSE | Jun 26, 2026 | ₹203 | ₹292.00 | +43.8% | **`[APPLY / SUBSCRIBE]`** |
-| **KRONOX** | Kronox Lab Sciences Ltd | NSE / BSE | Jun 10, 2026 | ₹136 | ₹168.00 | +23.5% | **`[APPLY / SUBSCRIBE]`** |
-| **ORIENT** | Orient Technologies Ltd | NSE / BSE | Aug 28, 2026 | ₹206 | ₹324.00 | +57.3% | **`[APPLY / SUBSCRIBE]`** |
-| **CEIGALL** | Ceigall India Ltd | NSE / BSE | Aug 08, 2026 | ₹401 | ₹368.00 | -8.2% | **`[AVOID]`** |
-| **SARASWATI** | Saraswati Saree Depot Ltd | NSE / BSE | Aug 20, 2026 | ₹160 | ₹184.00 | +15.0% | **`[WATCH AFTER LISTING]`** |
-| **UNILEV** | Unicommerce eSolutions Ltd | NSE / BSE | Aug 13, 2026 | ₹108 | ₹196.50 | +81.9% | **`[APPLY / SUBSCRIBE]`** |
-| **SWK** | Swastik Pipe & Tubes Ltd | BSE SME | Jul 18, 2026 | ₹100 | ₹114.50 | +14.5% | **`[APPLY / SUBSCRIBE]`** |
-| **PARAM** | Paramount Speciality Forgings Ltd | NSE Emerge | Sep 25, 2026 | ₹59 | ₹72.50 | +22.9% | **`[APPLY / SUBSCRIBE]`** |
-| **AWN** | Auranetworks Inc | NASDAQ | Jun 24, 2026 | $24 | $36.40 | +51.7% | **`[APPLY / SUBSCRIBE]`** |
-| **LINE** | Lineline Robotics Corp | NYSE | Sep 18, 2026 | $30 | $38.20 | +27.3% | **`[APPLY / SUBSCRIBE]`** |
+### 🚀 Upcoming SME IPOs (Exchange In-Principle Approved)
+| Ticker | Company Name | Issue Size | Chittorgarh Approval Status | Tentative Open Date | Lead Manager |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`VEDANTPOLY`** | Vedant Poly Fabs Ltd | ₹28.50 Cr | `🟡 UPCOMING (Exchange Approved)` (NSE SME) | Nov 02, 2026 | Hem Securities |
+| **`KAMSONS`** | Kamsons Polymers Ltd | ₹34.20 Cr | `🟡 UPCOMING (Exchange Approved)` (BSE SME) | Nov 05, 2026 | GYR Capital Advisors |
+| **`COOKWELL`** | Cookwell Domestic Appliances Ltd | ₹41.50 Cr | `🟡 UPCOMING (Exchange Approved)` (NSE Emerge) | Nov 11, 2026 | Hem Securities |
 
 ---
 
@@ -139,14 +119,17 @@ IPO Analyzer employs a dual-source market data architecture to ensure data authe
 # 1. Navigate to the project directory
 cd "IPO Analyzer"
 
-# 2. Run engine test suite
+# 2. Run institutional quant evaluation test suite (56 IPOs)
 node test_ipo_engine.js
 
-# 3. Start development server
+# 3. Run full navigation, IST timezone & UI test suite (20 Tests)
+node test_navigation_suite.js
+
+# 4. Start Vite development server
 npm run dev
 ```
 
-Server runs by default on `http://localhost:5175/` (or next available port).
+Server runs by default on `http://localhost:5175/`.
 
 ---
 
@@ -157,14 +140,17 @@ IPO Analyzer/
 ├── index.html                   # Institutional Bloomberg/Aladdin terminal layout
 ├── package.json                 # Dependencies (Chart.js, Lucide, Vite)
 ├── vite.config.js               # Dev server configuration with Yahoo chart proxy
-├── test_ipo_engine.js           # Verification test suite for IPO evaluation engine
+├── test_ipo_engine.js           # 56-Point quantitative scoring & forensic test suite
+├── test_navigation_suite.js     # 20-Point navigation, IST timezone & filter test suite
 ├── README.md                    # Project documentation
 └── src/
     ├── main.js                  # Main terminal controller & view orchestrator
     ├── style.css                # Obsidian financial terminal stylesheet
+    ├── utils/
+    │   └── dateUtils.js         # Indian Standard Time (IST - Asia/Kolkata) date normalization
     ├── data/
-    │   ├── ipoUniverse.js       # Curated universe across India Mainboard, SME, and US
-    │   └── marketDataFeed.js    # Macro VIX and peer live feed service
+    │   ├── ipoUniverse.js       # Curated 56-asset universe across Mainboard, SME & US
+    │   └── marketDataFeed.js    # Macro VIX, live quotes & peer feed service
     ├── quant/
     │   ├── ipoEvaluationEngine.js # 3-Pillar institutional evaluation & scoring engine
     │   └── peerValuation.js     # Median benchmark & discount/premium calculator
