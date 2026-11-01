@@ -126,9 +126,9 @@ export function renderOptionChain(containerId, quote, selectedDte = null, onAddL
         </span>
         <div class="expiry-chips" id="chainExpiryChips">
           ${expirations.map(exp => `
-            <button class="expiry-chip ${exp.dte === activeDte ? 'active' : ''}" data-dte="${exp.dte}">
+            <button class="expiry-chip ${exp.dte === activeDte ? 'active' : ''}" data-dte="${exp.dte}" title="${exp.note || ''}">
               <span class="font-bold">${exp.label}</span>
-              <span class="chip-dte font-mono">(${exp.dte} DTE • ${exp.type})</span>
+              <span class="chip-dte font-mono">(${exp.dayOfWeek ? exp.dayOfWeek.slice(0, 3) + ' • ' : ''}${exp.dte} DTE • ${exp.type})</span>
             </button>
           `).join('')}
         </div>

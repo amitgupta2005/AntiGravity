@@ -75,6 +75,25 @@ Designed specifically for disciplined risk managers and less risk-averse traders
 * **Elevated IV Rank Leaderboard** (Top candidates for Premium Sellers).
 * **Low IV Rank Leaderboard** (Top candidates for Option Buyers).
 
+### 8. 📅 Latest Indian Market Expiry & DTE Specification Engine
+Strictly implements the latest regulatory guidelines from **SEBI** and exchange circulars from **NSE** and **BSE**:
+* **🇮🇳 Indian Individual Stock Options (All F&O Equities)**:
+  * **Monthly Contracts Only**: In accordance with SEBI directives, Indian single stocks offer exclusively Monthly contracts (no weeklies).
+  * **Expiry Day Shift to Last Tuesday**: Stock options settle on the **Last Tuesday of the expiry month** (revised from the former Last Thursday cycle).
+  * **Cycles Generated**: Active Current Month Monthly, Next Month Monthly, Far Month Monthly, and Quarterly series.
+* **🇮🇳 NSE Benchmark Index (NIFTY 50)**:
+  * **Single Benchmark Index Rule**: NIFTY 50 is the sole NSE index permitted to offer weekly options.
+  * **Expiry Day**: Weekly contracts settle every **Tuesday**; Monthly contracts settle on the **Last Tuesday of the month**.
+* **🇮🇳 Non-Benchmark NSE Indices (`BANKNIFTY`, `FINNIFTY`, `MIDCPNIFTY`, `NIFTY_SMALLCAP`)**:
+  * **Weekly Contracts Discontinued**: Under SEBI's rationalization mandate, weekly options on Bank Nifty, Fin Nifty, and Midcap Nifty have been discontinued.
+  * **Monthly Contracts Only**: Strictly expire on the **Last Tuesday of the month**.
+* **🇮🇳 BSE Benchmark Index (SENSEX)**:
+  * **Weekly & Monthly Contracts**: Settle on **Thursdays** (Last Thursday of the month for monthly series), ensuring clean non-overlapping weekly expiry cycles with NSE.
+* **🏛️ Exchange Holiday Preceding Day Rule**:
+  * If a scheduled expiry date falls on an exchange holiday or weekend, the engine automatically rolls the contract date to the **preceding trading day** (e.g., rolling Tuesday expiries to Monday when falling on holidays like Guru Nanak Jayanti or Republic Day).
+* **⏱️ Precise Calendar-Day DTE Calculation**:
+  * Calculates integer Days To Expiry ($\text{DTE} \ge 0$) based on calendar midnight deltas and market settlement hours (15:30 IST for Dalal Street, 16:00 EST for Wall Street), enabling accurate 0 DTE intraday trading and multi-week Greeks modeling.
+
 ---
 
 ## 🏛️ High-Level Technical Architecture

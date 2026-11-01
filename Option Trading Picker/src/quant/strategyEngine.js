@@ -369,13 +369,21 @@ export function buildTransactSpec(quote, exp, stratName, dte) {
   const isIndia = quote.market === "IN";
   const isStock = quote.type === "STOCK";
   const ticker = quote.displayTicker;
-  const day = exp.dayOfWeek || (isIndia ? "Thursday" : "Friday");
+  const day = exp.dayOfWeek || (isIndia ? "Tuesday" : "Friday");
   const dateStr = exp.dateStr;
   const cycleType = exp.type;
 
   let instrumentTag = "";
   if (isIndia) {
-    instrumentTag = isStock ? "NSE Stock F&O Series (Monthly Contract Only)" : "NSE Index Options Series";
+    if (isStock) {
+      instrumentTag = "NSE Stock F&O Series (Monthly • Last Tuesday)";
+    } else if (ticker === '^BSESN' || ticker.includes('SENSEX')) {
+      instrumentTag = "BSE SENSEX Series (Weekly/Monthly • Thursday)";
+    } else if (ticker === '^NSEI' || ticker.includes('NIFTY 50') || ticker === 'NIFTY') {
+      instrumentTag = "NSE NIFTY 50 Series (Weekly/Monthly • Tuesday)";
+    } else {
+      instrumentTag = `NSE ${ticker} Series (Monthly • Last Tuesday)`;
+    }
   } else {
     instrumentTag = isStock ? "US Equity Option Contract" : "US Index Standard Series";
   }
@@ -392,7 +400,15 @@ export function buildTransactSpec(quote, exp, stratName, dte) {
 
   let rationale = "";
   if (isIndia && isStock) {
-    rationale = `Transact specifically in the ${dateStr} Monthly Contract on NSE. SEBI regulations permit only monthly options for Indian equities.`;
+    rationale = `Transact specifically in the ${dateStr} Monthly Contract on NSE. SEBI regulations permit only monthly options for Indian equities, expiring on the Last Tuesday of the month (${day}).`;
+  } else if (isIndia && !isStock) {
+    if (ticker === '^BSESN' || ticker.includes('SENSEX')) {
+      rationale = `Transact in the ${dateStr} (${cycleType}) series on BSE. SENSEX weekly and monthly contracts expire on Thursdays (${day}).`;
+    } else if (ticker === '^NSEI' || ticker.includes('NIFTY 50') || ticker === 'NIFTY') {
+      rationale = `Transact in the ${dateStr} (${cycleType}) series on NSE. NIFTY 50 weekly and monthly contracts expire on Tuesdays (${day}).`;
+    } else {
+      rationale = `Transact in the ${dateStr} Monthly Series on NSE. SEBI rules permit only monthly contracts for ${ticker}, expiring on the Last Tuesday of the month (${day}).`;
+    }
   } else if (stratName.includes("Theta") || stratName.includes("Condor")) {
     rationale = `Transact specifically in the ${dateStr} (${cycleType}) cycle. High liquidity zone offering optimal exponential theta decay capture. Close early at 50% profit target.`;
   } else if (stratName.includes("Spread")) {
@@ -428,17 +444,17 @@ export function scanStrategiesForAsset(quote) {
   const expirations = getMarketExpirations(quote);
   const isIndia = quote.market === "IN";
   const isStock = quote.type === "STOCK";
+  const ticker = quote.displayTicker || quote.ticker || '';
 
-  // 1. Weekly / Near-term cycle (for quick momentum breakouts)
+  // 1. Weekly / Near-term cycle (for quick momentum breakouts; for assets without weeklies, this is the current monthly)
   const weeklyExp = expirations[0];
 
-  // 2. Current Monthly cycle (Core high-liquidity series)
-  const currentMonthlyExp = (isIndia && !isStock) ? (expirations[1] || expirations[0]) : expirations[0];
+  // 2. Current Monthly cycle
+  const currentMonthlyExp = expirations.find(e => e.type.includes('Monthly')) || expirations[0];
 
   // 3. Next Monthly cycle (30-45 DTE institutional series)
-  const nextMonthlyExp = (isIndia && isStock)
-    ? (expirations[1] || currentMonthlyExp)
-    : (isIndia ? (expirations[2] || currentMonthlyExp) : (expirations[2] || expirations[1]));
+  const monthlyExpirations = expirations.filter(e => e.type.includes('Monthly'));
+  const nextMonthlyExp = monthlyExpirations[1] || currentMonthlyExp;
 
   const strategies = [];
 

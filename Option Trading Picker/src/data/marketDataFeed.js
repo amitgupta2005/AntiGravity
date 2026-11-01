@@ -13,29 +13,117 @@ const liveQuotesCache = new Map();
 /**
  * Generate standard option expiration dates (Weekly, Monthly, 45 DTE, Quarterly)
  */
+// Known Indian Exchange (NSE / BSE) Trading Holidays (2025, 2026, 2027)
+export const INDIAN_HOLIDAYS = new Set([
+  // 2025
+  '2025-01-26', // Republic Day
+  '2025-02-26', // Maha Shivratri
+  '2025-03-14', // Holi
+  '2025-03-31', // Id-Ul-Fitr
+  '2025-04-10', // Mahavir Jayanti
+  '2025-04-14', // Dr. B.R. Ambedkar Jayanti
+  '2025-04-18', // Good Friday
+  '2025-05-01', // Maharashtra Day
+  '2025-06-07', // Bakri Id
+  '2025-08-15', // Independence Day
+  '2025-08-27', // Ganesh Chaturthi
+  '2025-10-02', // Mahatma Gandhi Jayanti
+  '2025-10-21', // Diwali Laxmi Pujan
+  '2025-10-22', // Diwali Balipratipada
+  '2025-11-05', // Gurunanak Jayanti
+  '2025-12-25', // Christmas
+  // 2026
+  '2026-01-26', // Republic Day
+  '2026-02-17', // Maha Shivratri
+  '2026-03-03', // Holi
+  '2026-03-20', // Id-ul-Fitr
+  '2026-03-31', // Mahavir Jayanti
+  '2026-04-03', // Good Friday
+  '2026-04-14', // Dr. Ambedkar Jayanti
+  '2026-05-01', // Maharashtra Day
+  '2026-05-27', // Bakrid
+  '2026-08-15', // Independence Day
+  '2026-09-14', // Ganesh Chaturthi
+  '2026-10-02', // Mahatma Gandhi Jayanti
+  '2026-10-20', // Dussehra
+  '2026-11-08', // Diwali Laxmi Pujan
+  '2026-11-10', // Diwali Balipratipada
+  '2026-11-24', // Guru Nanak Jayanti
+  '2026-12-25', // Christmas
+  // 2027
+  '2027-01-26', // Republic Day
+  '2027-03-06', // Maha Shivratri
+  '2027-03-22', // Holi
+  '2027-03-26', // Good Friday
+  '2027-04-14', // Dr. Ambedkar Jayanti
+  '2027-05-01', // Maharashtra Day
+  '2027-08-15', // Independence Day
+  '2027-10-02', // Gandhi Jayanti
+  '2027-10-29', // Diwali
+  '2027-11-14', // Guru Nanak Jayanti
+  '2027-12-25', // Christmas
+]);
+
+/**
+ * Adjust an expiry date if it falls on an exchange holiday or weekend
+ * Exchange Rule: If scheduled expiry is a trading holiday, expiry rolls to PRECEDING trading day.
+ */
+export function getPrecedingTradingDay(date, isIndia = true) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  while (true) {
+    const day = d.getDay(); // 0 is Sunday, 6 is Saturday
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    if (day === 0 || day === 6 || (isIndia && INDIAN_HOLIDAYS.has(iso))) {
+      d.setDate(d.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return d;
+}
+
 /**
  * Compute institutional, market-accurate option expiration dates
  * Handles:
- * 1. Indian Indices (NSE: NIFTY 50 -> Thu, BANKNIFTY -> Wed, FINNIFTY -> Tue, BSE: SENSEX -> Fri)
- * 2. Indian Equities (NSE F&O Stocks -> strictly Last Thursday of each month, no weeklies)
- * 3. US Equities & Benchmark Indices (Fridays weekly, 3rd Friday monthly)
+ * 1. Indian Individual Stocks (NSE F&O Stocks -> strictly Last Tuesday of each month, no weeklies)
+ * 2. Indian Indices (NSE: NIFTY 50 -> Tuesday weekly & monthly; BANKNIFTY / FINNIFTY / MIDCPNIFTY -> Last Tuesday monthly only; BSE: SENSEX -> Thursday weekly & monthly)
+ * 3. Holiday adjustments: If scheduled expiry is on an exchange holiday, it automatically rolls to preceding trading day
+ * 4. US Equities & Benchmark Indices (Fridays weekly, 3rd Friday monthly)
  */
 export function getMarketExpirations(asset = null) {
   const now = new Date();
   const isIndia = asset ? (asset.market === 'IN' || (asset.ticker && (asset.ticker.includes('.NS') || asset.ticker.includes('.BO') || asset.ticker.includes('NSE')))) : false;
   const isStock = asset ? asset.type === 'STOCK' : false;
   const ticker = asset ? (asset.ticker || asset.displayTicker || '') : '';
+  const displayTicker = asset ? (asset.displayTicker || asset.ticker || '') : '';
 
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+  function isDateExpired(d) {
+    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const targetMidnight = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    if (targetMidnight < todayMidnight) return true;
+    if (targetMidnight.getTime() === todayMidnight.getTime()) {
+      // Options expire at 15:30 IST for Indian market, 16:00 for US market
+      const closeHour = isIndia ? 15 : 16;
+      const closeMin = isIndia ? 30 : 0;
+      return (now.getHours() > closeHour || (now.getHours() === closeHour && now.getMinutes() >= closeMin));
+    }
+    return false;
+  }
 
   function formatDate(d, typeLabel, note = '') {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     const monthStr = monthNames[d.getMonth()];
-    const msDiff = d.getTime() - now.getTime();
-    const dte = Math.max(1, Math.round(msDiff / (1000 * 60 * 60 * 24)));
+    
+    // Calendar day based integer DTE
+    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const targetMidnight = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const msDiff = targetMidnight.getTime() - todayMidnight.getTime();
+    const dte = Math.max(0, Math.round(msDiff / (1000 * 60 * 60 * 24)));
     const dayOfWeek = dayNames[d.getDay()];
 
     return {
@@ -49,27 +137,36 @@ export function getMarketExpirations(asset = null) {
     };
   }
 
-  function getNextDayOfWeek(fromD, targetDay) {
+  function getNextDayOfWeek(fromD, targetDay, isIndiaMarket = true) {
     const d = new Date(fromD.getFullYear(), fromD.getMonth(), fromD.getDate());
     const cur = d.getDay();
     let diff = (targetDay - cur + 7) % 7;
-    if (diff === 0) diff = 7; // next week if today
+    if (diff === 0) {
+      // If today is the target day but past market close, roll to next week
+      const closeHour = isIndiaMarket ? 15 : 16;
+      const closeMin = isIndiaMarket ? 30 : 0;
+      if (fromD.getHours() > closeHour || (fromD.getHours() === closeHour && fromD.getMinutes() >= closeMin)) {
+        diff = 7;
+      }
+    }
     d.setDate(d.getDate() + diff);
-    return d;
+    return getPrecedingTradingDay(d, isIndiaMarket);
   }
 
-  function getLastDayOfWeekOfMonth(year, month, targetDay) {
+  function getLastDayOfWeekOfMonth(year, month, targetDay, isIndiaMarket = true) {
     const lastDay = new Date(year, month + 1, 0); // last day of month
     const cur = lastDay.getDay();
     const diff = (cur >= targetDay) ? (cur - targetDay) : (cur + 7 - targetDay);
-    return new Date(year, month, lastDay.getDate() - diff);
+    const raw = new Date(year, month, lastDay.getDate() - diff);
+    return getPrecedingTradingDay(raw, isIndiaMarket);
   }
 
-  function getThirdFriday(year, month) {
+  function getThirdFriday(year, month, isIndiaMarket = false) {
     const firstDay = new Date(year, month, 1);
     const cur = firstDay.getDay();
     const firstFriDate = (5 - cur + 7) % 7 + 1;
-    return new Date(year, month, firstFriDate + 14);
+    const raw = new Date(year, month, firstFriDate + 14);
+    return getPrecedingTradingDay(raw, isIndiaMarket);
   }
 
   const results = [];
@@ -78,77 +175,159 @@ export function getMarketExpirations(asset = null) {
 
   if (isIndia) {
     if (isStock) {
-      // 1. Indian Single Stocks: SEBI permits ONLY Monthly contracts expiring on Last Thursday of the Month
-      const thisMonthExpiry = getLastDayOfWeekOfMonth(curYear, curMonth, 4);
-      if (thisMonthExpiry > now) {
-        results.push(formatDate(thisMonthExpiry, `${monthNames[curMonth]} Monthly`, 'Current NSE Monthly Contract (No weeklies for Indian stocks)'));
+      // 1. Indian Individual Stocks:
+      // SEBI permits ONLY Monthly contracts expiring on the Last Tuesday of the Month (effective Sept 2025 onwards)
+      // Expiry rolls to previous trading day if Last Tuesday is a trading holiday
+      const stockExpiryDay = 2; // Tuesday
+      
+      const thisMonthExpiry = getLastDayOfWeekOfMonth(curYear, curMonth, stockExpiryDay, true);
+      let startMonthOffset = 0;
+      if (isDateExpired(thisMonthExpiry)) {
+        startMonthOffset = 1;
       }
-      const nextMonthExpiry = getLastDayOfWeekOfMonth(curYear, curMonth + 1, 4);
-      results.push(formatDate(nextMonthExpiry, `${monthNames[(curMonth + 1) % 12]} Monthly`, 'Next NSE Monthly Contract'));
 
-      const farMonthExpiry = getLastDayOfWeekOfMonth(curYear, curMonth + 2, 4);
-      results.push(formatDate(farMonthExpiry, `${monthNames[(curMonth + 2) % 12]} Monthly`, 'Far NSE Monthly Contract'));
+      for (let offset = startMonthOffset; offset < startMonthOffset + 3; offset++) {
+        const m = (curMonth + offset) % 12;
+        const y = curYear + Math.floor((curMonth + offset) / 12);
+        const expDate = getLastDayOfWeekOfMonth(y, m, stockExpiryDay, true);
+        const cycleName = offset === startMonthOffset ? `${monthNames[m]} Monthly Expiry` : (offset === startMonthOffset + 1 ? `${monthNames[m]} Next Monthly` : `${monthNames[m]} Far Monthly`);
+        const note = offset === startMonthOffset 
+          ? 'Current NSE Monthly Contract (Last Tuesday of Month • No weeklies for Indian stocks)'
+          : `NSE ${monthNames[m]} Monthly Series (Last Tuesday of Month)`;
+        results.push(formatDate(expDate, cycleName, note));
+      }
 
-      const qtrExpiry = getLastDayOfWeekOfMonth(curYear, curMonth + 3, 4);
-      results.push(formatDate(qtrExpiry, `${monthNames[(curMonth + 3) % 12]} Quarterly`, 'Quarterly Series'));
+      // Add 4th Quarter contract
+      const qtrOffset = startMonthOffset + 3;
+      const qm = (curMonth + qtrOffset) % 12;
+      const qy = curYear + Math.floor((curMonth + qtrOffset) / 12);
+      const qtrExpiry = getLastDayOfWeekOfMonth(qy, qm, stockExpiryDay, true);
+      results.push(formatDate(qtrExpiry, `${monthNames[qm]} Quarterly`, `NSE ${monthNames[qm]} Quarterly Contract`));
+
     } else {
-      // 2. Indian Index Options (NIFTY 50 -> Thu, BANKNIFTY -> Wed, FINNIFTY -> Tue, MIDCPNIFTY -> Mon, SENSEX -> Fri)
-      let expiryDay = 4; // Default Thursday for NIFTY
-      let indexExchange = 'NSE';
-      if (ticker === '^NSEBANK' || ticker.includes('BANKNIFTY')) {
-        expiryDay = 3; // Wednesday
-      } else if (ticker.includes('FIN_SERVICE') || ticker.includes('FINNIFTY')) {
-        expiryDay = 2; // Tuesday
-      } else if (ticker.includes('MIDCPNIFTY') || ticker.includes('MIDCAP')) {
-        expiryDay = 1; // Monday (NSE Nifty Midcap Select F&O)
-      } else if (ticker === '^BSESN' || ticker.includes('SENSEX')) {
-        expiryDay = 5; // Friday
-        indexExchange = 'BSE';
-      }
+      // 2. Indian Index Options:
+      // SEBI Circular & Exchange Revision:
+      // - NSE NIFTY 50: ONLY NSE index with weekly contracts. Expiry on TUESDAY (weekly & monthly).
+      // - BSE SENSEX: ONLY BSE index with weekly contracts. Expiry on THURSDAY (weekly & monthly).
+      // - Other NSE Indices (BANKNIFTY, FINNIFTY, MIDCPNIFTY, NIFTY_SMALLCAP): Weekly options DISCONTINUED!
+      //   They offer ONLY MONTHLY contracts expiring on the LAST TUESDAY of the month.
 
-      // Next Weekly
-      const weekly1 = getNextDayOfWeek(now, expiryDay);
-      results.push(formatDate(weekly1, 'Current Weekly', `${indexExchange} Primary Weekly Series`));
+      const isNifty50 = (ticker === '^NSEI' || ticker.includes('NIFTY 50') || ticker === 'NIFTY' || displayTicker === 'NIFTY 50');
+      const isSensex = (ticker === '^BSESN' || ticker.includes('SENSEX') || displayTicker === 'SENSEX');
 
-      // Following Weekly
-      const weekly2 = new Date(weekly1);
-      weekly2.setDate(weekly2.getDate() + 7);
+      if (isNifty50) {
+        // NIFTY 50: Weekly & Monthly on Tuesday
+        const expiryDay = 2; // Tuesday
+        const weekly1 = getNextDayOfWeek(now, expiryDay, true);
+        results.push(formatDate(weekly1, 'Current Weekly', 'NSE NIFTY 50 Primary Weekly Series (Tuesday Expiry)'));
 
-      const thisMonthMonthly = getLastDayOfWeekOfMonth(curYear, curMonth, expiryDay);
-      const isWeekly2Monthly = Math.abs(weekly2.getTime() - thisMonthMonthly.getTime()) < 24 * 60 * 60 * 1000;
+        const weekly2 = new Date(weekly1);
+        weekly2.setDate(weekly2.getDate() + 7);
+        const weekly2Adj = getPrecedingTradingDay(weekly2, true);
 
-      if (isWeekly2Monthly) {
-        results.push(formatDate(thisMonthMonthly, `${monthNames[curMonth]} Monthly Expiry`, 'NSE Monthly Series & Contract Expiry'));
-      } else {
-        results.push(formatDate(weekly2, 'Next Weekly', 'Weekly Series'));
-        if (thisMonthMonthly > now && Math.abs(weekly1.getTime() - thisMonthMonthly.getTime()) >= 24 * 60 * 60 * 1000) {
-          results.push(formatDate(thisMonthMonthly, `${monthNames[curMonth]} Monthly Expiry`, 'NSE Monthly Series & Contract Expiry'));
+        const thisMonthMonthly = getLastDayOfWeekOfMonth(curYear, curMonth, expiryDay, true);
+        const isWeekly2Monthly = Math.abs(weekly2Adj.getTime() - thisMonthMonthly.getTime()) < 24 * 60 * 60 * 1000;
+        const isWeekly1Monthly = Math.abs(weekly1.getTime() - thisMonthMonthly.getTime()) < 24 * 60 * 60 * 1000;
+
+        if (isWeekly1Monthly) {
+          // Weekly 1 is the monthly contract
+          results[0] = formatDate(weekly1, `${monthNames[curMonth]} Monthly Expiry`, 'NSE NIFTY 50 Monthly Series (Last Tuesday of Month)');
+          results.push(formatDate(weekly2Adj, 'Next Weekly', 'NSE NIFTY 50 Weekly Series'));
+        } else if (isWeekly2Monthly) {
+          // Weekly 2 is the monthly contract
+          results.push(formatDate(thisMonthMonthly, `${monthNames[curMonth]} Monthly Expiry`, 'NSE NIFTY 50 Monthly Series (Last Tuesday of Month)'));
+        } else {
+          results.push(formatDate(weekly2Adj, 'Next Weekly', 'NSE NIFTY 50 Weekly Series'));
+          if (!isDateExpired(thisMonthMonthly)) {
+            results.push(formatDate(thisMonthMonthly, `${monthNames[curMonth]} Monthly Expiry`, 'NSE NIFTY 50 Monthly Series (Last Tuesday of Month)'));
+          }
         }
+
+        // Next Month Monthly
+        const nextMonthMonthly = getLastDayOfWeekOfMonth(curYear, curMonth + 1, expiryDay, true);
+        results.push(formatDate(nextMonthMonthly, `${monthNames[(curMonth + 1) % 12]} Monthly`, 'NSE NIFTY 50 Next Month Core Series (Last Tuesday)'));
+
+        // Far Month Monthly
+        const farMonthMonthly = getLastDayOfWeekOfMonth(curYear, curMonth + 2, expiryDay, true);
+        results.push(formatDate(farMonthMonthly, `${monthNames[(curMonth + 2) % 12]} Monthly`, 'NSE NIFTY 50 Far Month Core Series (Last Tuesday)'));
+
+      } else if (isSensex) {
+        // BSE SENSEX: Weekly & Monthly on Thursday
+        const expiryDay = 4; // Thursday
+        const weekly1 = getNextDayOfWeek(now, expiryDay, true);
+        results.push(formatDate(weekly1, 'Current Weekly', 'BSE SENSEX Primary Weekly Series (Thursday Expiry)'));
+
+        const weekly2 = new Date(weekly1);
+        weekly2.setDate(weekly2.getDate() + 7);
+        const weekly2Adj = getPrecedingTradingDay(weekly2, true);
+
+        const thisMonthMonthly = getLastDayOfWeekOfMonth(curYear, curMonth, expiryDay, true);
+        const isWeekly2Monthly = Math.abs(weekly2Adj.getTime() - thisMonthMonthly.getTime()) < 24 * 60 * 60 * 1000;
+        const isWeekly1Monthly = Math.abs(weekly1.getTime() - thisMonthMonthly.getTime()) < 24 * 60 * 60 * 1000;
+
+        if (isWeekly1Monthly) {
+          results[0] = formatDate(weekly1, `${monthNames[curMonth]} Monthly Expiry`, 'BSE SENSEX Monthly Series (Last Thursday of Month)');
+          results.push(formatDate(weekly2Adj, 'Next Weekly', 'BSE SENSEX Weekly Series'));
+        } else if (isWeekly2Monthly) {
+          results.push(formatDate(thisMonthMonthly, `${monthNames[curMonth]} Monthly Expiry`, 'BSE SENSEX Monthly Series (Last Thursday of Month)'));
+        } else {
+          results.push(formatDate(weekly2Adj, 'Next Weekly', 'BSE SENSEX Weekly Series'));
+          if (!isDateExpired(thisMonthMonthly)) {
+            results.push(formatDate(thisMonthMonthly, `${monthNames[curMonth]} Monthly Expiry`, 'BSE SENSEX Monthly Series (Last Thursday of Month)'));
+          }
+        }
+
+        const nextMonthMonthly = getLastDayOfWeekOfMonth(curYear, curMonth + 1, expiryDay, true);
+        results.push(formatDate(nextMonthMonthly, `${monthNames[(curMonth + 1) % 12]} Monthly`, 'BSE SENSEX Next Month Series (Last Thursday)'));
+
+        const farMonthMonthly = getLastDayOfWeekOfMonth(curYear, curMonth + 2, expiryDay, true);
+        results.push(formatDate(farMonthMonthly, `${monthNames[(curMonth + 2) % 12]} Monthly`, 'BSE SENSEX Far Month Series (Last Thursday)'));
+
+      } else {
+        // BANKNIFTY, FINNIFTY, MIDCPNIFTY, NIFTY_SMALLCAP:
+        // SEBI Rule: Weekly options DISCONTINUED. Only Monthly contracts expiring on Last Tuesday of the month!
+        const expiryDay = 2; // Tuesday
+        const thisMonthMonthly = getLastDayOfWeekOfMonth(curYear, curMonth, expiryDay, true);
+        let startMonthOffset = 0;
+        if (isDateExpired(thisMonthMonthly)) {
+          startMonthOffset = 1;
+        }
+
+        for (let offset = startMonthOffset; offset < startMonthOffset + 3; offset++) {
+          const m = (curMonth + offset) % 12;
+          const y = curYear + Math.floor((curMonth + offset) / 12);
+          const expDate = getLastDayOfWeekOfMonth(y, m, expiryDay, true);
+          const cycleName = offset === startMonthOffset ? `${monthNames[m]} Monthly Expiry` : (offset === startMonthOffset + 1 ? `${monthNames[m]} Next Monthly` : `${monthNames[m]} Far Monthly`);
+          const note = offset === startMonthOffset
+            ? `NSE Monthly Series (SEBI: Weekly contracts discontinued for ${displayTicker}; Expires Last Tuesday)`
+            : `NSE ${displayTicker} ${monthNames[m]} Series (Last Tuesday of Month)`;
+          results.push(formatDate(expDate, cycleName, note));
+        }
+
+        const qtrOffset = startMonthOffset + 3;
+        const qm = (curMonth + qtrOffset) % 12;
+        const qy = curYear + Math.floor((curMonth + qtrOffset) / 12);
+        const qtrExpiry = getLastDayOfWeekOfMonth(qy, qm, expiryDay, true);
+        results.push(formatDate(qtrExpiry, `${monthNames[qm]} Quarterly`, `NSE ${displayTicker} Quarterly Contract`));
       }
-
-      // Next Month Monthly
-      const nextMonthMonthly = getLastDayOfWeekOfMonth(curYear, curMonth + 1, expiryDay);
-      results.push(formatDate(nextMonthMonthly, `${monthNames[(curMonth + 1) % 12]} Monthly`, 'Next Month Core Series'));
-
-      // Far Month Monthly
-      const farMonthMonthly = getLastDayOfWeekOfMonth(curYear, curMonth + 2, expiryDay);
-      results.push(formatDate(farMonthMonthly, `${monthNames[(curMonth + 2) % 12]} Monthly`, 'Far Month Core Series'));
     }
+
   } else {
     // 3. USA Markets (Fridays weekly, 3rd Friday monthly)
-    const weekly1 = getNextDayOfWeek(now, 5);
+    const weekly1 = getNextDayOfWeek(now, 5, false);
     results.push(formatDate(weekly1, 'Current Weekly', 'CBOE/NYSE Weekly Series'));
 
     const weekly2 = new Date(weekly1);
     weekly2.setDate(weekly2.getDate() + 7);
-    results.push(formatDate(weekly2, 'Next Weekly', 'Weekly Series'));
+    const weekly2Adj = getPrecedingTradingDay(weekly2, false);
+    results.push(formatDate(weekly2Adj, 'Next Weekly', 'Weekly Series'));
 
     // Next Month 3rd Friday
-    const nextMonthThirdFri = getThirdFriday(curYear, curMonth + 1);
+    const nextMonthThirdFri = getThirdFriday(curYear, curMonth + 1, false);
     results.push(formatDate(nextMonthThirdFri, `${monthNames[(curMonth + 1) % 12]} Monthly`, 'Standard Monthly (3rd Friday)'));
 
     // Far Month 3rd Friday
-    const farMonthThirdFri = getThirdFriday(curYear, curMonth + 2);
+    const farMonthThirdFri = getThirdFriday(curYear, curMonth + 2, false);
     results.push(formatDate(farMonthThirdFri, `${monthNames[(curMonth + 2) % 12]} Monthly`, 'Quarterly / Far Monthly'));
   }
 
