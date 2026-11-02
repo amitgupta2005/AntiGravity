@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node test_tabular_view.js && node test_indian_market_expiries.js"
+    "test": "node test_tabular_view.js && node test_indian_market_expiries.js && node test_enhanced_options_rules.js && node test_memory_and_performance.js && node test_column_sorting.js"
   },
   "devDependencies": {
     "vite": "^8.3.0"
