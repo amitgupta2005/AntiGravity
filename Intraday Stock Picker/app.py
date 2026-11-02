@@ -163,7 +163,7 @@ def scan_stocks(
     results = scan_watchlist(market_str, custom_tickers=custom_list)
 
     # Timezone normalization: IST for India stocks, EST for US stocks
-    is_india = ("NSE" in market_str) or (custom_list and any((".NS" in c or ".BO" in c) for c in custom_list)) or (len(results) > 0 and results[0].get("is_india"))
+    is_india = ("NSE" in market_str) or ("INDIA" in market_str) or (custom_list and any((".NS" in c or ".BO" in c) for c in custom_list)) or (len(results) > 0 and results[0].get("is_india"))
     now_utc = datetime.now(timezone.utc)
     if is_india:
         scan_time_str = now_utc.astimezone(pytz.timezone("Asia/Kolkata")).strftime("%I:%M:%S %p IST")

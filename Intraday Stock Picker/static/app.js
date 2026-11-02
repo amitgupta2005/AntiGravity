@@ -711,9 +711,12 @@ async function fetchScreener(marketKey = currentMarket, isAuto = false) {
 
     if (data.status === "OK") {
       currentStocks = data.stocks;
-      const isIndiaMarket = Boolean(data.is_india || currentMarket.includes("NSE"));
-      const tzBadge = isIndiaMarket ? `<span class="tz-header-pill">🇮🇳 IST</span>` : `<span class="tz-header-pill pill-est">🇺🇸 EST</span>`;
-      scanCountBadge.innerHTML = `${currentStocks.length} Stocks ${tzBadge}`;
+      const isIndiaMarket = Boolean(data.is_india || currentMarket.includes("NSE") || currentMarket.includes("INDIA"));
+      const isGlobal = currentMarket.includes("OPPORTUNITIES") || currentMarket === "ALL";
+      const tzBadge = isGlobal
+        ? `<span class="tz-header-pill" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);">🌐 ALL</span>`
+        : (isIndiaMarket ? `<span class="tz-header-pill">🇮🇳 IST</span>` : `<span class="tz-header-pill pill-est">🇺🇸 EST</span>`);
+      scanCountBadge.innerHTML = `${currentStocks.length} Opportunities ${tzBadge}`;
       mobBadgeCount.textContent = currentStocks.length;
       renderStockCards();
 

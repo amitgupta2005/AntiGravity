@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 # Predefined Watchlists
 WATCHLISTS = {
     "NSE_MOMENTUM": {
-        "name": "India NSE Top Momentum & F&O",
-        "description": "High liquidity Indian intraday stocks (Nifty 50 leaders)",
+        "name": "India Nifty 50 Leaders",
+        "description": "High liquidity Indian intraday stocks (Complete Nifty 50 universe)",
         "currency": "₹",
         "stocks": [
             {"ticker": "RELIANCE.NS", "name": "Reliance Industries", "cap": "LARGE"},
@@ -31,17 +31,51 @@ WATCHLISTS = {
             {"ticker": "HDFCBANK.NS", "name": "HDFC Bank Ltd", "cap": "LARGE"},
             {"ticker": "INFY.NS", "name": "Infosys Ltd", "cap": "LARGE"},
             {"ticker": "ICICIBANK.NS", "name": "ICICI Bank Ltd", "cap": "LARGE"},
-            {"ticker": "HCLTECH.NS", "name": "HCL Technologies Ltd", "cap": "LARGE"},
-            {"ticker": "WIPRO.NS", "name": "Wipro Ltd", "cap": "LARGE"},
-            {"ticker": "SBIN.NS", "name": "State Bank of India", "cap": "LARGE"},
             {"ticker": "BHARTIARTL.NS", "name": "Bharti Airtel Ltd", "cap": "LARGE"},
+            {"ticker": "ITC.NS", "name": "ITC Ltd", "cap": "LARGE"},
+            {"ticker": "SBIN.NS", "name": "State Bank of India", "cap": "LARGE"},
+            {"ticker": "LT.NS", "name": "Larsen & Toubro Ltd", "cap": "LARGE"},
+            {"ticker": "HINDUNILVR.NS", "name": "Hindustan Unilever Ltd", "cap": "LARGE"},
             {"ticker": "AXISBANK.NS", "name": "Axis Bank Ltd", "cap": "LARGE"},
-            {"ticker": "LT.NS", "name": "Larsen & Toubro", "cap": "LARGE"},
-            {"ticker": "MARUTI.NS", "name": "Maruti Suzuki Ltd", "cap": "LARGE"},
+            {"ticker": "KOTAKBANK.NS", "name": "Kotak Mahindra Bank", "cap": "LARGE"},
             {"ticker": "BAJFINANCE.NS", "name": "Bajaj Finance Ltd", "cap": "LARGE"},
+            {"ticker": "MARUTI.NS", "name": "Maruti Suzuki Ltd", "cap": "LARGE"},
             {"ticker": "SUNPHARMA.NS", "name": "Sun Pharma Industries", "cap": "LARGE"},
+            {"ticker": "M&M.NS", "name": "Mahindra & Mahindra Ltd", "cap": "LARGE"},
+            {"ticker": "TATASTEEL.NS", "name": "Tata Steel Ltd", "cap": "LARGE"},
             {"ticker": "TITAN.NS", "name": "Titan Company Ltd", "cap": "LARGE"},
-            {"ticker": "TATASTEEL.NS", "name": "Tata Steel Ltd", "cap": "LARGE"}
+            {"ticker": "ULTRACEMCO.NS", "name": "UltraTech Cement Ltd", "cap": "LARGE"},
+            {"ticker": "NTPC.NS", "name": "NTPC Ltd", "cap": "LARGE"},
+            {"ticker": "POWERGRID.NS", "name": "Power Grid Corporation", "cap": "LARGE"},
+            {"ticker": "HCLTECH.NS", "name": "HCL Technologies Ltd", "cap": "LARGE"},
+            {"ticker": "ADANIENT.NS", "name": "Adani Enterprises Ltd", "cap": "LARGE"},
+            {"ticker": "ADANIPORTS.NS", "name": "Adani Ports & SEZ", "cap": "LARGE"},
+            {"ticker": "TRENT.NS", "name": "Trent Ltd", "cap": "LARGE"},
+            {"ticker": "ONGC.NS", "name": "Oil & Natural Gas Corp", "cap": "LARGE"},
+            {"ticker": "COALINDIA.NS", "name": "Coal India Ltd", "cap": "LARGE"},
+            {"ticker": "BAJAJFINSV.NS", "name": "Bajaj Finserv Ltd", "cap": "LARGE"},
+            {"ticker": "JSWSTEEL.NS", "name": "JSW Steel Ltd", "cap": "LARGE"},
+            {"ticker": "NESTLEIND.NS", "name": "Nestle India Ltd", "cap": "LARGE"},
+            {"ticker": "GRASIM.NS", "name": "Grasim Industries Ltd", "cap": "LARGE"},
+            {"ticker": "TECHM.NS", "name": "Tech Mahindra Ltd", "cap": "LARGE"},
+            {"ticker": "HINDALCO.NS", "name": "Hindalco Industries Ltd", "cap": "LARGE"},
+            {"ticker": "CIPLA.NS", "name": "Cipla Ltd", "cap": "LARGE"},
+            {"ticker": "BEL.NS", "name": "Bharat Electronics Ltd", "cap": "LARGE"},
+            {"ticker": "DRREDDY.NS", "name": "Dr. Reddy's Laboratories", "cap": "LARGE"},
+            {"ticker": "WIPRO.NS", "name": "Wipro Ltd", "cap": "LARGE"},
+            {"ticker": "EICHERMOT.NS", "name": "Eicher Motors Ltd", "cap": "LARGE"},
+            {"ticker": "APOLLOHOSP.NS", "name": "Apollo Hospitals", "cap": "LARGE"},
+            {"ticker": "BPCL.NS", "name": "Bharat Petroleum Corp", "cap": "LARGE"},
+            {"ticker": "BRITANNIA.NS", "name": "Britannia Industries Ltd", "cap": "LARGE"},
+            {"ticker": "HEROMOTOCO.NS", "name": "Hero MotoCorp Ltd", "cap": "LARGE"},
+            {"ticker": "DIVISLAB.NS", "name": "Divi's Laboratories", "cap": "LARGE"},
+            {"ticker": "SBILIFE.NS", "name": "SBI Life Insurance", "cap": "LARGE"},
+            {"ticker": "HDFCLIFE.NS", "name": "HDFC Life Insurance", "cap": "LARGE"},
+            {"ticker": "SHREECEM.NS", "name": "Shree Cement Ltd", "cap": "LARGE"},
+            {"ticker": "TATACONSUM.NS", "name": "Tata Consumer Products", "cap": "LARGE"},
+            {"ticker": "INDUSINDBK.NS", "name": "IndusInd Bank Ltd", "cap": "LARGE"},
+            {"ticker": "ASIANPAINT.NS", "name": "Asian Paints Ltd", "cap": "LARGE"},
+            {"ticker": "TATAPOWER.NS", "name": "Tata Power Company Ltd", "cap": "LARGE"}
         ]
     },
     "NSE_MIDCAP": {
@@ -201,6 +235,43 @@ WATCHLISTS = {
     }
 }
 
+
+def _build_aggregate_stocks(*watchlist_keys: str) -> List[Dict[str, Any]]:
+    """Constructs deduplicated stocks list from multiple watchlists."""
+    seen = set()
+    aggregated = []
+    for k in watchlist_keys:
+        if k in WATCHLISTS:
+            for s in WATCHLISTS[k].get("stocks", []):
+                sym = s.get("ticker", "").upper()
+                if sym and sym not in seen:
+                    seen.add(sym)
+                    aggregated.append(s)
+    return aggregated
+
+
+# Comprehensive Aggregated Universes for Complete Opportunity Visibility
+WATCHLISTS["ALL_INDIA"] = {
+    "name": "India All Opportunities",
+    "description": "Comprehensive scan across Nifty 50, Midcaps, Smallcaps, Banking & IT movers",
+    "currency": "₹",
+    "stocks": _build_aggregate_stocks("NSE_MOMENTUM", "NSE_MIDCAP", "NSE_SMALLCAP", "NSE_BANK", "NSE_IT")
+}
+
+WATCHLISTS["ALL_US"] = {
+    "name": "US All Opportunities",
+    "description": "Comprehensive scan across US Mag 7, Large-Cap, Midcap, and Smallcap breakouts",
+    "currency": "$",
+    "stocks": _build_aggregate_stocks("US_MAG7", "US_MOMENTUM", "US_MIDCAP", "US_SMALLCAP")
+}
+
+WATCHLISTS["ALL_OPPORTUNITIES"] = {
+    "name": "All Global Opportunities",
+    "description": "Full scan across all tracked Indian and US intraday opportunities",
+    "currency": "₹/$",
+    "stocks": _build_aggregate_stocks("ALL_INDIA", "ALL_US")
+}
+
 CACHE_TTL_SECONDS = 20  # 20 seconds cache for rapid scans
 
 class BoundedTTLCache:
@@ -209,7 +280,7 @@ class BoundedTTLCache:
     Prevents unbounded memory growth, memory leaks from accumulated Pandas DataFrames,
     and race conditions during concurrent multi-threaded scans.
     """
-    def __init__(self, maxsize: int = 128, ttl_seconds: float = CACHE_TTL_SECONDS):
+    def __init__(self, maxsize: int = 256, ttl_seconds: float = CACHE_TTL_SECONDS):
         self._maxsize = maxsize
         self._ttl_seconds = ttl_seconds
         self._cache: OrderedDict[str, Dict[str, Any]] = OrderedDict()
@@ -263,7 +334,7 @@ class BoundedTTLCache:
             return len(self._cache)
 
 # In-memory bounded cache for speed and rate-limit preservation
-_CACHE = BoundedTTLCache(maxsize=128, ttl_seconds=CACHE_TTL_SECONDS)
+_CACHE = BoundedTTLCache(maxsize=256, ttl_seconds=CACHE_TTL_SECONDS)
 
 
 def _cleanup_thread_db() -> None:
@@ -293,7 +364,7 @@ def _get_scan_executor() -> ThreadPoolExecutor:
     if _SCAN_EXECUTOR is None:
         with _SCAN_LOCK:
             if _SCAN_EXECUTOR is None:
-                _SCAN_EXECUTOR = ThreadPoolExecutor(max_workers=8, thread_name_prefix="screener_worker")
+                _SCAN_EXECUTOR = ThreadPoolExecutor(max_workers=20, thread_name_prefix="screener_worker")
     return _SCAN_EXECUTOR
 
 
