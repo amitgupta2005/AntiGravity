@@ -538,3 +538,26 @@ export function updateAllCharts(stock, isDarkMode) {
   renderEPSChart(stock, isDarkMode);
   renderMarginsChart(stock, isDarkMode);
 }
+
+/**
+ * Safely destroy and release all Chart.js instances and event listeners to prevent memory leaks
+ */
+export function destroyAllCharts() {
+  if (priceChartInstance) {
+    try { priceChartInstance.destroy(); } catch (_) {}
+    priceChartInstance = null;
+  }
+  if (rsiChartInstance) {
+    try { rsiChartInstance.destroy(); } catch (_) {}
+    rsiChartInstance = null;
+  }
+  if (epsChartInstance) {
+    try { epsChartInstance.destroy(); } catch (_) {}
+    epsChartInstance = null;
+  }
+  if (marginsChartInstance) {
+    try { marginsChartInstance.destroy(); } catch (_) {}
+    marginsChartInstance = null;
+  }
+}
+

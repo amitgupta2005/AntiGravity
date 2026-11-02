@@ -1293,35 +1293,58 @@ export async function fetchRealtimeHorizonUniverse(universe) {
   const timeFormatted = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const dateFormatted = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-  const results = await Promise.allSettled(
-    universe.map(async (asset) => {
-      let qTicker = asset.ticker;
-      if (qTicker === 'TATAMOTORS.NS') qTicker = 'TMCV.NS';
+  const BATCH_SIZE = 8;
+  const results = [];
 
-      try {
-        const res = await fetch(`${baseUrl}/api/yahoo/chart/${encodeURIComponent(qTicker)}?range=3mo&interval=1d`);
-        if (!res.ok) return { ticker: asset.ticker, ok: false };
-        const data = await res.json();
-        const meta = data?.chart?.result?.[0]?.meta;
-        if (!meta) return { ticker: asset.ticker, ok: false };
+  // Batch network requests in chunks of 8 to prevent socket starvation, memory spikes & HTTP 429
+  for (let i = 0; i < universe.length; i += BATCH_SIZE) {
+    const chunk = universe.slice(i, i + BATCH_SIZE);
+    const chunkResults = await Promise.allSettled(
+      chunk.map(async (asset) => {
+        let qTicker = asset.ticker;
+        if (qTicker === 'TATAMOTORS.NS') qTicker = 'TMCV.NS';
 
-        const quotes = data?.chart?.result?.[0]?.indicators?.quote?.[0] || {};
-        const closes = quotes.close?.filter(c => c != null && !isNaN(c)) || [];
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-        return {
-          ticker: asset.ticker,
-          ok: true,
-          meta,
-          closes
-        };
-      } catch (err) {
-        return { ticker: asset.ticker, ok: false, err };
-      }
-    })
-  );
+        try {
+          const res = await fetch(`${baseUrl}/api/yahoo/chart/${encodeURIComponent(qTicker)}?range=3mo&interval=1d`, {
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          if (!res.ok) return { ticker: asset.ticker, ok: false };
+          const data = await res.json();
+          const meta = data?.chart?.result?.[0]?.meta;
+          if (!meta) return { ticker: asset.ticker, ok: false };
+
+          const quotes = data?.chart?.result?.[0]?.indicators?.quote?.[0] || {};
+          const closes = quotes.close?.filter(c => c != null && !isNaN(c)) || [];
+
+          return {
+            ticker: asset.ticker,
+            ok: true,
+            meta,
+            closes
+          };
+        } catch (err) {
+          clearTimeout(timeoutId);
+          return { ticker: asset.ticker, ok: false, err };
+        }
+      })
+    );
+    results.push(...chunkResults);
+  }
+
+  // Fast O(1) lookup Map instead of O(N^2) array search
+  const resultsMap = new Map();
+  results.forEach(r => {
+    if (r.status === 'fulfilled' && r.value?.ok && r.value.ticker) {
+      resultsMap.set(r.value.ticker, r.value);
+    }
+  });
 
   return universe.map(asset => {
-    const found = results.find(r => r.status === 'fulfilled' && r.value?.ok && r.value.ticker === asset.ticker);
+    const found = resultsMap.get(asset.ticker);
     if (!found) {
       return {
         ...asset,
@@ -1330,7 +1353,7 @@ export async function fetchRealtimeHorizonUniverse(universe) {
       };
     }
 
-    const { meta, closes } = found.value;
+    const { meta, closes } = found;
     const livePrice = meta.regularMarketPrice || meta.chartPreviousClose || asset.price;
     const change = Number((meta.fulldayChange ?? meta.regularMarketChange ?? 0).toFixed(2));
     const changePercent = Number((meta.regularMarketChangePercent ?? meta.fulldayChangePercent ?? 0).toFixed(2));

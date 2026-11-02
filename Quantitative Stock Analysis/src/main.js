@@ -60,7 +60,7 @@ import {
   generateSensitivityMatrix,
   calculateQuantScore
 } from './quant/engine.js';
-import { updateAllCharts } from './components/charts.js';
+import { updateAllCharts, destroyAllCharts } from './components/charts.js';
 import { renderNewsFeed } from './components/news.js';
 import { renderOrderBook, updateOrderBookTheme, resizeOrderBookChart } from './components/orderbook.js';
 import { renderSectorsDashboard } from './components/sectors.js';
@@ -395,14 +395,10 @@ function setupTabNavigation() {
       exitLabel.textContent = `Back to Stock Terminal (${state.currentTicker})`;
     }
 
-    renderHorizonScanner('horizonScannerContainer', (t) => {
-      handleStockSelectionFromHorizon(t, 'tab-return-model');
-    }, (t) => {
-      handleStockSelectionFromHorizon(t, 'tab-technicals');
-    });
+    // Release Chart.js memory and event listeners while full-view Horizon Scanner is open
+    destroyAllCharts();
 
-    // Auto-stream real-time quotes, technical candles & dynamic valuation
-    syncHorizonScannerRealtime('horizonScannerContainer', (t) => {
+    renderHorizonScanner('horizonScannerContainer', (t) => {
       handleStockSelectionFromHorizon(t, 'tab-return-model');
     }, (t) => {
       handleStockSelectionFromHorizon(t, 'tab-technicals');
