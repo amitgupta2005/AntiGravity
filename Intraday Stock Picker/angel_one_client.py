@@ -490,24 +490,16 @@ class AngelOneSmartAPI:
                 if not candles:
                     return None
 
-                # Format: [datetime_str, open, high, low, close, volume]
-                records = []
-                for c in candles:
-                    dt = pd.to_datetime(c[0])
-                    if dt.tzinfo is None:
-                        dt = dt.tz_localize("Asia/Kolkata")
-                    else:
-                        dt = dt.tz_convert("Asia/Kolkata")
-                    records.append({
-                        "Datetime": dt,
-                        "Open": float(c[1]),
-                        "High": float(c[2]),
-                        "Low": float(c[3]),
-                        "Close": float(c[4]),
-                        "Volume": float(c[5])
-                    })
-                df = pd.DataFrame(records).set_index("Datetime").sort_index()
-                return df
+                # Vectorized DataFrame construction: [datetime_str, open, high, low, close, volume]
+                cols = ["Datetime", "Open", "High", "Low", "Close", "Volume"]
+                df = pd.DataFrame(candles, columns=cols)
+                df["Datetime"] = pd.to_datetime(df["Datetime"])
+                if df["Datetime"].dt.tz is None:
+                    df["Datetime"] = df["Datetime"].dt.tz_localize("Asia/Kolkata")
+                else:
+                    df["Datetime"] = df["Datetime"].dt.tz_convert("Asia/Kolkata")
+                df[["Open", "High", "Low", "Close", "Volume"]] = df[["Open", "High", "Low", "Close", "Volume"]].astype(float)
+                return df.set_index("Datetime").sort_index()
         except Exception as e:
             logger.error(f"Error fetching Angel One historical candles for {ticker}: {e}")
 

@@ -5,6 +5,7 @@ Intraday Trading Technical Expert Screener & Chart Analysis Terminal
 
 import os
 import logging
+from contextlib import asynccontextmanager
 from typing import List, Optional
 from datetime import datetime, timezone
 import pytz
@@ -19,16 +20,34 @@ from data_fetcher import (
     WATCHLISTS,
     scan_watchlist,
     get_chart_data,
-    fetch_and_analyze_ticker
+    fetch_and_analyze_ticker,
+    shutdown_data_fetcher
 )
 from angel_one_client import angel_client
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("intraday_stock_picker")
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Starting Intraday Stock Picker terminal...")
+    yield
+    logger.info("Shutting down Intraday Stock Picker terminal and releasing resources...")
+    try:
+        shutdown_data_fetcher(wait=False)
+    except Exception as e:
+        logger.debug(f"Error shutting down data fetcher: {e}")
+    try:
+        angel_client.session.close()
+    except Exception as e:
+        logger.debug(f"Error closing Angel One session: {e}")
+
+
 app = FastAPI(
     title="Intraday Stock Picker",
-    description="Real-time 1-minute intraday technical screener, Stop Loss & Target calculation engine, and institutional chart analysis terminal."
+    description="Real-time 1-minute intraday technical screener, Stop Loss & Target calculation engine, and institutional chart analysis terminal.",
+    lifespan=lifespan
 )
 
 app.add_middleware(
@@ -310,13 +329,15 @@ def get_live_quote(ticker: str):
     }
 
 
-@app.on_event("shutdown")
-def shutdown_event():
-    """Cleanly close connection pools and release resources on server shutdown."""
-    try:
-        angel_client.session.close()
-    except Exception:
-        pass
+@app.get("/api/backtest-results")
+def get_backtest_results():
+    """Serves the latest strategy backtest and regime performance metrics."""
+    backtest_file = os.path.join(os.path.dirname(__file__), "enhanced_backtest_results.json")
+    if not os.path.exists(backtest_file):
+        backtest_file = os.path.join(os.path.dirname(__file__), "backtest_results.json")
+    if os.path.exists(backtest_file):
+        return FileResponse(backtest_file, media_type="application/json")
+    return {"status": "NOT_FOUND", "message": "No backtest results generated yet."}
 
 
 if __name__ == "__main__":

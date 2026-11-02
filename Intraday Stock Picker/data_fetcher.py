@@ -266,6 +266,47 @@ class BoundedTTLCache:
 _CACHE = BoundedTTLCache(maxsize=128, ttl_seconds=CACHE_TTL_SECONDS)
 
 
+def _cleanup_thread_db() -> None:
+    """
+    Closes thread-local SQLite connections created by yfinance's Peewee cache manager.
+    Prevents unclosed database ResourceWarnings and memory leaks across worker threads.
+    """
+    try:
+        if hasattr(yf, 'cache'):
+            if hasattr(yf.cache, '_TzDBManager'):
+                yf.cache._TzDBManager.close_db()
+            if hasattr(yf.cache, '_CookieDBManager'):
+                yf.cache._CookieDBManager.close_db()
+            if hasattr(yf.cache, '_ISINDBManager'):
+                yf.cache._ISINDBManager.close_db()
+    except Exception:
+        pass
+
+
+# Persistent thread pool for concurrent stock screening (avoids thread churn)
+_SCAN_EXECUTOR: Optional[ThreadPoolExecutor] = None
+_SCAN_LOCK = threading.Lock()
+
+
+def _get_scan_executor() -> ThreadPoolExecutor:
+    global _SCAN_EXECUTOR
+    if _SCAN_EXECUTOR is None:
+        with _SCAN_LOCK:
+            if _SCAN_EXECUTOR is None:
+                _SCAN_EXECUTOR = ThreadPoolExecutor(max_workers=8, thread_name_prefix="screener_worker")
+    return _SCAN_EXECUTOR
+
+
+def shutdown_data_fetcher(wait: bool = False) -> None:
+    """Gracefully shuts down persistent thread pool and cleans up cache database resources."""
+    global _SCAN_EXECUTOR
+    with _SCAN_LOCK:
+        if _SCAN_EXECUTOR is not None:
+            _SCAN_EXECUTOR.shutdown(wait=wait, cancel_futures=True)
+            _SCAN_EXECUTOR = None
+    _cleanup_thread_db()
+
+
 def get_ticker_cap(ticker: str) -> str:
     """Helper to find market cap category for a ticker from predefined universe."""
     clean = ticker.strip().upper()
@@ -329,6 +370,8 @@ def get_stock_raw_intraday(ticker: str, interval: str = "1m", live_quote: Option
         except Exception as e:
             logger.error(f"Error fetching Yahoo Finance data for {ticker}: {e}")
             df = pd.DataFrame()
+        finally:
+            _cleanup_thread_db()
 
     if df.empty:
         return pd.DataFrame(), feed_source
@@ -388,9 +431,9 @@ def fetch_and_analyze_ticker(
         cap = get_ticker_cap(ticker)
     now = time.time()
 
-    if not force_refresh and ticker in _CACHE:
-        cached_entry = _CACHE[ticker]
-        if now - cached_entry["timestamp"] < CACHE_TTL_SECONDS:
+    if not force_refresh:
+        cached_entry = _CACHE.get(ticker)
+        if cached_entry and (now - cached_entry.get("timestamp", 0) < CACHE_TTL_SECONDS):
             return cached_entry["analysis"]
 
     # Fetch fresh 1-minute data and feed source
@@ -630,10 +673,12 @@ def scan_watchlist(watchlist_key: str = "NSE_MOMENTUM", custom_tickers: Optional
         except Exception as err:
             logger.error(f"Scan worker failed for {item['ticker']}: {err}")
             return None
+        finally:
+            _cleanup_thread_db()
 
-    # Fetch with concurrent threads for lightning speed
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        scan_outputs = list(executor.map(_worker, targets))
+    # Fetch with concurrent threads using persistent executor for maximum throughput
+    executor = _get_scan_executor()
+    scan_outputs = list(executor.map(_worker, targets))
 
     for out in scan_outputs:
         if out and out.get("status") == "OK":

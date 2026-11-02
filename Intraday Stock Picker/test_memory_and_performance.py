@@ -128,6 +128,42 @@ class TestMemoryAndPerformance(unittest.TestCase):
         self.assertFalse(success)
         self.assertIn("cooldown", msg.lower())
 
+    def test_single_session_orb_fast_path(self):
+        """Verify that vectorized single-session ORB calculation matches multi-session logic."""
+        periods = 60
+        dates = pd.date_range("2026-11-02 09:15:00", periods=periods, freq="1min", tz="Asia/Kolkata")
+        np.random.seed(123)
+        prices = 500.0 + np.cumsum(np.random.randn(periods))
+        df = pd.DataFrame({
+            "Open": prices,
+            "High": prices + 1.5,
+            "Low": prices - 1.5,
+            "Close": prices + 0.2,
+            "Volume": np.random.randint(100, 2000, size=periods)
+        }, index=dates)
+
+        df_calc = calculate_intraday_indicators(df.copy(), light=False)
+        expected_orb_high = float(df.iloc[:15]["High"].max())
+        expected_orb_low = float(df.iloc[:15]["Low"].min())
+
+        self.assertAlmostEqual(df_calc["ORB_High"].iloc[0], expected_orb_high)
+        self.assertAlmostEqual(df_calc["ORB_Low"].iloc[0], expected_orb_low)
+        self.assertAlmostEqual(df_calc["ORB_High"].iloc[-1], expected_orb_high)
+        self.assertAlmostEqual(df_calc["ORB_Low"].iloc[-1], expected_orb_low)
+
+    def test_shutdown_data_fetcher_lifecycle(self):
+        """Verify shutdown_data_fetcher safely cleans resources and permits re-initialization."""
+        from data_fetcher import _get_scan_executor, shutdown_data_fetcher
+        ex = _get_scan_executor()
+        self.assertFalse(ex._shutdown)
+        shutdown_data_fetcher(wait=False)
+        self.assertTrue(ex._shutdown)
+
+        # Calling _get_scan_executor again should recreate a fresh executor
+        ex2 = _get_scan_executor()
+        self.assertFalse(ex2._shutdown)
+        shutdown_data_fetcher(wait=False)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -110,19 +110,25 @@ def calculate_intraday_indicators(df: pd.DataFrame, light: bool = False) -> pd.D
         dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di).replace(0, np.nan)
         df['ADX14'] = dx.ewm(alpha=1/14, min_periods=1).mean().fillna(20.0)
 
-        # 8. Opening Range (First 15 bars of session)
+        # 8. Opening Range (First 15 bars of session) - Fast path for single session
         session_dates = df.index.date
-        df['SessionDate'] = session_dates
-        orb_highs = {}
-        orb_lows = {}
-        for dt, group in df.groupby('SessionDate'):
-            first_15 = group.iloc[:15]
-            orb_highs[dt] = first_15['High'].max()
-            orb_lows[dt] = first_15['Low'].min()
-        
-        df['ORB_High'] = df['SessionDate'].map(orb_highs)
-        df['ORB_Low'] = df['SessionDate'].map(orb_lows)
-        df.drop(columns=['SessionDate'], inplace=True, errors='ignore')
+        unique_dates = np.unique(session_dates)
+        if len(unique_dates) == 1:
+            first_15 = df.iloc[:15]
+            df['ORB_High'] = float(first_15['High'].max())
+            df['ORB_Low'] = float(first_15['Low'].min())
+        else:
+            df['SessionDate'] = session_dates
+            orb_highs = {}
+            orb_lows = {}
+            for dt, group in df.groupby('SessionDate'):
+                first_15 = group.iloc[:15]
+                orb_highs[dt] = float(first_15['High'].max())
+                orb_lows[dt] = float(first_15['Low'].min())
+            
+            df['ORB_High'] = df['SessionDate'].map(orb_highs)
+            df['ORB_Low'] = df['SessionDate'].map(orb_lows)
+            df.drop(columns=['SessionDate'], inplace=True, errors='ignore')
 
     return df
 
@@ -157,7 +163,10 @@ def analyze_stock_setup(
     
     close = float(curr['Close'])
     curr_date = curr.name.date() if hasattr(curr.name, 'date') else df.index.date[-1]
-    today_bars = df[df.index.date == curr_date]
+    if hasattr(df.index[0], 'date') and df.index[0].date() == curr_date:
+        today_bars = df
+    else:
+        today_bars = df[df.index.date == curr_date]
     open_price = float(today_bars.iloc[0]['Open']) if not today_bars.empty else float(df.iloc[0]['Open'])
     day_high = float(today_bars['High'].max()) if not today_bars.empty else float(df['High'].max())
     day_low = float(today_bars['Low'].min()) if not today_bars.empty else float(df['Low'].min())

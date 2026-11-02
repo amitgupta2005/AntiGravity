@@ -700,9 +700,13 @@ async function fetchScreener(marketKey = currentMarket, isAuto = false) {
     btnManualScan.disabled = true;
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
   try {
     const url = `/api/scan?market=${encodeURIComponent(marketKey)}`;
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await res.json();
 
     if (data.status === "OK") {
@@ -936,13 +940,17 @@ function selectStock(ticker, shouldFocus = false) {
 }
 
 async function loadChartData(ticker, tf = currentTimeframe, silent = false) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
   try {
     if (!silent) {
       activeSymbolTicker.textContent = ticker;
       activeSymbolName.textContent = "Loading 1-min feed...";
     }
 
-    const res = await fetch(`/api/chart/${encodeURIComponent(ticker)}?timeframe=${tf}`);
+    const res = await fetch(`/api/chart/${encodeURIComponent(ticker)}?timeframe=${tf}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await res.json();
 
     if (data.status !== "OK") {
@@ -2313,12 +2321,23 @@ function setupAutoRefresh() {
   const secs = parseInt(autoRefreshSelect.value, 10);
   if (secs > 0) {
     autoRefreshTimer = setInterval(() => {
-      if (!isReplayActive) {
+      // Pause automatic background polling when tab is hidden or during historical replay
+      if (!isReplayActive && !document.hidden) {
         fetchScreener(currentMarket, true);
       }
     }, secs * 1000);
   }
 }
+
+// Instant refresh on returning to tab if not in replay mode
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && !isReplayActive) {
+    fetchScreener(currentMarket, true);
+    if (currentTicker) {
+      loadChartData(currentTicker, currentTimeframe, true);
+    }
+  }
+});
 
 async function updateMarketStatus() {
   try {
