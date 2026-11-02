@@ -310,6 +310,15 @@ def get_live_quote(ticker: str):
     }
 
 
+@app.on_event("shutdown")
+def shutdown_event():
+    """Cleanly close connection pools and release resources on server shutdown."""
+    try:
+        angel_client.session.close()
+    except Exception:
+        pass
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))

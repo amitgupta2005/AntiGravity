@@ -8,8 +8,10 @@ import os
 import json
 import time
 import logging
+import threading
 from typing import Dict, Any, List, Optional, Tuple
 import requests
+from requests.adapters import HTTPAdapter
 import pyotp
 import pandas as pd
 
@@ -97,7 +99,16 @@ class AngelOneSmartAPI:
         self.feed_token: Optional[str] = None
         self.token_expiry: float = 0.0
         self.last_login_time: float = 0.0
+        self.last_login_attempt: float = 0.0
+        self.login_cooldown_seconds: float = 45.0
         self.last_error: Optional[str] = None
+        self._lock = threading.Lock()
+
+        # Connection-pooled HTTP session to avoid socket leaks and SSL handshake overhead
+        self.session = requests.Session()
+        adapter = HTTPAdapter(pool_connections=25, pool_maxsize=25, max_retries=1)
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
         
         # Scrip master cache
         self.tokens_cache: Dict[str, Dict[str, str]] = dict(BUILTIN_NSE_TOKENS)
@@ -156,6 +167,7 @@ class AngelOneSmartAPI:
             # Invalidate existing session tokens so new credentials take effect
             self.jwt_token = None
             self.token_expiry = 0.0
+            self.last_login_attempt = 0.0
             self.last_error = None
             return True
         except Exception as e:
@@ -202,6 +214,7 @@ class AngelOneSmartAPI:
     def login(self, force: bool = False) -> Tuple[bool, str]:
         """
         Authenticates with Angel One SmartAPI at https://apiconnect.angelone.in/rest/auth/angelbroking/user/v1/loginByPassword
+        Includes concurrency protection and backoff cooldown to prevent API flooding on failure.
         """
         if not self.is_configured():
             msg = "Angel One credentials incomplete. Please set API Key, Client ID, PIN, and TOTP Secret."
@@ -211,46 +224,66 @@ class AngelOneSmartAPI:
         if not force and self.is_authenticated():
             return True, "Already connected with active session."
 
-        totp_code = self.generate_totp()
-        if not totp_code:
-            msg = "Failed to generate TOTP code. Verify your TOTP secret key."
-            self.last_error = msg
-            return False, msg
+        now = time.time()
+        # Cooldown guard: if previous login failed recently, do not spam endpoint repeatedly
+        if not force and (now - self.last_login_attempt) < self.login_cooldown_seconds:
+            detail = f": {self.last_error}" if self.last_error else ""
+            return False, f"Login cooldown active{detail}. Please wait before retrying."
 
-        endpoint = f"{SMARTAPI_BASE_URL}/rest/auth/angelbroking/user/v1/loginByPassword"
-        payload = {
-            "clientcode": self.client_code,
-            "password": self.password,
-            "totp": totp_code
-        }
+        with self._lock:
+            # Recheck inside lock
+            if not force and self.is_authenticated():
+                return True, "Already connected with active session."
+            if not force and (time.time() - self.last_login_attempt) < self.login_cooldown_seconds:
+                detail = f": {self.last_error}" if self.last_error else ""
+                return False, f"Login cooldown active{detail}."
 
-        try:
-            headers = self._get_headers(authenticated=False)
-            res = requests.post(endpoint, json=payload, headers=headers, timeout=12)
-            data = res.json()
+            self.last_login_attempt = time.time()
 
-            if res.status_code == 200 and data.get("status") is True:
-                resp_data = data.get("data", {})
-                self.jwt_token = resp_data.get("jwtToken")
-                self.refresh_token = resp_data.get("refreshToken")
-                self.feed_token = resp_data.get("feedToken")
-                # Token valid for ~20 hours
-                self.token_expiry = time.time() + (20 * 3600)
-                self.last_login_time = time.time()
-                self.last_error = None
-                logger.info(f"Angel One SmartAPI login successful for client {self.client_code}")
-                return True, "Connected successfully to Angel One SmartAPI live feed."
-            else:
-                err_msg = data.get("message") or data.get("errorcode") or f"HTTP {res.status_code}"
+            totp_code = self.generate_totp()
+            if not totp_code:
+                msg = "Failed to generate TOTP code. Verify your TOTP secret key."
+                self.last_error = msg
+                return False, msg
+
+            endpoint = f"{SMARTAPI_BASE_URL}/rest/auth/angelbroking/user/v1/loginByPassword"
+            payload = {
+                "clientcode": self.client_code,
+                "password": self.password,
+                "totp": totp_code
+            }
+
+            try:
+                headers = self._get_headers(authenticated=False)
+                res = self.session.post(endpoint, json=payload, headers=headers, timeout=10)
+                try:
+                    data = res.json() if res.content else {}
+                except Exception:
+                    data = {}
+
+                if res.status_code == 200 and data.get("status") is True:
+                    resp_data = data.get("data", {})
+                    self.jwt_token = resp_data.get("jwtToken")
+                    self.refresh_token = resp_data.get("refreshToken")
+                    self.feed_token = resp_data.get("feedToken")
+                    # Token valid for ~20 hours
+                    self.token_expiry = time.time() + (20 * 3600)
+                    self.last_login_time = time.time()
+                    self.last_error = None
+                    self.login_cooldown_seconds = 45.0
+                    logger.info(f"Angel One SmartAPI login successful for client {self.client_code}")
+                    return True, "Connected successfully to Angel One SmartAPI live feed."
+                else:
+                    err_msg = data.get("message") or data.get("errorcode") or f"HTTP {res.status_code}"
+                    self.last_error = err_msg
+                    logger.warning(f"Angel One SmartAPI login failed: {err_msg}")
+                    return False, f"Login failed: {err_msg}"
+
+            except Exception as e:
+                err_msg = f"Network exception reaching {SMARTAPI_BASE_URL}: {str(e)}"
                 self.last_error = err_msg
-                logger.warning(f"Angel One SmartAPI login failed: {err_msg}")
-                return False, f"Login failed: {err_msg}"
-
-        except Exception as e:
-            err_msg = f"Network exception reaching {SMARTAPI_BASE_URL}: {str(e)}"
-            self.last_error = err_msg
-            logger.error(err_msg)
-            return False, err_msg
+                logger.error(err_msg)
+                return False, err_msg
 
     def refresh_session_token(self) -> bool:
         """Refreshes JWT token using refreshToken."""
@@ -260,8 +293,11 @@ class AngelOneSmartAPI:
         payload = {"refreshToken": self.refresh_token}
         try:
             headers = self._get_headers(authenticated=True)
-            res = requests.post(endpoint, json=payload, headers=headers, timeout=10)
-            data = res.json()
+            res = self.session.post(endpoint, json=payload, headers=headers, timeout=10)
+            try:
+                data = res.json() if res.content else {}
+            except Exception:
+                data = {}
             if res.status_code == 200 and data.get("status") is True:
                 resp_data = data.get("data", {})
                 self.jwt_token = resp_data.get("jwtToken")
@@ -332,8 +368,11 @@ class AngelOneSmartAPI:
 
             try:
                 headers = self._get_headers(authenticated=True)
-                res = requests.post(endpoint, json=payload, headers=headers, timeout=8)
-                data = res.json()
+                res = self.session.post(endpoint, json=payload, headers=headers, timeout=8)
+                try:
+                    data = res.json() if res.content else {}
+                except Exception:
+                    data = {}
 
                 if res.status_code == 200 and data.get("status") is True:
                     fetched = data.get("data", {}).get("fetched", [])
@@ -380,8 +419,11 @@ class AngelOneSmartAPI:
                     if self.refresh_session_token():
                         # Retry once with refreshed token
                         headers = self._get_headers(authenticated=True)
-                        res2 = requests.post(endpoint, json=payload, headers=headers, timeout=8)
-                        data2 = res2.json()
+                        res2 = self.session.post(endpoint, json=payload, headers=headers, timeout=8)
+                        try:
+                            data2 = res2.json() if res2.content else {}
+                        except Exception:
+                            data2 = {}
                         if res2.status_code == 200 and data2.get("status") is True:
                             for item in data2.get("data", {}).get("fetched", []):
                                 tok = str(item.get("symbolToken"))
@@ -437,8 +479,11 @@ class AngelOneSmartAPI:
 
         try:
             headers = self._get_headers(authenticated=True)
-            res = requests.post(endpoint, json=payload, headers=headers, timeout=10)
-            data = res.json()
+            res = self.session.post(endpoint, json=payload, headers=headers, timeout=10)
+            try:
+                data = res.json() if res.content else {}
+            except Exception:
+                data = {}
 
             if res.status_code == 200 and data.get("status") is True:
                 candles = data.get("data", [])

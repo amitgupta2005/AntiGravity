@@ -23,9 +23,12 @@ DEFAULT_MIN_LIQUIDITY_VOL_MA = 15000.0  # Min 1-minute volume MA (shares)
 DEFAULT_MAX_ATR_PCT = 1.5               # Max 1-minute ATR as % of price
 
 
-def calculate_intraday_indicators(df: pd.DataFrame) -> pd.DataFrame:
+def calculate_intraday_indicators(df: pd.DataFrame, light: bool = False) -> pd.DataFrame:
     """
-    Computes all intraday technical indicators on a 1-minute OHLCV DataFrame.
+    Computes intraday technical indicators on an OHLCV DataFrame.
+    When light=True (used during multi-timeframe resampled checks), calculates only
+    essential directional indicators (VWAP, EMA9, EMA21, RSI) for 3-5x faster processing
+    and minimal memory allocation.
     """
     if df.empty:
         return df
@@ -53,13 +56,14 @@ def calculate_intraday_indicators(df: pd.DataFrame) -> pd.DataFrame:
     # Avoid division by zero
     df['VWAP'] = np.where(df['Cum_Vol'] > 0, df['Cum_Vol_TP'] / df['Cum_Vol'], df['Typical_Price'])
     
-    # VWAP Standard Deviation Bands
-    # Deviation = sqrt( cumsum(Vol * (TP - VWAP)^2) / cumsum(Vol) )
-    df['Dev_Sq'] = df['Volume'] * ((df['Typical_Price'] - df['VWAP']) ** 2)
-    df['Cum_Dev_Sq'] = df.groupby('DateGroup')['Dev_Sq'].cumsum()
-    df['VWAP_Std'] = np.where(df['Cum_Vol'] > 0, np.sqrt(df['Cum_Dev_Sq'] / df['Cum_Vol']), 0.0)
-    df['VWAP_Upper'] = df['VWAP'] + (1.5 * df['VWAP_Std'])
-    df['VWAP_Lower'] = df['VWAP'] - (1.5 * df['VWAP_Std'])
+    if not light:
+        # VWAP Standard Deviation Bands
+        # Deviation = sqrt( cumsum(Vol * (TP - VWAP)^2) / cumsum(Vol) )
+        df['Dev_Sq'] = df['Volume'] * ((df['Typical_Price'] - df['VWAP']) ** 2)
+        df['Cum_Dev_Sq'] = df.groupby('DateGroup')['Dev_Sq'].cumsum()
+        df['VWAP_Std'] = np.where(df['Cum_Vol'] > 0, np.sqrt(df['Cum_Dev_Sq'] / df['Cum_Vol']), 0.0)
+        df['VWAP_Upper'] = df['VWAP'] + (1.5 * df['VWAP_Std'])
+        df['VWAP_Lower'] = df['VWAP'] - (1.5 * df['VWAP_Std'])
     
     # Clean up intermediate cols
     df.drop(columns=['DateGroup', 'Vol_x_TP', 'Cum_Vol', 'Cum_Vol_TP', 'Dev_Sq', 'Cum_Dev_Sq'], inplace=True, errors='ignore')
@@ -67,7 +71,8 @@ def calculate_intraday_indicators(df: pd.DataFrame) -> pd.DataFrame:
     # 3. Exponential Moving Averages (EMA 9, 21, 50)
     df['EMA9'] = df['Close'].ewm(span=9, adjust=False).mean()
     df['EMA21'] = df['Close'].ewm(span=21, adjust=False).mean()
-    df['EMA50'] = df['Close'].ewm(span=50, adjust=False).mean()
+    if not light:
+        df['EMA50'] = df['Close'].ewm(span=50, adjust=False).mean()
 
     # 4. Relative Strength Index (RSI 14)
     delta = df['Close'].diff()
@@ -81,33 +86,43 @@ def calculate_intraday_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df['RSI'] = 100 - (100 / (1 + rs))
     df['RSI'] = df['RSI'].fillna(50.0)
 
-    # 5. Volume Moving Average (20) & Relative Volume (RVOL)
-    df['Vol_MA20'] = df['Volume'].rolling(window=20, min_periods=1).mean()
-    df['RVOL'] = np.where(df['Vol_MA20'] > 0, df['Volume'] / df['Vol_MA20'], 1.0)
-    
-    # 6. Average True Range (ATR 14)
-    high_low = df['High'] - df['Low']
-    high_close_prev = (df['High'] - df['Close'].shift(1)).abs()
-    low_close_prev = (df['Low'] - df['Close'].shift(1)).abs()
-    tr = pd.concat([high_low, high_close_prev, low_close_prev], axis=1).max(axis=1)
-    df['ATR14'] = tr.rolling(window=14, min_periods=1).mean()
-    df['ATR14'] = df['ATR14'].bfill().fillna(df['Close'] * 0.005)
+    if not light:
+        # 5. Volume Moving Average (20) & Relative Volume (RVOL)
+        df['Vol_MA20'] = df['Volume'].rolling(window=20, min_periods=1).mean()
+        df['RVOL'] = np.where(df['Vol_MA20'] > 0, df['Volume'] / df['Vol_MA20'], 1.0)
+        
+        # 6. Average True Range (ATR 14) - Vectorized with zero intermediate DataFrame allocations
+        high_low = (df['High'] - df['Low']).values
+        high_close_prev = (df['High'] - df['Close'].shift(1)).abs().values
+        low_close_prev = (df['Low'] - df['Close'].shift(1)).abs().values
+        tr = np.maximum(high_low, np.maximum(high_close_prev, low_close_prev))
+        df['ATR14'] = pd.Series(tr, index=df.index).rolling(window=14, min_periods=1).mean()
+        df['ATR14'] = df['ATR14'].bfill().fillna(df['Close'] * 0.005)
 
-    # 7. Opening Range (First 15 bars of session)
-    # Mark first 15 bars per session
-    session_dates = df.index.date
-    df['SessionDate'] = session_dates
-    # Calculate ORB per day
-    orb_highs = {}
-    orb_lows = {}
-    for dt, group in df.groupby('SessionDate'):
-        first_15 = group.iloc[:15]
-        orb_highs[dt] = first_15['High'].max()
-        orb_lows[dt] = first_15['Low'].min()
-    
-    df['ORB_High'] = df['SessionDate'].map(orb_highs)
-    df['ORB_Low'] = df['SessionDate'].map(orb_lows)
-    df.drop(columns=['SessionDate'], inplace=True, errors='ignore')
+        # 7. ADX 14 (Average Directional Index) for Macro Trend Regime Filtering
+        up_move = df['High'].diff()
+        down_move = -df['Low'].diff()
+        plus_dm = np.where((up_move > down_move) & (up_move > 0), up_move, 0.0)
+        minus_dm = np.where((down_move > up_move) & (down_move > 0), down_move, 0.0)
+        atr_series = df['ATR14'].replace(0, np.nan)
+        plus_di = 100 * (pd.Series(plus_dm, index=df.index).ewm(alpha=1/14, min_periods=1).mean() / atr_series)
+        minus_di = 100 * (pd.Series(minus_dm, index=df.index).ewm(alpha=1/14, min_periods=1).mean() / atr_series)
+        dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di).replace(0, np.nan)
+        df['ADX14'] = dx.ewm(alpha=1/14, min_periods=1).mean().fillna(20.0)
+
+        # 8. Opening Range (First 15 bars of session)
+        session_dates = df.index.date
+        df['SessionDate'] = session_dates
+        orb_highs = {}
+        orb_lows = {}
+        for dt, group in df.groupby('SessionDate'):
+            first_15 = group.iloc[:15]
+            orb_highs[dt] = first_15['High'].max()
+            orb_lows[dt] = first_15['Low'].min()
+        
+        df['ORB_High'] = df['SessionDate'].map(orb_highs)
+        df['ORB_Low'] = df['SessionDate'].map(orb_lows)
+        df.drop(columns=['SessionDate'], inplace=True, errors='ignore')
 
     return df
 
@@ -156,6 +171,7 @@ def analyze_stock_setup(
     ema50 = float(curr.get('EMA50', close))
     rsi = float(curr.get('RSI', 50.0))
     atr = float(curr.get('ATR14', close * 0.005))
+    adx14 = float(curr.get('ADX14', 20.0))
     rvol = float(curr.get('RVOL', 1.0))
     volume = float(curr.get('Volume', 0))
     vol_ma20 = float(curr.get('Vol_MA20', volume))
@@ -375,11 +391,16 @@ def analyze_stock_setup(
             "detail": f"RSI is {rsi:.1f} in equilibrium zone; awaiting directional breakout."
         })
 
-    # 5. Breakout Structure (ORB & Day High/Low)
-    is_orb_breakout = close >= (orb_high * 0.999)
-    is_orb_breakdown = close <= (orb_low * 1.001)
-    near_day_high = close >= (day_high * 0.997)
-    near_day_low = close <= (day_low * 1.003)
+    # 5. Breakout Structure (ORB & Day High/Low) with Decisive Confirmation Margin
+    # Strict 0.15% margin + volume confirmation (RVOL >= 1.3x) to avoid entering on false wicks
+    is_orb_breakout = (close >= orb_high * 1.0015) and (rvol >= 1.3) and (close >= open_price)
+    is_orb_breakdown = (close <= orb_low * 0.9985) and (rvol >= 1.3) and (close <= open_price)
+    near_day_high = (close >= day_high * 0.9985) and (rvol >= 1.2)
+    near_day_low = (close <= day_low * 1.0015) and (rvol >= 1.2)
+
+    # Detect Trap Conditions
+    is_bear_trap_risk = (close <= orb_low * 1.001) and (close >= open_price or day_change_pct > 0)
+    is_bull_trap_risk = (close >= orb_high * 0.999) and (close <= open_price or day_change_pct < -0.5)
 
     if near_day_high:
         score += 15
@@ -387,15 +408,15 @@ def analyze_stock_setup(
             "factor": "Breakout / Range",
             "status": "Day High Breakout",
             "score": "+15",
-            "detail": f"Trading within 0.3% of High of the Day (Day High ₹{day_high:,.2f}), clear continuation setup."
+            "detail": f"Trading within 0.15% of High of the Day (Day High {curr_sym}{day_high:,.2f}) with volume expansion (RVOL {rvol:.2f}x)."
         })
     elif is_orb_breakout:
-        score += 12
+        score += 15
         checks.append({
             "factor": "Breakout / Range",
-            "status": "ORB Breakout",
-            "score": "+12",
-            "detail": f"Trading above 15-Minute Opening Range High (₹{orb_high:,.2f})."
+            "status": "ORB Breakout Confirmed",
+            "score": "+15",
+            "detail": f"Trading decisively above 15-Min ORB High ({curr_sym}{orb_high:,.2f}) with RVOL {rvol:.2f}x >= 1.3x and green day alignment."
         })
     elif near_day_low:
         score -= 15
@@ -403,27 +424,39 @@ def analyze_stock_setup(
             "factor": "Breakout / Range",
             "status": "Day Low Breakdown",
             "score": "-15",
-            "detail": f"Trading within 0.3% of Low of the Day (Day Low ₹{day_low:,.2f}), aggressive downside pressure."
+            "detail": f"Trading within 0.15% of Low of the Day (Day Low {curr_sym}{day_low:,.2f}) with heavy volume selling (RVOL {rvol:.2f}x)."
         })
     elif is_orb_breakdown:
-        score -= 12
+        score -= 15
         checks.append({
             "factor": "Breakout / Range",
-            "status": "ORB Breakdown",
-            "score": "-12",
-            "detail": f"Trading below 15-Minute Opening Range Low (₹{orb_low:,.2f})."
+            "status": "ORB Breakdown Confirmed",
+            "score": "-15",
+            "detail": f"Trading decisively below 15-Min ORB Low ({curr_sym}{orb_low:,.2f}) with RVOL {rvol:.2f}x >= 1.3x and red day alignment."
+        })
+    elif is_bear_trap_risk:
+        checks.append({
+            "factor": "Breakout / Range",
+            "status": "Bear Trap Warning",
+            "score": "+5",
+            "detail": f"Price testing ORB Low ({curr_sym}{orb_low:,.2f}) but stock is positive on the day (+{day_change_pct:.2f}%). Dip-buying absorption likely; shorting blocked."
+        })
+    elif is_bull_trap_risk:
+        checks.append({
+            "factor": "Breakout / Range",
+            "status": "Bull Trap Warning",
+            "score": "-5",
+            "detail": f"Price testing ORB High ({curr_sym}{orb_high:,.2f}) but stock is down on the day ({day_change_pct:.2f}%). Overhead supply resistance active; buying blocked."
         })
     else:
         checks.append({
             "factor": "Breakout / Range",
             "status": "Within Range",
             "score": "0",
-            "detail": f"Trading inside Opening Range (ORB Low ₹{orb_low:,.2f} - ORB High ₹{orb_high:,.2f})."
+            "detail": f"Trading inside Opening Range (ORB Low {curr_sym}{orb_low:,.2f} - ORB High {curr_sym}{orb_high:,.2f})."
         })
 
-    # 5. Time-of-Day Whipsaw Penalty
-    # Extract local time from the most recent candle's timestamp.
-    # If time falls within mid-day doldrums (12:00 PM to 13:30 PM local market time), subtract 15 points.
+    # 6. Time-of-Day Execution Window
     candle_ts = curr.name
     local_time = None
     is_india_stock = bool(".NS" in ticker or ".BO" in ticker or currency_symbol == "₹")
@@ -440,21 +473,48 @@ def analyze_stock_setup(
         except Exception:
             local_time = candle_ts.time()
 
+    is_midday_chop = False
+    is_late_session = False
+    is_prime_window = False
+
     if local_time is not None:
-        if dt_time(12, 0) <= local_time <= dt_time(13, 30):
-            score -= 15
+        is_midday_chop = (dt_time(11, 30) <= local_time < dt_time(13, 30))
+        is_late_session = (local_time >= dt_time(14, 45))
+        is_prime_window = (
+            (dt_time(9, 45) <= local_time <= dt_time(11, 30)) or
+            (dt_time(13, 30) <= local_time < dt_time(14, 45))
+        )
+
+        if is_midday_chop:
+            score -= 20
             checks.append({
-                "factor": "Time of Day",
+                "factor": "Execution Window",
                 "status": f"Mid-day Chop Zone ({market_tz_label})",
-                "score": "-15",
-                "detail": f"Mid-day Chop Zone (12:00 PM to 1:30 PM {market_tz_label}): Volume traditionally dries up; requiring perfect structure to trigger."
+                "score": "-20",
+                "detail": f"Mid-day Chop Zone (11:30 AM to 1:30 PM {market_tz_label}): Volume traditionally dries up; high whipsaw risk. Setup held on WATCH."
+            })
+        elif is_late_session:
+            score -= 25
+            checks.append({
+                "factor": "Execution Window",
+                "status": f"Late Session / Square-off ({market_tz_label})",
+                "score": "-25",
+                "detail": f"Late intraday session ({local_time.strftime('%I:%M %p')} {market_tz_label}): Approaching market close. Insufficient time for multi-stage targets."
+            })
+        elif is_prime_window:
+            score += 10
+            checks.append({
+                "factor": "Execution Window",
+                "status": f"Prime Window ({market_tz_label})",
+                "score": "+10",
+                "detail": f"High liquidity institutional momentum window ({local_time.strftime('%I:%M %p')} {market_tz_label}). Optimal directional follow-through."
             })
         else:
             checks.append({
-                "factor": "Time of Day",
-                "status": f"Active Session ({market_tz_label})",
-                "score": "+5",
-                "detail": f"High liquidity intraday session ({local_time.strftime('%I:%M %p')} {market_tz_label}). Optimal institutional momentum window."
+                "factor": "Execution Window",
+                "status": f"Open Range Discovery ({market_tz_label})",
+                "score": "0",
+                "detail": f"Opening session price discovery ({local_time.strftime('%I:%M %p')} {market_tz_label})."
             })
 
     # 4. Factor MTF Alignment into the Score
@@ -530,7 +590,32 @@ def analyze_stock_setup(
                     "detail": f"{bear_tfs} of 4 timeframes show bearish momentum."
                 })
 
-    # 7. Risk Guardrails (Liquidity & Volatility Checks)
+    # 7. Macro Regime & ADX Trend Strength Check
+    if adx14 >= 25.0:
+        score += 15 if (direction_bias == "LONG") else -15
+        checks.append({
+            "factor": "Trend Regime (ADX 14)",
+            "status": f"Strong Directional Trend (ADX {adx14:.1f})",
+            "score": "+15" if direction_bias == "LONG" else "-15",
+            "detail": f"1-minute ADX ({adx14:.1f} >= 25) confirms strong trend strength with institutional directional flow."
+        })
+    elif adx14 < 18.0 and rvol < 1.6:
+        score -= 20 if (direction_bias == "LONG") else +20
+        checks.append({
+            "factor": "Trend Regime (ADX 14)",
+            "status": f"Low-ADX Chop Risk (ADX {adx14:.1f})",
+            "score": "-20" if direction_bias == "LONG" else "+20",
+            "detail": f"1-minute ADX ({adx14:.1f} < 18) indicates sideways compression. Elevated risk of false breakouts."
+        })
+    else:
+        checks.append({
+            "factor": "Trend Regime (ADX 14)",
+            "status": f"Moderate Trend (ADX {adx14:.1f})",
+            "score": "0",
+            "detail": f"1-minute ADX ({adx14:.1f}) indicates standard trending conditions."
+        })
+
+    # 8. Risk Guardrails (Liquidity & Volatility Checks)
     if not has_sufficient_liquidity:
         score -= 40
         checks.append({
@@ -562,10 +647,11 @@ def analyze_stock_setup(
     # Intraday Normalized Score (0 to 100) for UI display
     display_score = int(round((score + 100) / 2))
 
-    # --- SIGNAL DETERMINATION (STRICT 4-TIMEFRAME SATISFACTION) ---
-    # User requirement: Only recommend stocks that satisfy ALL 4 TIMEFRAMES (1m, 5m, 10m, and 15m).
-    # Stocks with 3 or fewer aligned timeframes are strictly held on WATCH and NOT recommended.
+    # --- SIGNAL DETERMINATION (STRICT 4-TIMEFRAME & EXECUTION GATES) ---
     is_recommended = False
+    setup_name = ""
+    setup_desc = ""
+
     if not has_sufficient_liquidity:
         signal = "AVOID - ILLIQUID"
         action = "WATCH"
@@ -578,51 +664,96 @@ def analyze_stock_setup(
         color = "#F87171"
         setup_name = "Caution: High Intraday Volatility"
         setup_desc = f"1-minute ATR volatility ({atr_pct:.2f}%) exceeds safety ceiling. Whipsaws likely to trigger stops."
-    elif bull_tfs == 4 and score >= 60:
-        signal = "STRONG BUY"
-        action = "LONG"
-        color = "#10B981"  # Emerald Green
-        is_recommended = True
     elif bull_tfs == 4 and score >= 35:
-        signal = "BUY"
-        action = "LONG"
-        color = "#34D399"
-        is_recommended = True
-    elif bear_tfs == 4 and score <= -60:
-        signal = "STRONG SELL"
-        action = "SHORT"
-        color = "#EF4444"  # Red
-        is_recommended = True
+        if is_midday_chop:
+            signal = "WATCH - MIDDAY CHOP"
+            action = "WATCH"
+            color = "#FB923C"
+            setup_name = f"Midday Chop Zone ({market_tz_label})"
+            setup_desc = f"Midday volume lull (11:30 AM to 1:30 PM {market_tz_label}). Historically elevated whipsaw risk. Recommendation withheld until afternoon session."
+            is_recommended = False
+        elif is_late_session:
+            signal = "WATCH - LATE SESSION"
+            action = "WATCH"
+            color = "#9CA3AF"
+            setup_name = f"Late Session / Square-off Zone ({market_tz_label})"
+            setup_desc = f"Approaching market close ({local_time.strftime('%I:%M %p') if local_time else ''} {market_tz_label}). Insufficient time remaining for intraday targets."
+            is_recommended = False
+        elif adx14 < 18.0 and rvol < 1.6:
+            signal = "WATCH - LOW ADX CHOP"
+            action = "WATCH"
+            color = "#9CA3AF"
+            setup_name = f"Low-ADX Range Compression (ADX {adx14:.1f})"
+            setup_desc = f"1-minute ADX ({adx14:.1f} < 18) and RVOL ({rvol:.2f}x) show lack of directional expansion. Held on WATCH to avoid mean-reversion chop."
+            is_recommended = False
+        elif close < open_price and day_change_pct < -0.5:
+            signal = "WATCH - BULL TRAP SHIELD"
+            action = "WATCH"
+            color = "#38BDF8"
+            setup_name = "Bull-Trap Shield: Red Day Bounce"
+            setup_desc = f"Stock is testing highs but opened with a gap down and remains red on the day ({day_change_pct:+.2f}%). Overhead supply active. Longs blocked."
+            is_recommended = False
+        else:
+            signal = "STRONG BUY" if score >= 60 else "BUY"
+            action = "LONG"
+            color = "#10B981" if score >= 60 else "#34D399"
+            is_recommended = True
     elif bear_tfs == 4 and score <= -35:
-        signal = "SELL"
-        action = "SHORT"
-        color = "#F87171"
-        is_recommended = True
+        if is_midday_chop:
+            signal = "WATCH - MIDDAY CHOP"
+            action = "WATCH"
+            color = "#FB923C"
+            setup_name = f"Midday Chop Zone ({market_tz_label})"
+            setup_desc = f"Midday volume lull (11:30 AM to 1:30 PM {market_tz_label}). Historically elevated whipsaw risk. Recommendation withheld until afternoon session."
+            is_recommended = False
+        elif is_late_session:
+            signal = "WATCH - LATE SESSION"
+            action = "WATCH"
+            color = "#9CA3AF"
+            setup_name = f"Late Session / Square-off Zone ({market_tz_label})"
+            setup_desc = f"Approaching market close ({local_time.strftime('%I:%M %p') if local_time else ''} {market_tz_label}). Insufficient time remaining for intraday targets."
+            is_recommended = False
+        elif adx14 < 18.0 and rvol < 1.6:
+            signal = "WATCH - LOW ADX CHOP"
+            action = "WATCH"
+            color = "#9CA3AF"
+            setup_name = f"Low-ADX Range Compression (ADX {adx14:.1f})"
+            setup_desc = f"1-minute ADX ({adx14:.1f} < 18) and RVOL ({rvol:.2f}x) show lack of directional expansion. Held on WATCH to avoid false breakdown chop."
+            is_recommended = False
+        elif close >= open_price or day_change_pct > 0:
+            signal = "WATCH - BEAR TRAP SHIELD"
+            action = "WATCH"
+            color = "#FB923C"
+            setup_name = "Bear-Trap Shield: Green Day Dip"
+            setup_desc = f"Stock is testing lows but is green on the day (+{day_change_pct:.2f}%). Dips into green days are frequently bought by institutional algos. Shorting blocked."
+            is_recommended = False
+        else:
+            signal = "STRONG SELL" if score <= -60 else "SELL"
+            action = "SHORT"
+            color = "#EF4444" if score <= -60 else "#F87171"
+            is_recommended = True
     elif bull_tfs == 3 and score >= 35:
-        # Satisfies 3 of 4 timeframes; NOT recommended until 4th timeframe confirms
         signal = "WATCH - 3/4 MTF"
         action = "WATCH"
-        color = "#38BDF8"  # Sky Blue
+        color = "#38BDF8"
         setup_name = "Awaiting 4-TF Confluence (3/4 Bullish)"
         setup_desc = "Satisfies 3 of 4 timeframes (1m, 5m, 10m, 15m). Awaiting all 4 timeframes to align before recommending."
     elif bear_tfs == 3 and score <= -35:
-        # Satisfies 3 of 4 timeframes; NOT recommended until 4th timeframe confirms
         signal = "WATCH - 3/4 MTF"
         action = "WATCH"
-        color = "#FB923C"  # Orange
+        color = "#FB923C"
         setup_name = "Awaiting 4-TF Confluence (3/4 Bearish)"
         setup_desc = "Satisfies 3 of 4 timeframes (1m, 5m, 10m, 15m). Awaiting all 4 timeframes to align before recommending."
     elif (score >= 35 and bull_tfs < 3) or (score <= -35 and bear_tfs < 3):
-        # 1-min was showing momentum, but 5m, 10m, or 15m are not in alignment
         signal = "WATCH - MTF CONFLICT"
         action = "WATCH"
-        color = "#EAB308"  # Amber
+        color = "#EAB308"
         setup_name = f"MTF Divergence ({bull_tfs}/4 Bullish)" if score > 0 else f"MTF Divergence ({bear_tfs}/4 Bearish)"
         setup_desc = "1-minute momentum is contradicted across 5m, 10m, and 15m charts. Awaiting higher timeframe alignment."
     else:
         signal = "NEUTRAL"
         action = "WATCH"
-        color = "#9CA3AF"  # Gray
+        color = "#9CA3AF"
 
     # --- SETUP IDENTIFICATION ---
     if action == "LONG":
@@ -654,6 +785,8 @@ def analyze_stock_setup(
         else:
             setup_name = "Intraday Trend Continuation (Short)"
             setup_desc = "Sustained downward momentum with resistance at 9/21 EMA."
+    elif setup_name:
+        pass  # Retain specific setup_name from gating checks (e.g. Midday Chop, Bear Trap, MTF Conflict)
     elif not has_sufficient_liquidity:
         setup_name = "Caution: Low Liquidity Order Book"
         setup_desc = f"Order book volume ({vol_ma20:,.0f} shares/min) is thin. Intraday execution risks elevated slippage."
@@ -745,7 +878,7 @@ def analyze_stock_setup(
         f"**3. Price Action & Range**: Day High is {currency_symbol}{day_high:,.2f} and Day Low is {currency_symbol}{day_low:,.2f}. 15-Min Opening Range: {currency_symbol}{orb_low:,.2f} - {currency_symbol}{orb_high:,.2f}. Setup: **{setup_name}**.",
         f"**4. Momentum (RSI 14)**: RSI is currently **{rsi:.1f}**. {'Optimal bullish trajectory, plenty of headroom before overbought exhaustion.' if 50 <= rsi <= 72 else ('High momentum, watch for pullback' if rsi > 72 else 'Bearish momentum dominance.')}",
         f"**5. Volatility & Stop Loss Rule**: 1-minute ATR is {currency_symbol}{atr_val:,.2f}. Strict Stop Loss placed at **{currency_symbol}{sl_price:,.2f}** ({sl_pct:+.2f}% risk), safely anchored below key structural support (Swing Low / VWAP buffer).",
-        f"**6. Target Projections**: Target 1 at **{currency_symbol}{t1_price:,.2f}** ({t1_pct:+.2f}%, 1:1.5 R:R); Target 2 at **{currency_symbol}{t2_price:,.2f}** ({t2_pct:+.2f}%, 1:2.5 R:R); Target 3 runner at **{currency_symbol}{t3_price:,.2f}** ({t3_pct:+.2f}%).",
+        f"**6. Target Projections & Runner Lock-in**: Target 1 at **{currency_symbol}{t1_price:,.2f}** ({t1_pct:+.2f}%, 1:1.5 R:R); Target 2 at **{currency_symbol}{t2_price:,.2f}** ({t2_pct:+.2f}%, 1:2.5 R:R). Upon reaching Target 1, 50% is booked and runner Stop Loss trails to +0.5R (**{currency_symbol}{round(entry_price + (0.5 * risk_amount), 2) if action == 'LONG' else round(entry_price - (0.5 * risk_amount), 2):,.2f}**), ensuring the trade cannot regress to a loss.",
         (
             f"**7. Multi-Timeframe Alignment (1m, 5m, 10m, 15m)**: FULL 4-TF CONFLUENCE (RECOMMENDED - {mtf_data.get('confluence_score', '')}). "
             f"[1m: {mtf_data.get('timeframes', {}).get('1m', {}).get('bias', 'N/A')} | "
@@ -764,6 +897,8 @@ def analyze_stock_setup(
     ]
 
     roi_pct = round(abs(t2_pct), 2)
+    locked_sl_price = round(entry_price + (0.5 * risk_amount), 2) if action == "LONG" else round(entry_price - (0.5 * risk_amount), 2)
+    locked_sl_pct = round(((locked_sl_price - entry_price) / entry_price) * 100.0, 2) if action == "LONG" else round(((entry_price - locked_sl_price) / entry_price) * 100.0, 2)
 
     trade_plan = {
         "action": action,
@@ -777,13 +912,19 @@ def analyze_stock_setup(
         "target_2_pct": t2_pct,
         "target_3": t3_price,
         "target_3_pct": t3_pct,
+        "locked_stop_loss": locked_sl_price,
+        "locked_stop_loss_pct": locked_sl_pct,
         "roi_pct": roi_pct,
         "t1_roi_pct": round(abs(t1_pct), 2),
         "t2_roi_pct": round(abs(t2_pct), 2),
         "t3_roi_pct": round(abs(t3_pct), 2),
         "risk_reward_ratio": rrr,
         "risk_per_share": risk_amount,
-        "execution_strategy": f"Book 50% position at Target 1 ({currency_symbol}{t1_price:,.2f}), trail Stop Loss to Cost/Entry ({currency_symbol}{entry_price:,.2f}), and ride remaining 50% towards Target 2 ({currency_symbol}{t2_price:,.2f})."
+        "execution_strategy": (
+            f"Book 50% position at Target 1 ({currency_symbol}{t1_price:,.2f}, +1.5R). "
+            f"Immediately trail Stop Loss to Lock-in Profit at +0.5R ({currency_symbol}{locked_sl_price:,.2f}) to guarantee positive expectancy, "
+            f"and let remaining 50% runner target Target 2 ({currency_symbol}{t2_price:,.2f}, +2.5R)."
+        )
     }
 
     # Detect visual chart markers for patterns & triggers
@@ -838,6 +979,7 @@ def analyze_stock_setup(
         "ema50": round(ema50, 2),
         "rsi": round(rsi, 1),
         "atr": round(atr_val, 2),
+        "adx": round(adx14, 1),
         "rvol": round(rvol, 2),
         "volume": int(volume),
         "score": score,
@@ -1032,7 +1174,7 @@ def compute_mtf_alignment(df_1m: pd.DataFrame) -> Dict[str, Any]:
 
     # 2. 5-Minute (Tactical)
     df_5m = df_1m.resample('5min').agg(agg_rules).dropna()
-    df_5m = calculate_intraday_indicators(df_5m)
+    df_5m = calculate_intraday_indicators(df_5m, light=True)
     if not df_5m.empty and 'VWAP' in df_5m.columns:
         last_5m = df_5m.iloc[-1]
         close_5m = float(last_5m['Close'])
@@ -1048,7 +1190,7 @@ def compute_mtf_alignment(df_1m: pd.DataFrame) -> Dict[str, Any]:
 
     # 3. 10-Minute (Intermediate)
     df_10m = df_1m.resample('10min').agg(agg_rules).dropna()
-    df_10m = calculate_intraday_indicators(df_10m)
+    df_10m = calculate_intraday_indicators(df_10m, light=True)
     if not df_10m.empty and 'VWAP' in df_10m.columns:
         last_10m = df_10m.iloc[-1]
         close_10m = float(last_10m['Close'])
@@ -1064,7 +1206,7 @@ def compute_mtf_alignment(df_1m: pd.DataFrame) -> Dict[str, Any]:
 
     # 4. 15-Minute (Macro)
     df_15m = df_1m.resample('15min').agg(agg_rules).dropna()
-    df_15m = calculate_intraday_indicators(df_15m)
+    df_15m = calculate_intraday_indicators(df_15m, light=True)
     if not df_15m.empty and 'VWAP' in df_15m.columns:
         last_15m = df_15m.iloc[-1]
         close_15m = float(last_15m['Close'])

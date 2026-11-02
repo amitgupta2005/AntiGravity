@@ -7,6 +7,8 @@ handles market sessions, caching, error recovery, and multiple watchlists
 
 import time
 import logging
+import threading
+from collections import OrderedDict
 from typing import Dict, Any, List, Optional, Tuple
 import pandas as pd
 import yfinance as yf
@@ -199,10 +201,69 @@ WATCHLISTS = {
     }
 }
 
-# In-memory cache for speed and rate-limit preservation
-# Key: ticker, Value: {"timestamp": float, "df": DataFrame, "setup": dict}
-_CACHE: Dict[str, Dict[str, Any]] = {}
 CACHE_TTL_SECONDS = 20  # 20 seconds cache for rapid scans
+
+class BoundedTTLCache:
+    """
+    Thread-safe, bounded LRU + TTL in-memory cache.
+    Prevents unbounded memory growth, memory leaks from accumulated Pandas DataFrames,
+    and race conditions during concurrent multi-threaded scans.
+    """
+    def __init__(self, maxsize: int = 128, ttl_seconds: float = CACHE_TTL_SECONDS):
+        self._maxsize = maxsize
+        self._ttl_seconds = ttl_seconds
+        self._cache: OrderedDict[str, Dict[str, Any]] = OrderedDict()
+        self._lock = threading.Lock()
+
+    def get(self, key: str, default: Any = None) -> Any:
+        with self._lock:
+            if key not in self._cache:
+                return default
+            entry = self._cache[key]
+            now = time.time()
+            if now - entry.get("timestamp", 0) > self._ttl_seconds:
+                del self._cache[key]
+                return default
+            self._cache.move_to_end(key)
+            return entry
+
+    def __contains__(self, key: str) -> bool:
+        return self.get(key) is not None
+
+    def __getitem__(self, key: str) -> Dict[str, Any]:
+        val = self.get(key)
+        if val is None:
+            raise KeyError(key)
+        return val
+
+    def __setitem__(self, key: str, value: Dict[str, Any]) -> None:
+        with self._lock:
+            now = time.time()
+            # Prune stale expired entries proactively to conserve memory
+            expired = [
+                k for k, v in self._cache.items()
+                if (now - v.get("timestamp", 0)) > (self._ttl_seconds * 3)
+            ]
+            for k in expired:
+                del self._cache[k]
+
+            if key in self._cache:
+                self._cache.move_to_end(key)
+            self._cache[key] = value
+
+            while len(self._cache) > self._maxsize:
+                self._cache.popitem(last=False)
+
+    def clear(self) -> None:
+        with self._lock:
+            self._cache.clear()
+
+    def __len__(self) -> int:
+        with self._lock:
+            return len(self._cache)
+
+# In-memory bounded cache for speed and rate-limit preservation
+_CACHE = BoundedTTLCache(maxsize=128, ttl_seconds=CACHE_TTL_SECONDS)
 
 
 def get_ticker_cap(ticker: str) -> str:
@@ -415,7 +476,7 @@ def get_chart_data(ticker: str, timeframe: str = "1m", force_refresh: bool = Fal
     else:
         df_chart = df
 
-    # Prepare Lightweight Charts arrays
+    # Prepare Lightweight Charts arrays with high performance
     candles = []
     vwap_series = []
     ema9_series = []
@@ -426,8 +487,16 @@ def get_chart_data(ticker: str, timeframe: str = "1m", force_refresh: bool = Fal
     rsi_series = []
 
     last_time = -1
-    for idx, row in df_chart.iterrows():
-        # UNIX epoch in seconds
+    has_vwap = 'VWAP' in df_chart.columns
+    has_ema9 = 'EMA9' in df_chart.columns
+    has_ema21 = 'EMA21' in df_chart.columns
+    has_ema50 = 'EMA50' in df_chart.columns
+    has_vol_ma = 'Vol_MA20' in df_chart.columns
+    has_rsi = 'RSI' in df_chart.columns
+
+    # itertuples is 30-50x faster than iterrows and avoids allocating a pd.Series per row
+    for row in df_chart.itertuples():
+        idx = row.Index
         try:
             t_sec = int(idx.timestamp())
         except Exception:
@@ -438,11 +507,11 @@ def get_chart_data(ticker: str, timeframe: str = "1m", force_refresh: bool = Fal
             continue
         last_time = t_sec
 
-        o = float(row['Open'])
-        h = float(row['High'])
-        l = float(row['Low'])
-        c = float(row['Close'])
-        v = float(row['Volume'])
+        o = float(row.Open)
+        h = float(row.High)
+        l = float(row.Low)
+        c = float(row.Close)
+        v = float(row.Volume)
 
         candles.append({
             "time": t_sec,
@@ -452,17 +521,25 @@ def get_chart_data(ticker: str, timeframe: str = "1m", force_refresh: bool = Fal
             "close": round(c, 2)
         })
 
-        if not pd.isna(row.get('VWAP')):
-            vwap_series.append({"time": t_sec, "value": round(float(row['VWAP']), 2)})
+        if has_vwap:
+            val = getattr(row, 'VWAP', None)
+            if val is not None and not pd.isna(val):
+                vwap_series.append({"time": t_sec, "value": round(float(val), 2)})
         
-        if not pd.isna(row.get('EMA9')):
-            ema9_series.append({"time": t_sec, "value": round(float(row['EMA9']), 2)})
+        if has_ema9:
+            val = getattr(row, 'EMA9', None)
+            if val is not None and not pd.isna(val):
+                ema9_series.append({"time": t_sec, "value": round(float(val), 2)})
 
-        if not pd.isna(row.get('EMA21')):
-            ema21_series.append({"time": t_sec, "value": round(float(row['EMA21']), 2)})
+        if has_ema21:
+            val = getattr(row, 'EMA21', None)
+            if val is not None and not pd.isna(val):
+                ema21_series.append({"time": t_sec, "value": round(float(val), 2)})
 
-        if not pd.isna(row.get('EMA50')):
-            ema50_series.append({"time": t_sec, "value": round(float(row['EMA50']), 2)})
+        if has_ema50:
+            val = getattr(row, 'EMA50', None)
+            if val is not None and not pd.isna(val):
+                ema50_series.append({"time": t_sec, "value": round(float(val), 2)})
 
         # Volume color: green if close >= open, else red
         vol_color = "rgba(16, 185, 129, 0.65)" if c >= o else "rgba(239, 68, 68, 0.65)"
@@ -472,11 +549,15 @@ def get_chart_data(ticker: str, timeframe: str = "1m", force_refresh: bool = Fal
             "color": vol_color
         })
 
-        if not pd.isna(row.get('Vol_MA20')):
-            vol_ma_series.append({"time": t_sec, "value": round(float(row['Vol_MA20']), 2)})
+        if has_vol_ma:
+            val = getattr(row, 'Vol_MA20', None)
+            if val is not None and not pd.isna(val):
+                vol_ma_series.append({"time": t_sec, "value": round(float(val), 2)})
 
-        if not pd.isna(row.get('RSI')):
-            rsi_series.append({"time": t_sec, "value": round(float(row['RSI']), 2)})
+        if has_rsi:
+            val = getattr(row, 'RSI', None)
+            if val is not None and not pd.isna(val):
+                rsi_series.append({"time": t_sec, "value": round(float(val), 2)})
 
     return {
         "status": "OK",
@@ -507,11 +588,20 @@ def scan_watchlist(watchlist_key: str = "NSE_MOMENTUM", custom_tickers: Optional
     Utilizes Angel One SmartAPI live market feed for real-time Indian NSE quotes.
     """
     if custom_tickers and len(custom_tickers) > 0:
-        targets = [{"ticker": t.strip().upper(), "name": t.strip().upper()} for t in custom_tickers if t.strip()]
+        raw_targets = [{"ticker": t.strip().upper(), "name": t.strip().upper()} for t in custom_tickers if t.strip()]
     elif watchlist_key in WATCHLISTS:
-        targets = WATCHLISTS[watchlist_key]["stocks"]
+        raw_targets = WATCHLISTS[watchlist_key]["stocks"]
     else:
-        targets = WATCHLISTS["NSE_MOMENTUM"]["stocks"]
+        raw_targets = WATCHLISTS["NSE_MOMENTUM"]["stocks"]
+
+    # Deduplicate targets by ticker symbol to avoid duplicate work and concurrent thread waste
+    seen_tickers = set()
+    targets = []
+    for item in raw_targets:
+        sym = item.get("ticker", "").strip().upper()
+        if sym and sym not in seen_tickers:
+            seen_tickers.add(sym)
+            targets.append(item)
 
     # Batch-fetch live Angel One quotes for Indian stocks up-front if configured
     angel_quotes: Dict[str, Dict[str, Any]] = {}

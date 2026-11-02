@@ -35,6 +35,8 @@ let ema50Series = null;
 let volumeSeries = null;
 let volMaSeries = null;
 let activePriceLines = [];
+let lastAppliedChartTz = null;
+let sharedAudioCtx = null;
 
 let rsiChart = null;
 let rsiSeries = null;
@@ -358,6 +360,26 @@ function initLightweightCharts() {
     return;
   }
 
+  // Properly dispose and remove existing chart instances to prevent canvas memory leaks
+  if (mainChart) {
+    try {
+      mainChart.remove();
+    } catch (e) {
+      console.warn("Error removing previous mainChart:", e);
+    }
+    mainChart = null;
+  }
+  if (rsiChart) {
+    try {
+      rsiChart.remove();
+    } catch (e) {
+      console.warn("Error removing previous rsiChart:", e);
+    }
+    rsiChart = null;
+  }
+  activePriceLines = [];
+  lastAppliedChartTz = null;
+
   const c = getThemeColors();
 
   const commonOptions = {
@@ -542,8 +564,12 @@ function setupResizeObserver() {
   });
   ro.observe(chartViewportContainer);
 
+  let resizeRaf = null;
   window.addEventListener("resize", () => {
-    calculateAndApplyDeviceFrame();
+    if (resizeRaf) cancelAnimationFrame(resizeRaf);
+    resizeRaf = requestAnimationFrame(() => {
+      calculateAndApplyDeviceFrame();
+    });
   });
   window.addEventListener("orientationchange", () => {
     setTimeout(calculateAndApplyDeviceFrame, 200);
@@ -887,32 +913,7 @@ function renderStockCards() {
       </div>
     `;
 
-    card.addEventListener("click", () => {
-      selectStock(stock.ticker, true);
-      // If mobile view, automatically switch to chart view on selection
-      if (window.innerWidth <= 1024) {
-        setMobileView("chart");
-      }
-    });
-
-    card.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        e.stopPropagation();
-        navigateStockList(1);
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        e.stopPropagation();
-        navigateStockList(-1);
-      } else if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        selectStock(stock.ticker, true);
-        if (window.innerWidth <= 1024) {
-          setMobileView("chart");
-        }
-      }
-    });
-
+    card.dataset.ticker = stock.ticker;
     stockCardsContainer.appendChild(card);
   });
 }
@@ -1088,50 +1089,53 @@ function updateChartSeries(chartData) {
   const tzName = isIndia ? "Asia/Kolkata" : "America/New_York";
   const tzLabel = isIndia ? "IST" : "EST";
 
-  const chartTimeOptions = {
-    localization: {
-      timeFormatter: (timestamp) => {
-        const d = new Date(timestamp * 1000);
-        const timePart = d.toLocaleTimeString(isIndia ? 'en-IN' : 'en-US', {
-          timeZone: tzName,
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: true
-        });
-        const datePart = d.toLocaleDateString(isIndia ? 'en-IN' : 'en-US', {
-          timeZone: tzName,
-          month: 'short',
-          day: '2-digit'
-        });
-        return `${datePart} ${timePart} ${tzLabel}`;
-      }
-    },
-    timeScale: {
-      tickMarkFormatter: (time, tickMarkType, locale) => {
-        const d = new Date(time * 1000);
-        if (tickMarkType === LightweightCharts.TickMarkType.Time || tickMarkType === LightweightCharts.TickMarkType.TimeWithSeconds) {
-          return d.toLocaleTimeString(isIndia ? 'en-IN' : 'en-US', {
+  if (lastAppliedChartTz !== tzLabel) {
+    lastAppliedChartTz = tzLabel;
+    const chartTimeOptions = {
+      localization: {
+        timeFormatter: (timestamp) => {
+          const d = new Date(timestamp * 1000);
+          const timePart = d.toLocaleTimeString(isIndia ? 'en-IN' : 'en-US', {
             timeZone: tzName,
             hour: '2-digit',
             minute: '2-digit',
-            hour12: false
+            second: '2-digit',
+            hour12: true
+          });
+          const datePart = d.toLocaleDateString(isIndia ? 'en-IN' : 'en-US', {
+            timeZone: tzName,
+            month: 'short',
+            day: '2-digit'
+          });
+          return `${datePart} ${timePart} ${tzLabel}`;
+        }
+      },
+      timeScale: {
+        tickMarkFormatter: (time, tickMarkType, locale) => {
+          const d = new Date(time * 1000);
+          if (tickMarkType === LightweightCharts.TickMarkType.Time || tickMarkType === LightweightCharts.TickMarkType.TimeWithSeconds) {
+            return d.toLocaleTimeString(isIndia ? 'en-IN' : 'en-US', {
+              timeZone: tzName,
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            });
+          }
+          return d.toLocaleDateString(isIndia ? 'en-IN' : 'en-US', {
+            timeZone: tzName,
+            month: 'short',
+            day: 'numeric'
           });
         }
-        return d.toLocaleDateString(isIndia ? 'en-IN' : 'en-US', {
-          timeZone: tzName,
-          month: 'short',
-          day: 'numeric'
-        });
       }
-    }
-  };
+    };
 
-  try {
-    mainChart.applyOptions(chartTimeOptions);
-    if (rsiChart) rsiChart.applyOptions(chartTimeOptions);
-  } catch (e) {
-    console.debug("Could not apply chart timezone formatting:", e);
+    try {
+      mainChart.applyOptions(chartTimeOptions);
+      if (rsiChart) rsiChart.applyOptions(chartTimeOptions);
+    } catch (e) {
+      console.debug("Could not apply chart timezone formatting:", e);
+    }
   }
 
   // FIT CHART TO FRAME:
@@ -1438,20 +1442,28 @@ function exitReplayMode() {
 // ============================================================================
 function playAlertSound() {
   try {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
+    const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtxClass) return;
+    if (!sharedAudioCtx || sharedAudioCtx.state === "closed") {
+      sharedAudioCtx = new AudioCtxClass();
+    }
+    if (sharedAudioCtx.state === "suspended") {
+      sharedAudioCtx.resume().catch(() => {});
+    }
+
+    const osc = sharedAudioCtx.createOscillator();
+    const gain = sharedAudioCtx.createGain();
 
     osc.type = "sine";
-    osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15);
-    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+    osc.frequency.setValueAtTime(587.33, sharedAudioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, sharedAudioCtx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.2, sharedAudioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, sharedAudioCtx.currentTime + 0.35);
 
     osc.connect(gain);
-    gain.connect(audioCtx.destination);
+    gain.connect(sharedAudioCtx.destination);
     osc.start();
-    osc.stop(audioCtx.currentTime + 0.35);
+    osc.stop(sharedAudioCtx.currentTime + 0.35);
   } catch (e) {}
 }
 
@@ -1522,6 +1534,44 @@ function setupEventListeners() {
       setMobileView(btn.dataset.view);
     });
   });
+
+  // Delegated event handling for Stock Cards (prevents listener churn on every 5s refresh)
+  if (stockCardsContainer) {
+    stockCardsContainer.addEventListener("click", (e) => {
+      const card = e.target.closest(".stock-card");
+      if (!card) return;
+      const ticker = card.dataset.ticker;
+      if (ticker) {
+        selectStock(ticker, true);
+        if (window.innerWidth <= 1024) {
+          setMobileView("chart");
+        }
+      }
+    });
+
+    stockCardsContainer.addEventListener("keydown", (e) => {
+      const card = e.target.closest(".stock-card");
+      if (!card) return;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        e.stopPropagation();
+        navigateStockList(1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        e.stopPropagation();
+        navigateStockList(-1);
+      } else if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        const ticker = card.dataset.ticker;
+        if (ticker) {
+          selectStock(ticker, true);
+          if (window.innerWidth <= 1024) {
+            setMobileView("chart");
+          }
+        }
+      }
+    });
+  }
 
   // Theme Switcher Toggle
   btnThemeToggle.addEventListener("click", () => {
