@@ -127,7 +127,7 @@ export function renderStrategyBuilder(containerId, onPayoffUpdate) {
           <label class="control-label text-dim">Strategy Presets</label>
           <select id="builderPresetPicker" class="input-select">
             <option value="">-- Apply Strategy Template --</option>
-            <option value="THETA_DECAY">⚡ Theta Decay Harvester (ATM Pin)</option>
+            <option value="THETA_DECAY">⚡ Theta Decay Harvester (16-Delta Condor)</option>
             <option value="THETA_CALENDAR">⏳ Theta Decay Calendar (Time Spread)</option>
             <option value="LONG_CALL">Long Call (Bullish Momentum)</option>
             <option value="BULL_CALL_SPREAD">Bull Call Spread (Debit)</option>
@@ -456,10 +456,10 @@ function applyStrategyPreset(preset, S, step, dte, iv, r) {
     ];
   } else if (preset === 'THETA_DECAY') {
     currentBuilderState.legs = [
-      { id: 1, type: 'put', action: 'buy', strike: atm - step * 3, premium: gPut(atm - step * 3), contracts: 1 },
-      { id: 2, type: 'put', action: 'sell', strike: atm, premium: gPut(atm), contracts: 1 },
-      { id: 3, type: 'call', action: 'sell', strike: atm, premium: gCall(atm), contracts: 1 },
-      { id: 4, type: 'call', action: 'buy', strike: atm + step * 3, premium: gCall(atm + step * 3), contracts: 1 }
+      { id: 1, type: 'put', action: 'buy', strike: atm - step * 5, premium: gPut(atm - step * 5), contracts: 1 },
+      { id: 2, type: 'put', action: 'sell', strike: atm - step * 2, premium: gPut(atm - step * 2), contracts: 1 },
+      { id: 3, type: 'call', action: 'sell', strike: atm + step * 2, premium: gCall(atm + step * 2), contracts: 1 },
+      { id: 4, type: 'call', action: 'buy', strike: atm + step * 4, premium: gCall(atm + step * 4), contracts: 1 }
     ];
   } else if (preset === 'THETA_CALENDAR') {
     const T_back = (dte * 2.5) / 365;

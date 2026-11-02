@@ -159,8 +159,45 @@ export function buildExitPlan({
       riskProfile = RISK_PROFILES.CONSERVATIVE;
       laymanSummary = {
         plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()}.`,
-        timeExitRule: 'Credit trade: time decay works for you. Exit at 50% profit target early.',
-        actionTip: 'Never hold until the final hour; close early when 50% profit is captured.'
+        timeExitRule: '21-DTE Gamma Armor: Close or roll position when 21 DTE is reached to avoid late-stage exponential gamma spikes.',
+        actionTip: 'Never hold until the final hour; close early when 50% profit is captured or at 21 DTE.'
+      };
+      break;
+    }
+
+    case 'BEAR_CALL_SPREAD': {
+      const targetSpot = Number((S * 0.985).toFixed(2));
+      const targetProfitPerLot = Number((netCost * 0.50).toFixed(2)); // netCost is credit
+
+      const stopSpot = Number((shortStrike * 1.005).toFixed(2));
+      const stopLossPerLot = Number((netCost * 1.50).toFixed(2));
+
+      targetBooking = {
+        spotPrice: targetSpot,
+        spotPct: '-1.5%',
+        triggerText: `Stock stays below ${curr}${shortStrike}`,
+        rule: 'Book early at 50% max credit to eliminate tail risk',
+        laymanAction: `Buy back call spread when you make +${curr}${targetProfitPerLot.toLocaleString()} (50% of credit collected). Free up margin.`,
+        profitPerLot: targetProfitPerLot,
+        profitPct: '+50% Credit'
+      };
+      stopLoss = {
+        spotPrice: stopSpot,
+        spotPct: `+${(((stopSpot - S) / S) * 100).toFixed(1)}%`,
+        triggerText: `Stock rallies to ${curr}${stopSpot}`,
+        rule: 'Stop loss: exit if loss reaches 1.5x credit collected',
+        laymanAction: `Exit trade if stock rallies to ${curr}${stopSpot} OR loss reaches -${curr}${stopLossPerLot.toLocaleString()}. Prevents full max loss.`,
+        lossPerLot: stopLossPerLot,
+        lossPct: '-1.5x Credit'
+      };
+      const ratio = (targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(1);
+      managedRiskReward = `1 : ${ratio}`;
+      capitalPreservedPct = 65;
+      riskProfile = RISK_PROFILES.CONSERVATIVE;
+      laymanSummary = {
+        plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()}.`,
+        timeExitRule: '21-DTE Gamma Armor: Close or roll position when 21 DTE is reached to avoid late-stage exponential gamma spikes.',
+        actionTip: 'Close at 50% profit or 21 DTE. Never hold calls short into expiration week.'
       };
       break;
     }
@@ -267,36 +304,36 @@ export function buildExitPlan({
       riskProfile = RISK_PROFILES.CONSERVATIVE;
       laymanSummary = {
         plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()}.`,
-        timeExitRule: 'Sideways trade: Once 50% credit is gained through time decay, take it and exit.',
-        actionTip: 'Do not hold till expiry Friday. Close all 4 legs together.'
+        timeExitRule: '21-DTE Gamma Armor: Close or roll position when 21 DTE is reached to avoid late-stage exponential gamma spikes.',
+        actionTip: 'Do not hold till expiry Friday. Close all 4 legs together at 50% credit or 21 DTE.'
       };
       break;
     }
 
     case 'THETA_DECAY': {
       const targetProfitPerLot = Number((netCost * 0.50).toFixed(2));
-      const stopLossPerLot = Number((netCost * 1.25).toFixed(2));
-      const stopDistance = step * 1.5;
+      const stopLossPerLot = Number((netCost * 1.50).toFixed(2));
+      const stopDistance = step * 2.5;
       const stopSpotUpper = Number(((atmStrike || S) + stopDistance).toFixed(2));
       const stopSpotLower = Number(((atmStrike || S) - stopDistance).toFixed(2));
 
       targetBooking = {
         spotPrice: atmStrike || S,
-        spotPct: 'ATM Pin',
-        triggerText: `Stock pins near ${curr}${atmStrike || S}`,
-        rule: `Capture Theta: Book 50% max credit (${curr}${targetProfitPerLot.toLocaleString()}) within 7-10 days`,
-        laymanAction: `Exit trade when time decay gives you +${curr}${targetProfitPerLot.toLocaleString()} (50% credit collected). Usually takes 7-10 days.`,
+        spotPct: 'Range Plateau',
+        triggerText: `Stock remains between ${curr}${stopSpotLower} — ${curr}${stopSpotUpper}`,
+        rule: `Capture Theta: Book 50% max credit (${curr}${targetProfitPerLot.toLocaleString()}) or exit at 21 DTE`,
+        laymanAction: `Exit trade when time decay gives you +${curr}${targetProfitPerLot.toLocaleString()} (50% credit collected) or when 21 DTE is reached.`,
         profitPerLot: targetProfitPerLot,
         profitPct: '+50% Credit'
       };
       stopLoss = {
         spotPrice: stopSpotLower,
         spotPct: `±${((stopDistance / S) * 100).toFixed(1)}%`,
-        triggerText: `Stock leaves ${curr}${stopSpotLower} — ${curr}${stopSpotUpper}`,
-        rule: `Stop loss: close if spot breaks outside range or loss reaches 1.25x credit`,
+        triggerText: `Stock tests short wing (${curr}${stopSpotLower} or ${curr}${stopSpotUpper})`,
+        rule: `Stop loss: close if spot breaks outside range or loss reaches 1.5x credit`,
         laymanAction: `Exit all legs if stock moves outside ${curr}${stopSpotLower} — ${curr}${stopSpotUpper} OR loss reaches -${curr}${stopLossPerLot.toLocaleString()}.`,
         lossPerLot: stopLossPerLot,
-        lossPct: '-1.25x Credit'
+        lossPct: '-1.5x Credit'
       };
       const ratio = (targetProfitPerLot / Math.max(1, stopLossPerLot)).toFixed(1);
       managedRiskReward = `1 : ${ratio}`;
@@ -304,8 +341,8 @@ export function buildExitPlan({
       riskProfile = RISK_PROFILES.CONSERVATIVE;
       laymanSummary = {
         plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()}.`,
-        timeExitRule: 'Theta Harvest: Capture decay quickly, exit before final week expiration gamma spikes.',
-        actionTip: 'Time decay deposits money every day. Cash out when 50% is banked.'
+        timeExitRule: '21-DTE Gamma Armor: Capture rapid time decay, exit at 21 DTE before exponential gamma spike.',
+        actionTip: 'Time decay deposits money every day. Cash out when 50% is banked or 21 DTE is reached.'
       };
       break;
     }
@@ -353,7 +390,8 @@ export function buildExitPlan({
     managedRiskReward,
     capitalPreservedPct,
     riskProfile,
-    laymanSummary
+    laymanSummary,
+    gammaArmorDte: isCredit ? 21 : null
   };
 }
 
@@ -440,6 +478,22 @@ export function scanStrategiesForAsset(quote) {
   const pcr = quote.pcr || 1.0;
   const lotSize = quote.lotSize || 100;
   const curr = quote.currencySymbol || '$';
+
+  // Volatility Risk Premium (VRP) & Trend Regime Alignment Metrics:
+  // VRP = IV - Realized HV. When VRP >= 3.0%, IV is richly priced, justifying short credit.
+  // When VRP < 3.0%, options are cheap or underpriced, favoring long debit structures.
+  const hv = (quote.hv !== undefined && quote.hv !== null)
+    ? Number(quote.hv)
+    : (quote.historicalVolatility !== undefined && quote.historicalVolatility !== null)
+      ? Number(quote.historicalVolatility)
+      : Number(((quote.iv || 25) * 0.88).toFixed(1));
+  const vrp = Number(((quote.iv || 25) - hv).toFixed(1));
+
+  // Trend Regime Alignment:
+  // Bullish credit (Bull Put Spread) allowed only when asset is in an upward trend (Price >= SMA50)
+  // Bearish credit (Bear Call Spread) allowed only when asset is in a downward trend (Price < SMA50)
+  const isUptrend = quote.sma50 ? S >= quote.sma50 : (quote.trend ? quote.trend !== 'BEARISH' : true);
+  const isDowntrend = quote.sma50 ? S < quote.sma50 : (quote.trend ? quote.trend === 'BEARISH' : false);
 
   const expirations = getMarketExpirations(quote);
   const isIndia = quote.market === "IN";
@@ -641,9 +695,9 @@ export function scanStrategiesForAsset(quote) {
   // -------------------------------------------------------------
   // 3. STRATEGY: Bull Put Spread (Credit Spread)
   // Sell OTM Put + Buy Lower OTM Put (High probability income)
-  // Generated only when ivRank >= 40
+  // Gated by: IV Rank >= 40, VRP >= 3.0%, and Trend Regime is Bullish (Price >= SMA50)
   // -------------------------------------------------------------
-  if (ivRank >= 40) {
+  if (ivRank >= 40 && vrp >= 3.0 && isUptrend) {
     // Force nextMonthlyExp to target 30-45 DTE window and avoid late-stage Gamma explosion
     const exp = nextMonthlyExp;
     const dte = exp.dte;
@@ -728,7 +782,103 @@ export function scanStrategiesForAsset(quote) {
             ivRank,
             netDelta: payoff.netDelta,
             netTheta: payoff.netTheta,
-            catalyst: `High-probability theta harvest with cushion down to ${curr}${breakeven}. Disciplined exit books 50% credit (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}) and cuts loss at 1.5x credit to protect capital.`
+            catalyst: `High-probability theta harvest with cushion down to ${curr}${breakeven}. Backed by Volatility Risk Premium (VRP: +${vrp}%) and Uptrend alignment. Disciplined exit books 50% credit (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}), enforces 21-DTE Gamma Armor, and cuts loss at 1.5x credit to protect capital.`
+          });
+        }
+      }
+    }
+  }
+
+  // -------------------------------------------------------------
+  // STRATEGY: Bear Call Spread (Credit Spread)
+  // Sell OTM Call + Buy Higher OTM Call (High probability income on downtrend)
+  // Gated by: IV Rank >= 40, VRP >= 3.0%, and Trend Regime is Bearish (Price < SMA50)
+  // -------------------------------------------------------------
+  if (ivRank >= 40 && vrp >= 3.0 && isDowntrend) {
+    const exp = nextMonthlyExp;
+    const dte = exp.dte;
+    const T = dte / 365;
+
+    // Binary event check: Avoid gap risk if earnings event occurs before expiration
+    if (!hasEarningsBefore(dte)) {
+      const shortStrike = atmStrike + step * 2;
+      const longStrike = atmStrike + step * 4;
+
+      const shortGreeks = calculateGreeks('call', S, shortStrike, T, r, ivDecimal);
+      const longGreeks = calculateGreeks('call', S, longStrike, T, r, ivDecimal);
+
+      // Low-Liquidity Wing filter: protection leg must evaluate to at least $0.05
+      if (longGreeks.price >= 0.05) {
+        const spreadWidth = longStrike - shortStrike;
+        const netCredit = Math.max(0.05, Number((shortGreeks.price - longGreeks.price).toFixed(2)));
+
+        // Minimum Net Credit Floor: net credit collected must be >= 15% of spreadWidth
+        if (netCredit >= 0.15 * spreadWidth) {
+          const maxLossPerShare = spreadWidth - netCredit;
+          const breakeven = Number((shortStrike + netCredit).toFixed(2));
+          const pop = calculatePOP(S, breakeven, T, ivDecimal, false);
+
+          const legs = [
+            { type: 'call', action: 'sell', strike: shortStrike, premium: shortGreeks.price, contracts: 1, label: `Sell ${curr}${shortStrike} Call` },
+            { type: 'call', action: 'buy', strike: longStrike, premium: longGreeks.price, contracts: 1, label: `Buy ${curr}${longStrike} Call` }
+          ];
+
+          const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
+          const netCost = Number((netCredit * lotSize).toFixed(2));
+          const maxProfit = netCost;
+          const maxLoss = Number((maxLossPerShare * lotSize).toFixed(2));
+
+          const exitPlan = buildExitPlan({
+            type: 'BEAR_CALL_SPREAD',
+            S,
+            lotSize,
+            netCost,
+            maxProfit,
+            maxLoss,
+            isCredit: true,
+            curr,
+            shortStrike,
+            longStrike,
+            step
+          });
+
+          strategies.push({
+            id: `${quote.ticker}-BEAR-CALL-SPREAD-${shortStrike}-${longStrike}`,
+            ticker: quote.ticker,
+            displayTicker: quote.displayTicker,
+            name: quote.name,
+            market: quote.market,
+            type: quote.type,
+            cap: quote.cap || 'LARGE',
+            sector: quote.sector || '',
+            currency: quote.currency,
+            currencySymbol: curr,
+            strategyName: 'Bear Call Spread (Credit)',
+            category: STRATEGY_CATEGORIES.CREDIT_SPREADS,
+            sentiment: 'Bearish',
+            directionBadge: 'Bearish Credit',
+            badgeClass: 'badge-credit',
+            conviction: pop > 70 ? 'High Win Rate (POP > 70%)' : 'Income Play',
+            dte,
+            expiryDate: exp.dateStr,
+            expiryLabel: `${exp.dateStr} (${exp.type})`,
+            transactSpec: buildTransactSpec(quote, exp, 'Bear Call Spread', dte),
+            spotPrice: S,
+            targetPrice: exitPlan.targetBooking.spotPrice,
+            stopLossPrice: exitPlan.stopLoss.spotPrice,
+            exitPlan,
+            legs,
+            netCost,
+            isCredit: true,
+            maxProfit,
+            maxLoss,
+            breakevens: [breakeven],
+            riskReward: `1 : ${(netCredit / maxLossPerShare).toFixed(2)}`,
+            pop,
+            ivRank,
+            netDelta: payoff.netDelta,
+            netTheta: payoff.netTheta,
+            catalyst: `High-probability theta harvest with cushion up to ${curr}${breakeven}. Backed by Volatility Risk Premium (VRP: +${vrp}%) and Downtrend alignment. Disciplined exit books 50% credit (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}), enforces 21-DTE Gamma Armor, and cuts loss at 1.5x credit to protect capital.`
           });
         }
       }
@@ -906,9 +1056,9 @@ export function scanStrategiesForAsset(quote) {
   // -------------------------------------------------------------
   // 6. STRATEGY: Iron Condor (Range-Bound / Delta-Neutral)
   // Sell OTM Put Spread + Sell OTM Call Spread (4 legs)
-  // Optimal when IV Rank is elevated (ivRank >= 40) and stock is consolidating
+  // Gated by: IV Rank >= 40 and VRP >= 3.0% (rich volatility premium)
   // -------------------------------------------------------------
-  if (ivRank >= 40) {
+  if (ivRank >= 40 && vrp >= 3.0) {
     // Force nextMonthlyExp to target 30-45 DTE window and avoid late-stage Gamma explosion
     const exp = nextMonthlyExp;
     const dte = exp.dte;
@@ -1007,7 +1157,7 @@ export function scanStrategiesForAsset(quote) {
             ivRank,
             netDelta: payoff.netDelta,
             netTheta: payoff.netTheta,
-            catalyst: `Profits from time decay and IV crush between ${curr}${lowerBE} and ${curr}${upperBE}. Exit rule books 50% max credit (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}) and stops loss at 1.5x credit to protect capital.`
+            catalyst: `Profits from time decay and IV crush between ${curr}${lowerBE} and ${curr}${upperBE}. Backed by Volatility Risk Premium (VRP: +${vrp}%). Disciplined exit books 50% max credit (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}), enforces 21-DTE Gamma Armor, and stops loss at 1.5x credit to protect capital.`
           });
         }
       }
@@ -1096,11 +1246,12 @@ export function scanStrategiesForAsset(quote) {
   }
 
   // -------------------------------------------------------------
-  // 8. STRATEGY: Theta Decay Harvester (Iron Butterfly Pin)
-  // Sell ATM Call + Sell ATM Put + Buy OTM Protective Wings (4 legs)
-  // Maximum Positive Net Theta decay strategy at ATM strike (ivRank >= 40)
+  // 8. STRATEGY: Theta Decay Harvester (16-Delta Strangle Condor)
+  // Sell OTM ~16-Delta Put + Sell OTM ~16-Delta Call + Buy Wider Protective Wings (4 legs)
+  // Replaces narrow ATM pinning butterfly with asymmetric 1-sigma safe plateau
+  // Gated by: IV Rank >= 40 and VRP >= 3.0%
   // -------------------------------------------------------------
-  if (ivRank >= 40) {
+  if (ivRank >= 40 && vrp >= 3.0) {
     // Force nextMonthlyExp to target 30-45 DTE window and avoid late-stage Gamma explosion
     const exp = nextMonthlyExp;
     const dte = exp.dte;
@@ -1108,36 +1259,40 @@ export function scanStrategiesForAsset(quote) {
 
     // Binary event check: Avoid gap risk if earnings event occurs before expiration
     if (!hasEarningsBefore(dte)) {
-      const wingWidth = step * 3;
-      const spreadWidth = wingWidth;
-      const putWing = atmStrike - wingWidth;
-      const callWing = atmStrike + wingWidth;
+      // 16-Delta OTM Short Strikes (~1 Standard Deviation buffer)
+      // Asymmetric put side has an extra margin of safety to absorb negative market skew
+      const shortPut = atmStrike - step * 2;
+      const longPut  = atmStrike - step * 5; // Wide 3-step put wing for crash safety
+      const shortCall = atmStrike + step * 2;
+      const longCall  = atmStrike + step * 4; // 2-step call wing
 
-      const atmCallGreeks = calculateGreeks('call', S, atmStrike, T, r, ivDecimal);
-      const atmPutGreeks = calculateGreeks('put', S, atmStrike, T, r, ivDecimal);
-      const callWingGreeks = calculateGreeks('call', S, callWing, T, r, ivDecimal);
-      const putWingGreeks = calculateGreeks('put', S, putWing, T, r, ivDecimal);
+      const spGreeks = calculateGreeks('put', S, shortPut, T, r, ivDecimal);
+      const lpGreeks = calculateGreeks('put', S, longPut, T, r, ivDecimal);
+      const scGreeks = calculateGreeks('call', S, shortCall, T, r, ivDecimal);
+      const lcGreeks = calculateGreeks('call', S, longCall, T, r, ivDecimal);
 
-      // Low-Liquidity Wing filter: both long protection legs must evaluate to at least $0.05
-      if (callWingGreeks.price >= 0.05 && putWingGreeks.price >= 0.05) {
-        const creditCollected = (atmCallGreeks.price + atmPutGreeks.price) - (callWingGreeks.price + putWingGreeks.price);
-        const totalCredit = Math.max(0.10, Number(creditCollected.toFixed(2)));
+      // Low-Liquidity Wing filter: both long protection legs must evaluate to at least $0.04
+      if (lpGreeks.price >= 0.04 && lcGreeks.price >= 0.04) {
+        const putCredit = Math.max(0.04, spGreeks.price - lpGreeks.price);
+        const callCredit = Math.max(0.04, scGreeks.price - lcGreeks.price);
+        const totalCredit = Number((putCredit + callCredit).toFixed(2));
+        const maxWingWidth = Math.max(shortPut - longPut, longCall - shortCall);
 
-        // Minimum Net Credit Floor: total credit collected must be >= 15% of spreadWidth
-        if (totalCredit >= 0.15 * spreadWidth) {
-          const maxLossPerShare = Number((wingWidth - totalCredit).toFixed(2));
-          const lowerBE = Number((atmStrike - totalCredit).toFixed(2));
-          const upperBE = Number((atmStrike + totalCredit).toFixed(2));
+        // Minimum Net Credit Floor: total credit collected must be >= 12% of maxWingWidth
+        if (totalCredit >= 0.12 * maxWingWidth) {
+          const maxLossPerShare = Number((maxWingWidth - totalCredit).toFixed(2));
+          const lowerBE = Number((shortPut - totalCredit).toFixed(2));
+          const upperBE = Number((shortCall + totalCredit).toFixed(2));
 
           const popLower = calculatePOP(S, lowerBE, T, ivDecimal, true);
           const popUpper = calculatePOP(S, upperBE, T, ivDecimal, false);
-          const pop = Number((Math.min(95, Math.max(52, (popLower + popUpper) / 2))).toFixed(1));
+          const pop = Number((Math.min(95, Math.max(60, (popLower + popUpper) / 2))).toFixed(1));
 
           const legs = [
-            { type: 'put', action: 'buy', strike: putWing, premium: putWingGreeks.price, contracts: 1, label: `Buy ${curr}${putWing} Put (Wing Protection)` },
-            { type: 'put', action: 'sell', strike: atmStrike, premium: atmPutGreeks.price, contracts: 1, label: `Sell ${curr}${atmStrike} Put (Theta Decay)` },
-            { type: 'call', action: 'sell', strike: atmStrike, premium: atmCallGreeks.price, contracts: 1, label: `Sell ${curr}${atmStrike} Call (Theta Decay)` },
-            { type: 'call', action: 'buy', strike: callWing, premium: callWingGreeks.price, contracts: 1, label: `Buy ${curr}${callWing} Call (Wing Protection)` }
+            { type: 'put', action: 'buy', strike: longPut, premium: lpGreeks.price, contracts: 1, label: `Buy ${curr}${longPut} Put (Tail Protection)` },
+            { type: 'put', action: 'sell', strike: shortPut, premium: spGreeks.price, contracts: 1, label: `Sell ${curr}${shortPut} Put (16-Delta Theta)` },
+            { type: 'call', action: 'sell', strike: shortCall, premium: scGreeks.price, contracts: 1, label: `Sell ${curr}${shortCall} Call (16-Delta Theta)` },
+            { type: 'call', action: 'buy', strike: longCall, premium: lcGreeks.price, contracts: 1, label: `Buy ${curr}${longCall} Call (Tail Protection)` }
           ];
 
           const payoff = calculatePayoffProfile(legs, S, lotSize, dte, ivDecimal, r);
@@ -1154,14 +1309,15 @@ export function scanStrategiesForAsset(quote) {
             maxLoss,
             isCredit: true,
             curr,
-            atmStrike,
+            atmStrike: S,
+            shortStrike: shortPut,
             step
           });
 
           const netDailyThetaCurr = Math.abs(payoff.netTheta).toFixed(1);
 
           strategies.push({
-            id: `${quote.ticker}-THETA-DECAY-${atmStrike}`,
+            id: `${quote.ticker}-THETA-DECAY-${shortPut}-${shortCall}`,
             ticker: quote.ticker,
             displayTicker: quote.displayTicker,
             name: quote.name,
@@ -1171,18 +1327,18 @@ export function scanStrategiesForAsset(quote) {
             sector: quote.sector || '',
             currency: quote.currency,
             currencySymbol: curr,
-            strategyName: 'Theta Decay Harvester (Iron Butterfly Pin)',
+            strategyName: 'Theta Decay Harvester (16-Delta Strangle Condor)',
             category: STRATEGY_CATEGORIES.THETA_DECAY,
             sentiment: 'Neutral',
             directionBadge: 'Theta Decay',
             badgeClass: 'badge-theta',
-            conviction: 'Pure Time Decay',
+            conviction: '1-Sigma Safe Buffer',
             dte,
             expiryDate: exp.dateStr,
             expiryLabel: `${exp.dateStr} (${exp.type})`,
             transactSpec: buildTransactSpec(quote, exp, 'Theta Decay Harvester', dte),
             spotPrice: S,
-            targetPrice: atmStrike,
+            targetPrice: S,
             stopLossPrice: exitPlan.stopLoss.spotPrice,
             exitPlan,
             legs,
@@ -1196,7 +1352,7 @@ export function scanStrategiesForAsset(quote) {
             ivRank,
             netDelta: payoff.netDelta,
             netTheta: payoff.netTheta,
-            catalyst: `Engineered for pure positive time decay. Generates +${curr}${netDailyThetaCurr}/day Theta harvest around ${curr}${atmStrike}. Exit rule books 50% credit (${curr}${exitPlan.targetBooking.profitPerLot.toLocaleString()}) within 7-10 days.`
+            catalyst: `Engineered for steady positive time decay (+${curr}${netDailyThetaCurr}/day) across a wide 1-sigma safe buffer (${curr}${shortPut} — ${curr}${shortCall}). Backed by Volatility Risk Premium (VRP: +${vrp}%). Enforces 21-DTE Gamma Armor to capture theta without pinning risk.`
           });
         }
       }

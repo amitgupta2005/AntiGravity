@@ -1,0 +1,301 @@
+{
+  "status": "OK",
+  "backtest_period": "Jan 2023 - Nov 2026 (~3.8 Years)",
+  "total_trades": 3735,
+  "win_count": 1910,
+  "loss_count": 1825,
+  "win_rate_pct": 51.14,
+  "avg_win_roi_pct": 38.39,
+  "avg_loss_roi_pct": -35.99,
+  "payoff_ratio": 1.07,
+  "profit_factor": 1.12,
+  "max_drawdown_pct": 3762.52,
+  "total_pnl_roi_pct": 7654.49,
+  "avg_roi_per_trade_pct": 2.05,
+  "exit_reasons": {
+    "TARGET_PROFIT_BOOKED": 1749,
+    "STOP_LOSS_TRIGGERED": 1204,
+    "EXPIRATION": 456,
+    "TIME_STOP_CONSOLIDATION": 172,
+    "EARLY_DTE_HARVEST": 154
+  },
+  "strategy_breakdown": {
+    "BEAR_CALL_SPREAD": {
+      "trades": 417,
+      "win_rate_pct": 69.8,
+      "avg_win_roi": 17.25,
+      "avg_loss_roi": -50.41,
+      "total_roi": -1331.19,
+      "avg_roi_per_trade": -3.19,
+      "profit_factor": 0.79
+    },
+    "BEAR_PUT_SPREAD": {
+      "trades": 210,
+      "win_rate_pct": 28.6,
+      "avg_win_roi": 116.65,
+      "avg_loss_roi": -46.5,
+      "total_roi": 24.1,
+      "avg_roi_per_trade": 0.11,
+      "profit_factor": 1.0
+    },
+    "BULL_CALL_SPREAD": {
+      "trades": 603,
+      "win_rate_pct": 36.3,
+      "avg_win_roi": 110.77,
+      "avg_loss_roi": -46.5,
+      "total_roi": 6403.27,
+      "avg_roi_per_trade": 10.62,
+      "profit_factor": 1.36
+    },
+    "BULL_PUT_SPREAD": {
+      "trades": 810,
+      "win_rate_pct": 82.5,
+      "avg_win_roi": 15.18,
+      "avg_loss_roi": -41.76,
+      "total_roi": 4210.97,
+      "avg_roi_per_trade": 5.2,
+      "profit_factor": 1.71
+    },
+    "IRON_CONDOR": {
+      "trades": 432,
+      "win_rate_pct": 46.8,
+      "avg_win_roi": 20.55,
+      "avg_loss_roi": -20.57,
+      "total_roi": -579.84,
+      "avg_roi_per_trade": -1.34,
+      "profit_factor": 0.88
+    },
+    "LONG_CALL": {
+      "trades": 603,
+      "win_rate_pct": 45.3,
+      "avg_win_roi": 53.5,
+      "avg_loss_roi": -41.5,
+      "total_roi": 910.5,
+      "avg_roi_per_trade": 1.51,
+      "profit_factor": 1.07
+    },
+    "LONG_PUT": {
+      "trades": 210,
+      "win_rate_pct": 43.3,
+      "avg_win_roi": 53.5,
+      "avg_loss_roi": -41.5,
+      "total_roi": -70.0,
+      "avg_roi_per_trade": -0.33,
+      "profit_factor": 0.99
+    },
+    "LONG_STRADDLE": {
+      "trades": 225,
+      "win_rate_pct": 21.8,
+      "avg_win_roi": 43.5,
+      "avg_loss_roi": -10.99,
+      "total_roi": 196.51,
+      "avg_roi_per_trade": 0.87,
+      "profit_factor": 1.1
+    },
+    "THETA_DECAY": {
+      "trades": 225,
+      "win_rate_pct": 25.3,
+      "avg_win_roi": 20.25,
+      "avg_loss_roi": -19.43,
+      "total_roi": -2109.83,
+      "avg_roi_per_trade": -9.38,
+      "profit_factor": 0.35
+    }
+  },
+  "regime_breakdown": {
+    "BEARISH_CORRECTION": {
+      "trades": 630,
+      "win_rate_pct": 49.5,
+      "total_roi": 504.2,
+      "avg_roi": 0.8,
+      "profit_factor": 1.04
+    },
+    "BULLISH_TREND": {
+      "trades": 1809,
+      "win_rate_pct": 54.1,
+      "total_roi": 9408.18,
+      "avg_roi": 5.2,
+      "profit_factor": 1.26
+    },
+    "HIGH_VOLATILITY": {
+      "trades": 621,
+      "win_rate_pct": 68.8,
+      "total_roi": 1416.57,
+      "avg_roi": 2.28,
+      "profit_factor": 1.22
+    },
+    "LOW_VOL_RANGE": {
+      "trades": 675,
+      "win_rate_pct": 28.4,
+      "total_roi": -3674.46,
+      "avg_roi": -5.44,
+      "profit_factor": 0.58
+    }
+  },
+  "market_breakdown": {
+    "INDIA": {
+      "trades": 1845,
+      "win_rate_pct": 48.9,
+      "total_roi": 2318.89,
+      "avg_roi": 1.26
+    },
+    "US": {
+      "trades": 1890,
+      "win_rate_pct": 53.3,
+      "total_roi": 5335.6,
+      "avg_roi": 2.82
+    }
+  },
+  "sample_trades": [
+    {
+      "strategy": "LONG_CALL",
+      "ticker": "TRENT",
+      "market": "INDIA",
+      "currency": "\u20b9",
+      "entry_date": "2023-03-15",
+      "exit_date": "2023-03-20",
+      "days_held": "3",
+      "regime": "BULLISH_TREND",
+      "exit_reason": "TARGET_PROFIT_BOOKED",
+      "cash_pnl": "2595.36",
+      "roi_pct": "53.5",
+      "margin_allocated": "4851.13",
+      "is_win": "True"
+    },
+    {
+      "strategy": "BULL_PUT_SPREAD",
+      "ticker": "RELIANCE",
+      "market": "INDIA",
+      "currency": "\u20b9",
+      "entry_date": "2023-03-15",
+      "exit_date": "2023-03-31",
+      "days_held": "11",
+      "regime": "HIGH_VOLATILITY",
+      "exit_reason": "TARGET_PROFIT_BOOKED",
+      "cash_pnl": "702.98",
+      "roi_pct": "5.62",
+      "margin_allocated": "12500.0",
+      "is_win": "True"
+    },
+    {
+      "strategy": "BEAR_PUT_SPREAD",
+      "ticker": "HDFCBANK",
+      "market": "INDIA",
+      "currency": "\u20b9",
+      "entry_date": "2023-03-15",
+      "exit_date": "2023-03-23",
+      "days_held": "6",
+      "regime": "BEARISH_CORRECTION",
+      "exit_reason": "STOP_LOSS_TRIGGERED",
+      "cash_pnl": "-1909.49",
+      "roi_pct": "-46.5",
+      "margin_allocated": "4106.44",
+      "is_win": "False"
+    },
+    {
+      "strategy": "BULL_PUT_SPREAD",
+      "ticker": "TRENT",
+      "market": "INDIA",
+      "currency": "\u20b9",
+      "entry_date": "2023-03-15",
+      "exit_date": "2023-03-17",
+      "days_held": "2",
+      "regime": "BULLISH_TREND",
+      "exit_reason": "TARGET_PROFIT_BOOKED",
+      "cash_pnl": "314.88",
+      "roi_pct": "6.3",
+      "margin_allocated": "5000.0",
+      "is_win": "True"
+    },
+    {
+      "strategy": "BEAR_CALL_SPREAD",
+      "ticker": "HDFCBANK",
+      "market": "INDIA",
+      "currency": "\u20b9",
+      "entry_date": "2023-03-15",
+      "exit_date": "2023-04-13",
+      "days_held": "18",
+      "regime": "BEARISH_CORRECTION",
+      "exit_reason": "STOP_LOSS_TRIGGERED",
+      "cash_pnl": "-3229.47",
+      "roi_pct": "-58.72",
+      "margin_allocated": "5500.0",
+      "is_win": "False"
+    },
+    {
+      "strategy": "LONG_PUT",
+      "ticker": "HDFCBANK",
+      "market": "INDIA",
+      "currency": "\u20b9",
+      "entry_date": "2023-03-15",
+      "exit_date": "2023-03-21",
+      "days_held": "4",
+      "regime": "BEARISH_CORRECTION",
+      "exit_reason": "STOP_LOSS_TRIGGERED",
+      "cash_pnl": "-3292.81",
+      "roi_pct": "-41.5",
+      "margin_allocated": "7934.49",
+      "is_win": "False"
+    },
+    {
+      "strategy": "IRON_CONDOR",
+      "ticker": "BANKNIFTY",
+      "market": "INDIA",
+      "currency": "\u20b9",
+      "entry_date": "2023-03-15",
+      "exit_date": "2023-05-10",
+      "days_held": "35",
+      "regime": "HIGH_VOLATILITY",
+      "exit_reason": "EXPIRATION",
+      "cash_pnl": "-212.87",
+      "roi_pct": "-3.76",
+      "margin_allocated": "5659.15",
+      "is_win": "False"
+    },
+    {
+      "strategy": "BEAR_CALL_SPREAD",
+      "ticker": "BANKNIFTY",
+      "market": "INDIA",
+      "currency": "\u20b9",
+      "entry_date": "2023-03-15",
+      "exit_date": "2023-05-10",
+      "days_held": "35",
+      "regime": "HIGH_VOLATILITY",
+      "exit_reason": "EXPIRATION",
+      "cash_pnl": "-1544.21",
+      "roi_pct": "-51.47",
+      "margin_allocated": "3000.0",
+      "is_win": "False"
+    },
+    {
+      "strategy": "BULL_PUT_SPREAD",
+      "ticker": "BANKNIFTY",
+      "market": "INDIA",
+      "currency": "\u20b9",
+      "entry_date": "2023-03-15",
+      "exit_date": "2023-03-31",
+      "days_held": "11",
+      "regime": "HIGH_VOLATILITY",
+      "exit_reason": "TARGET_PROFIT_BOOKED",
+      "cash_pnl": "655.53",
+      "roi_pct": "21.85",
+      "margin_allocated": "3000.0",
+      "is_win": "True"
+    },
+    {
+      "strategy": "IRON_CONDOR",
+      "ticker": "NIFTY 50",
+      "market": "INDIA",
+      "currency": "\u20b9",
+      "entry_date": "2023-03-15",
+      "exit_date": "2023-05-10",
+      "days_held": "35",
+      "regime": "HIGH_VOLATILITY",
+      "exit_reason": "EXPIRATION",
+      "cash_pnl": "-1337.26",
+      "roi_pct": "-10.69",
+      "margin_allocated": "12513.18",
+      "is_win": "False"
+    }
+  ]
+}
