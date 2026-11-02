@@ -7,7 +7,7 @@ import { createIcons, icons } from 'lucide';
 import { OPTION_UNIVERSE, findStockInUniverse } from './data/stockUniverse.js';
 import { fetchAllUniverseQuotes, fetchLiveQuote, getBaseQuote } from './data/marketDataFeed.js';
 import { scanAllUniverseStrategies } from './quant/strategyEngine.js';
-import { filterStrategies, renderScannerView, renderScannerCards, renderScannerTable, cleanupTableHorizontalScroll } from './components/scannerView.js';
+import { filterStrategies, sortStrategies, renderScannerView, renderScannerCards, renderScannerTable, cleanupTableHorizontalScroll } from './components/scannerView.js';
 import { renderPayoffChart, resizePayoffChart, destroyPayoffChart } from './components/payoffChart.js';
 import { renderOptionChain } from './components/optionChainView.js';
 import { initBuilderState, renderStrategyBuilder, addLegToBuilder } from './components/strategyBuilder.js';
@@ -66,6 +66,8 @@ const state = {
   activeTab: 'tab-scanner',
   scannerViewMode: localStorage.getItem('opt_scanner_view_mode') || 'table', // Table format default
   isDarkMode: true,
+  sortColumn: 'pop',
+  sortDirection: 'desc',
   filters: {
     market: 'ALL',
     cap: 'ALL',
@@ -196,21 +198,60 @@ function renderActiveView() {
 }
 
 /**
+ * Synchronize state.sortColumn and state.sortDirection from filter select string
+ */
+function syncSortStateFromSelect(val) {
+  if (val === 'POP_DESC') { state.sortColumn = 'pop'; state.sortDirection = 'desc'; }
+  else if (val === 'POP_ASC') { state.sortColumn = 'pop'; state.sortDirection = 'asc'; }
+  else if (val === 'IVR_DESC') { state.sortColumn = 'ivr'; state.sortDirection = 'desc'; }
+  else if (val === 'IVR_ASC') { state.sortColumn = 'ivr'; state.sortDirection = 'asc'; }
+  else if (val === 'DTE_ASC') { state.sortColumn = 'expiry'; state.sortDirection = 'asc'; }
+  else if (val === 'DTE_DESC') { state.sortColumn = 'expiry'; state.sortDirection = 'desc'; }
+  else if (val === 'PROFIT_DESC') { state.sortColumn = 'profit'; state.sortDirection = 'desc'; }
+  else if (val === 'PROFIT_ASC') { state.sortColumn = 'profit'; state.sortDirection = 'asc'; }
+  else if (val === 'LOSS_ASC') { state.sortColumn = 'loss'; state.sortDirection = 'asc'; }
+  else if (val === 'LOSS_DESC') { state.sortColumn = 'loss'; state.sortDirection = 'desc'; }
+  else if (val === 'RR_DESC') { state.sortColumn = 'rr'; state.sortDirection = 'desc'; }
+  else if (val === 'ASSET_ASC') { state.sortColumn = 'asset'; state.sortDirection = 'asc'; }
+  else if (val === 'ASSET_DESC') { state.sortColumn = 'asset'; state.sortDirection = 'desc'; }
+  else if (val === 'STRAT_ASC') { state.sortColumn = 'strategy'; state.sortDirection = 'asc'; }
+}
+
+/**
+ * Handle Column Header Sort Toggle in Tabular View
+ */
+function handleSortChange(col, dir) {
+  state.sortColumn = col;
+  state.sortDirection = dir;
+
+  // Sync with dropdown if an alias or direct match exists
+  const key = `${col.toUpperCase()}_${dir.toUpperCase()}`;
+  const aliasMap = {
+    'EXPIRY_ASC': 'DTE_ASC',
+    'EXPIRY_DESC': 'DTE_DESC',
+    'STRATEGY_ASC': 'STRAT_ASC',
+    'STRATEGY_DESC': 'STRAT_DESC'
+  };
+  const targetVal = aliasMap[key] || key;
+  const sortSelect = document.getElementById('filterSortBy');
+  if (sortSelect) {
+    if (sortSelect.querySelector(`option[value="${targetVal}"]`)) {
+      sortSelect.value = targetVal;
+      state.filters.sortBy = targetVal;
+    }
+  }
+
+  renderScannerTab();
+}
+
+/**
  * 1. Render Strategy Scanner Tab
  */
 function renderScannerTab() {
   let filtered = filterStrategies(state.strategies, state.filters);
 
-  // Sorting
-  if (state.filters.sortBy === 'POP_DESC') {
-    filtered.sort((a, b) => (b.pop || 0) - (a.pop || 0));
-  } else if (state.filters.sortBy === 'IVR_DESC') {
-    filtered.sort((a, b) => (b.ivRank || 0) - (a.ivRank || 0));
-  } else if (state.filters.sortBy === 'IVR_ASC') {
-    filtered.sort((a, b) => (a.ivRank || 0) - (b.ivRank || 0));
-  } else if (state.filters.sortBy === 'DTE_ASC') {
-    filtered.sort((a, b) => (a.dte || 0) - (b.dte || 0));
-  }
+  // Multi-column sorting (via header clicks or dropdown)
+  filtered = sortStrategies(filtered, state.sortColumn, state.sortDirection);
 
   // Update Count Badge & View Mode Display
   const countBadge = document.getElementById('scannerCountBadge');
@@ -242,6 +283,12 @@ function renderScannerTab() {
       initBuilderState(asset, strat.legs, strat.dte);
       switchTab('tab-builder');
       showToast(`Loaded ${strat.strategyName} into Strategy Builder`, 'success');
+    },
+    // Active sort state for column header indicators
+    { column: state.sortColumn, direction: state.sortDirection },
+    // On Sort Change callback from clicking column headers
+    (col, dir) => {
+      handleSortChange(col, dir);
     }
   );
 }
@@ -683,7 +730,9 @@ function setupEventListeners() {
   const sortSelect = document.getElementById('filterSortBy');
   if (sortSelect) {
     sortSelect.addEventListener('change', (e) => {
-      state.filters.sortBy = e.target.value;
+      const val = e.target.value;
+      state.filters.sortBy = val;
+      syncSortStateFromSelect(val);
       renderScannerTab();
     });
   }
@@ -762,6 +811,8 @@ function setupEventListeners() {
       searchQuery: '',
       sortBy: 'POP_DESC'
     };
+    state.sortColumn = 'pop';
+    state.sortDirection = 'desc';
     if (searchInput) searchInput.value = '';
     if (clearBtn) clearBtn.style.display = 'none';
     syncFilterToolbar();

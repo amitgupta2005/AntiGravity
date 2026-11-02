@@ -889,6 +889,77 @@ body.light-theme .view-mode-btn.active {
   z-index: 5;
 }
 
+/* Sortable Column Headers */
+.scanner-table th.th-sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease, color 0.15s ease;
+  padding: 0.75rem 0.85rem;
+}
+
+.scanner-table th.th-sortable:hover {
+  background: rgba(0, 242, 254, 0.08);
+  color: var(--cyan);
+}
+
+.scanner-table th.th-sortable:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: -2px;
+  background: rgba(0, 242, 254, 0.1);
+}
+
+.scanner-table th.th-sortable.sorted {
+  color: var(--cyan);
+  background: rgba(0, 242, 254, 0.07);
+  border-bottom: 2px solid var(--cyan);
+}
+
+.th-sort-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.scanner-table th.text-right .th-sort-inner {
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.scanner-table th.text-center .th-sort-inner {
+  justify-content: center;
+  width: 100%;
+}
+
+.th-sort-icon-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
+.sort-icon {
+  width: 13px;
+  height: 13px;
+  transition: transform 0.15s ease, opacity 0.15s ease, color 0.15s ease;
+}
+
+.sort-icon-idle {
+  opacity: 0.28;
+  color: var(--text-dim);
+}
+
+.scanner-table th.th-sortable:hover .sort-icon-idle {
+  opacity: 0.85;
+  color: var(--cyan);
+}
+
+.sort-icon-active {
+  opacity: 1;
+  color: var(--cyan);
+  stroke-width: 2.5;
+}
+
 .scanner-table td {
   padding: 0.75rem 0.9rem;
   border-bottom: 1px solid var(--border-subtle);

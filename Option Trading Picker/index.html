@@ -181,10 +181,20 @@
 
             <div style="margin-left: auto; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
               <select id="filterSortBy" class="filter-select font-mono font-bold">
-                <option value="POP_DESC">Sort: Probability of Profit (Highest)</option>
+                <option value="POP_DESC">Sort: Probability of Profit (Highest First)</option>
+                <option value="POP_ASC">Sort: Probability of Profit (Lowest First)</option>
                 <option value="IVR_DESC">Sort: IV Rank (Highest First)</option>
                 <option value="IVR_ASC">Sort: IV Rank (Lowest / Cheapest First)</option>
                 <option value="DTE_ASC">Sort: DTE (Near-term First)</option>
+                <option value="DTE_DESC">Sort: DTE (Far-term First)</option>
+                <option value="PROFIT_DESC">Sort: Max Profit (Highest First)</option>
+                <option value="PROFIT_ASC">Sort: Max Profit (Lowest First)</option>
+                <option value="LOSS_ASC">Sort: Max Loss (Lowest First)</option>
+                <option value="LOSS_DESC">Sort: Max Loss (Highest First)</option>
+                <option value="RR_DESC">Sort: Risk:Reward (Highest First)</option>
+                <option value="ASSET_ASC">Sort: Asset Ticker (A → Z)</option>
+                <option value="ASSET_DESC">Sort: Asset Ticker (Z → A)</option>
+                <option value="STRAT_ASC">Sort: Strategy Name (A → Z)</option>
               </select>
 
               <!-- View Mode Switcher: Table Format (Default) vs Card Format -->

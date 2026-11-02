@@ -79,6 +79,128 @@ export function filterStrategies(strategies, filters) {
 }
 
 /**
+ * Parse Risk:Reward ratio string (e.g. "1:2.4", "1:0.8", "Unlimited") to decimal number
+ */
+export function parseRiskReward(val) {
+  if (typeof val === 'number') return val;
+  if (!val) return 0;
+  const s = String(val).trim().toLowerCase();
+  if (s.includes('unlimited')) return 999;
+  const parts = s.split(':');
+  if (parts.length === 2) {
+    const num = parseFloat(parts[1]);
+    const den = parseFloat(parts[0]) || 1;
+    return isNaN(num) ? 0 : num / den;
+  }
+  const f = parseFloat(s);
+  return isNaN(f) ? 0 : f;
+}
+
+/**
+ * High-performance multi-column strategy sorting
+ * @param {Array} strategies - List of strategy objects
+ * @param {string} sortColumn - Column key ('pop', 'profit', 'loss', 'rr', 'ivr', 'theta', 'expiry', 'asset', 'strategy')
+ * @param {string} sortDirection - 'asc' or 'desc'
+ */
+export function sortStrategies(strategies, sortColumn = 'pop', sortDirection = 'desc') {
+  if (!Array.isArray(strategies)) return [];
+  const list = [...strategies];
+  const mult = sortDirection === 'asc' ? 1 : -1;
+
+  list.sort((a, b) => {
+    switch (sortColumn) {
+      case 'asset': {
+        const tA = (a.displayTicker || a.ticker || '').toLowerCase();
+        const tB = (b.displayTicker || b.ticker || '').toLowerCase();
+        const diff = tA.localeCompare(tB);
+        return (diff !== 0 ? diff : (Number(a.spotPrice || 0) - Number(b.spotPrice || 0))) * mult;
+      }
+      case 'strategy': {
+        const sA = (a.strategyName || '').toLowerCase();
+        const sB = (b.strategyName || '').toLowerCase();
+        return sA.localeCompare(sB) * mult;
+      }
+      case 'expiry':
+      case 'dte': {
+        const dteA = Number(a.dte) || 0;
+        const dteB = Number(b.dte) || 0;
+        return (dteA - dteB) * mult;
+      }
+      case 'pop': {
+        const popA = Number(a.pop) || 0;
+        const popB = Number(b.pop) || 0;
+        return (popA - popB) * mult;
+      }
+      case 'profit': {
+        const pA = typeof a.maxProfit === 'number' ? a.maxProfit : (String(a.maxProfit).toLowerCase().includes('unlimited') ? 999999999 : 0);
+        const pB = typeof b.maxProfit === 'number' ? b.maxProfit : (String(b.maxProfit).toLowerCase().includes('unlimited') ? 999999999 : 0);
+        return (pA - pB) * mult;
+      }
+      case 'loss': {
+        const lA = typeof a.maxLoss === 'number' ? a.maxLoss : (String(a.maxLoss).toLowerCase().includes('unlimited') ? 999999999 : 0);
+        const lB = typeof b.maxLoss === 'number' ? b.maxLoss : (String(b.maxLoss).toLowerCase().includes('unlimited') ? 999999999 : 0);
+        return (lA - lB) * mult;
+      }
+      case 'rr': {
+        return (parseRiskReward(a.riskReward) - parseRiskReward(b.riskReward)) * mult;
+      }
+      case 'ivr': {
+        const ivA = Number(a.ivRank) || 0;
+        const ivB = Number(b.ivRank) || 0;
+        return (ivA - ivB) * mult;
+      }
+      case 'theta': {
+        const thA = Number(a.netTheta) || 0;
+        const thB = Number(b.netTheta) || 0;
+        return (thA - thB) * mult;
+      }
+      default: {
+        return ((b.pop || 0) - (a.pop || 0)) * mult;
+      }
+    }
+  });
+
+  return list;
+}
+
+/**
+ * Render an accessible, sortable table header (<th>)
+ */
+function renderSortableTh(columnKey, label, currentSort = { column: 'pop', direction: 'desc' }, extraClasses = '', title = '') {
+  const isSorted = currentSort && currentSort.column === columnKey;
+  const dir = isSorted ? currentSort.direction : 'none';
+  const ariaSort = isSorted ? (dir === 'asc' ? 'ascending' : 'descending') : 'none';
+  const sortedClass = isSorted ? `sorted sorted-${dir}` : '';
+  const nextDir = isSorted ? (dir === 'asc' ? 'desc' : 'asc') : ((columnKey === 'asset' || columnKey === 'strategy' || columnKey === 'expiry') ? 'asc' : 'desc');
+  const tooltip = title || `Sort by ${label} (${nextDir.toUpperCase()})`;
+
+  let iconHtml = '';
+  if (isSorted) {
+    if (dir === 'asc') {
+      iconHtml = '<i data-lucide="chevron-up" class="sort-icon sort-icon-active"></i>';
+    } else {
+      iconHtml = '<i data-lucide="chevron-down" class="sort-icon sort-icon-active"></i>';
+    }
+  } else {
+    iconHtml = '<i data-lucide="chevrons-up-down" class="sort-icon sort-icon-idle"></i>';
+  }
+
+  return `
+    <th class="th-sortable ${extraClasses} ${sortedClass}"
+        data-sort="${columnKey}"
+        tabindex="0"
+        role="columnheader"
+        aria-sort="${ariaSort}"
+        title="${tooltip}">
+      <div class="th-sort-inner">
+        <span class="th-label">${label}</span>
+        <span class="th-sort-icon-box">${iconHtml}</span>
+      </div>
+    </th>
+  `;
+}
+
+/**
  * Reusable Empty State Renderer
  */
 function renderEmptyState(container) {
@@ -108,18 +230,35 @@ function renderEmptyState(container) {
 /**
  * Unified Scanner View Dispatcher (Tabular default vs Cards)
  */
-export function renderScannerView(containerId, strategies, viewMode = 'table', onSelectStrategy, onViewChain, onCustomBuild) {
+export function renderScannerView(
+  containerId,
+  strategies,
+  viewMode = 'table',
+  onSelectStrategy,
+  onViewChain,
+  onCustomBuild,
+  currentSort = { column: 'pop', direction: 'desc' },
+  onSortChange = null
+) {
   if (viewMode === 'cards') {
     renderScannerCards(containerId, strategies, onSelectStrategy, onViewChain, onCustomBuild);
   } else {
-    renderScannerTable(containerId, strategies, onSelectStrategy, onViewChain, onCustomBuild);
+    renderScannerTable(containerId, strategies, onSelectStrategy, onViewChain, onCustomBuild, currentSort, onSortChange);
   }
 }
 
 /**
  * Render strategy results in high-density Tabular format (Default)
  */
-export function renderScannerTable(containerId, strategies, onSelectStrategy, onViewChain, onCustomBuild) {
+export function renderScannerTable(
+  containerId,
+  strategies,
+  onSelectStrategy,
+  onViewChain,
+  onCustomBuild,
+  currentSort = { column: 'pop', direction: 'desc' },
+  onSortChange = null
+) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
@@ -127,6 +266,11 @@ export function renderScannerTable(containerId, strategies, onSelectStrategy, on
     renderEmptyState(container);
     return;
   }
+
+  // Preserve horizontal scroll position across sorting re-renders
+  const existingTableContainer = document.getElementById('scannerTableContainer');
+  const previousScrollLeft = existingTableContainer ? existingTableContainer.scrollLeft : 0;
+
 
   const rowsHtml = strategies.map(strat => {
     const curr = strat.currencySymbol;
@@ -335,20 +479,20 @@ export function renderScannerTable(containerId, strategies, onSelectStrategy, on
       </button>
 
       <!-- Accessible Scroll Container with Arrow Key Navigation -->
-      <div class="scanner-table-container" id="scannerTableContainer" tabindex="0" role="region" aria-label="Strategy Scanner Table. Press Left and Right arrow keys to scroll.">
+      <div class="scanner-table-container" id="scannerTableContainer" tabindex="0" role="region" aria-label="Strategy Scanner Table. Press Left and Right arrow keys to scroll. Click column headers to sort.">
         <table class="scanner-table font-mono">
           <thead>
             <tr>
-              <th class="th-asset">Asset & Price</th>
-              <th class="th-strategy">Strategy / Bias</th>
-              <th class="th-expiry">Expiry / DTE</th>
+              ${renderSortableTh('asset', 'Asset & Price', currentSort, 'th-asset', 'Sort by Asset Ticker')}
+              ${renderSortableTh('strategy', 'Strategy / Bias', currentSort, 'th-strategy', 'Sort by Strategy Name')}
+              ${renderSortableTh('expiry', 'Expiry / DTE', currentSort, 'th-expiry', 'Sort by Days to Expiry (DTE)')}
               <th class="th-structure">Legs Structure</th>
-              <th class="th-pop text-right">POP</th>
-              <th class="th-profit text-right">Max Profit</th>
-              <th class="th-loss text-right">Max Loss</th>
-              <th class="th-rr text-center">R:R</th>
+              ${renderSortableTh('pop', 'POP', currentSort, 'th-pop text-right', 'Sort by Probability of Profit (POP %)')}
+              ${renderSortableTh('profit', 'Max Profit', currentSort, 'th-profit text-right', 'Sort by Maximum Profit')}
+              ${renderSortableTh('loss', 'Max Loss', currentSort, 'th-loss text-right', 'Sort by Maximum Loss')}
+              ${renderSortableTh('rr', 'R:R', currentSort, 'th-rr text-center', 'Sort by Risk:Reward Ratio')}
               <th class="th-be">Breakeven(s)</th>
-              <th class="th-ivr text-center">IVR / Theta</th>
+              ${renderSortableTh('ivr', 'IVR / Theta', currentSort, 'th-ivr text-center', 'Sort by IV Rank / Theta')}
               <th class="th-exit">Simple Exit Rule</th>
               <th class="th-actions text-center">Actions</th>
             </tr>
@@ -364,7 +508,7 @@ export function renderScannerTable(containerId, strategies, onSelectStrategy, on
         <div class="table-scroll-hint text-dim">
           <span class="kbd-badge">←</span>
           <span class="kbd-badge">→</span>
-          <span>Scroll columns with Left &amp; Right Arrow Keys</span>
+          <span>Scroll columns with Left &amp; Right Arrow Keys • Click column headers to sort</span>
         </div>
         <div class="table-scroll-progress-bar">
           <div class="table-scroll-progress-thumb" id="tableScrollThumb"></div>
@@ -376,7 +520,13 @@ export function renderScannerTable(containerId, strategies, onSelectStrategy, on
     </div>
   `;
 
-  attachScannerEvents(container, strategies, onSelectStrategy, onViewChain, onCustomBuild);
+  // Restore horizontal scroll position if user previously scrolled
+  const newTableContainer = document.getElementById('scannerTableContainer');
+  if (newTableContainer && previousScrollLeft > 0) {
+    newTableContainer.scrollLeft = previousScrollLeft;
+  }
+
+  attachScannerEvents(container, strategies, onSelectStrategy, onViewChain, onCustomBuild, currentSort, onSortChange);
   setupTableHorizontalScroll(container);
 }
 
@@ -631,17 +781,58 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
 /**
  * Attach Event Listeners to rendered strategy view components using high-performance Event Delegation
  */
-function attachScannerEvents(container, strategies, onSelectStrategy, onViewChain, onCustomBuild) {
+function attachScannerEvents(
+  container,
+  strategies,
+  onSelectStrategy,
+  onViewChain,
+  onCustomBuild,
+  currentSort = { column: 'pop', direction: 'desc' },
+  onSortChange = null
+) {
   if (typeof window !== 'undefined' && typeof window.refreshIcons === 'function') {
     window.refreshIcons();
   }
 
   if (!container) return;
 
-  // Single delegated click listener replaces 1,000+ individual event listeners
+  // Single delegated click listener replaces 1,000+ individual event listeners and handles header sorting
   container.onclick = (e) => {
     const target = e.target;
     if (!target) return;
+
+    // 0. Column Header Sorting
+    const thSort = target.closest('.th-sortable');
+    if (thSort) {
+      e.stopPropagation();
+      const col = thSort.dataset.sort;
+      if (col) {
+        let newDir;
+        if (currentSort && currentSort.column === col) {
+          newDir = currentSort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+          // Default direction: asc for text/time, desc for financial yields/metrics
+          newDir = (col === 'asset' || col === 'strategy' || col === 'expiry') ? 'asc' : 'desc';
+        }
+
+        if (typeof onSortChange === 'function') {
+          onSortChange(col, newDir);
+        } else {
+          // Fallback internal sorting if called without onSortChange callback
+          const sorted = sortStrategies(strategies, col, newDir);
+          renderScannerTable(
+            container.id || 'scannerCardsContainer',
+            sorted,
+            onSelectStrategy,
+            onViewChain,
+            onCustomBuild,
+            { column: col, direction: newDir },
+            onSortChange
+          );
+        }
+      }
+      return;
+    }
 
     // 1. Analyze Buttons
     const analyzeBtn = target.closest('.btn-analyze');
@@ -693,6 +884,17 @@ function attachScannerEvents(container, strategies, onSelectStrategy, onViewChai
       const id = row.dataset.id;
       toggleTableRowDetail(id);
       return;
+    }
+  };
+
+  // Keyboard accessibility for column headers (Enter or Space to sort when focused)
+  container.onkeydown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      const thSort = e.target.closest('.th-sortable');
+      if (thSort) {
+        e.preventDefault();
+        thSort.click();
+      }
     }
   };
 }
