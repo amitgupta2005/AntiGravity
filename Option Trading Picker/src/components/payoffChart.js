@@ -208,3 +208,16 @@ export function resizePayoffChart() {
     } catch (_) {}
   }
 }
+
+/**
+ * Clean up and destroy existing Payoff Chart instance to prevent canvas context leaks
+ */
+export function destroyPayoffChart() {
+  if (payoffChartInstance) {
+    try {
+      payoffChartInstance.destroy();
+    } catch (_) {}
+    payoffChartInstance = null;
+  }
+}
+

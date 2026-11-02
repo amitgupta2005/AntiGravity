@@ -163,13 +163,14 @@ export function renderMarketOverview(containerId, quotes, onSelectAsset) {
     window.refreshIcons();
   }
 
-  // Clickable assets to trigger chain view
-  container.querySelectorAll('.clickable-asset, .idx-card').forEach(el => {
-    el.addEventListener('click', (e) => {
-      const ticker = e.currentTarget.dataset.ticker;
-      if (typeof onSelectAsset === 'function') {
+  // Clickable assets to trigger chain view via single delegated click handler
+  container.onclick = (e) => {
+    const el = e.target.closest('.clickable-asset, .idx-card, .idx-action-btn');
+    if (el) {
+      const ticker = el.dataset.ticker;
+      if (ticker && typeof onSelectAsset === 'function') {
         onSelectAsset(ticker);
       }
-    });
-  });
+    }
+  };
 }

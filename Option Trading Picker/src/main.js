@@ -7,8 +7,8 @@ import { createIcons, icons } from 'lucide';
 import { OPTION_UNIVERSE, findStockInUniverse } from './data/stockUniverse.js';
 import { fetchAllUniverseQuotes, fetchLiveQuote, getBaseQuote } from './data/marketDataFeed.js';
 import { scanAllUniverseStrategies } from './quant/strategyEngine.js';
-import { filterStrategies, renderScannerView, renderScannerCards, renderScannerTable } from './components/scannerView.js';
-import { renderPayoffChart, resizePayoffChart } from './components/payoffChart.js';
+import { filterStrategies, renderScannerView, renderScannerCards, renderScannerTable, cleanupTableHorizontalScroll } from './components/scannerView.js';
+import { renderPayoffChart, resizePayoffChart, destroyPayoffChart } from './components/payoffChart.js';
 import { renderOptionChain } from './components/optionChainView.js';
 import { initBuilderState, renderStrategyBuilder, addLegToBuilder } from './components/strategyBuilder.js';
 import { renderMarketOverview } from './components/marketOverview.js';
@@ -26,6 +26,36 @@ export function refreshIcons() {
 }
 window.refreshIcons = refreshIcons;
 window.lucide = { createIcons: refreshIcons, icons };
+
+/**
+ * Debounce helper for high-frequency user events (search typing, window resizes)
+ */
+function debounce(fn, delayMs = 120) {
+  let timer = null;
+  return function (...args) {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      fn.apply(this, args);
+    }, delayMs);
+  };
+}
+
+// Background simulation timer reference
+let marketSimulationInterval = null;
+
+function startMarketSimulation() {
+  if (!marketSimulationInterval) {
+    marketSimulationInterval = setInterval(tickMarketSimulation, 5000);
+  }
+}
+
+function pauseMarketSimulation() {
+  if (marketSimulationInterval) {
+    clearInterval(marketSimulationInterval);
+    marketSimulationInterval = null;
+  }
+}
 
 // Global App State
 const state = {
@@ -78,8 +108,8 @@ async function initApp() {
   // 6. Asynchronously fetch live real-time quotes without blocking
   refreshMarketData().catch(console.error);
 
-  // 7. Start continuous live market pulse (every 5 seconds)
-  setInterval(tickMarketSimulation, 5000);
+  // 7. Start continuous live market pulse (throttled when page is hidden)
+  startMarketSimulation();
 }
 
 /**
@@ -485,7 +515,18 @@ function renderMarketOverviewTab() {
  * Switch Active Tab
  */
 function switchTab(tabId) {
+  const prevTab = state.activeTab;
   state.activeTab = tabId;
+
+  // Cleanup table scroll listeners if navigating away from strategy scanner
+  if (prevTab === 'tab-scanner' && tabId !== 'tab-scanner') {
+    cleanupTableHorizontalScroll();
+  }
+
+  // Cleanup Chart.js instance if leaving analyzer to avoid canvas memory leak
+  if (prevTab === 'tab-analyzer' && tabId !== 'tab-analyzer') {
+    destroyPayoffChart();
+  }
 
   // Update tab buttons
   document.querySelectorAll('.nav-tab-btn').forEach(btn => {
@@ -647,20 +688,24 @@ function setupEventListeners() {
     });
   }
 
-  // 4. Omnibar Search
+  // 4. Omnibar Search (Debounced 120ms to eliminate layout thrashing during fast typing)
   const searchInput = document.getElementById('globalSearchInput');
   const clearBtn = document.getElementById('btnClearSearch');
+
+  const debouncedSearch = debounce((q) => {
+    state.filters.searchQuery = q;
+    if (state.activeTab !== 'tab-scanner') {
+      switchTab('tab-scanner');
+    } else {
+      renderScannerTab();
+    }
+  }, 120);
 
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
       const q = e.target.value.trim();
-      state.filters.searchQuery = q;
       if (clearBtn) clearBtn.style.display = q ? 'inline-flex' : 'none';
-      if (state.activeTab !== 'tab-scanner') {
-        switchTab('tab-scanner');
-      } else {
-        renderScannerTab();
-      }
+      debouncedSearch(q);
     });
 
     searchInput.addEventListener('keydown', (e) => {
@@ -724,7 +769,7 @@ function setupEventListeners() {
     showToast('Filters reset to default', 'info');
   });
 
-  // 6. Refresh Button
+  // 7. Refresh Button
   const refreshBtn = document.getElementById('btnRefreshData');
   if (refreshBtn) {
     refreshBtn.addEventListener('click', async () => {
@@ -734,7 +779,7 @@ function setupEventListeners() {
     });
   }
 
-  // 7. Theme Toggle Button
+  // 8. Theme Toggle Button
   const themeBtn = document.getElementById('btnThemeToggle');
   const themeIcon = document.getElementById('themeIcon');
   if (themeBtn) {
@@ -752,10 +797,22 @@ function setupEventListeners() {
     });
   }
 
-  // Window resize handler for charts
-  window.addEventListener('resize', () => {
+  // 9. Window resize handler for charts (debounced 150ms to eliminate resize thrashing)
+  const debouncedChartResize = debounce(() => {
     if (state.activeTab === 'tab-analyzer') {
       resizePayoffChart();
+    }
+  }, 150);
+
+  window.addEventListener('resize', debouncedChartResize);
+
+  // 10. Pause market simulation when tab is hidden to save CPU and prevent background leaks
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      pauseMarketSimulation();
+    } else {
+      startMarketSimulation();
+      tickMarketSimulation();
     }
   });
 }

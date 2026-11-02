@@ -7,8 +7,23 @@
 import { OPTION_UNIVERSE } from './stockUniverse.js';
 import { calculateGreeks, calculateIV, calculateOptionBeta, calculateOptionAlpha } from '../quant/blackScholes.js';
 
-// Cache for live quotes
+// Bounded cache for live quotes to prevent memory leaks
+const MAX_CACHE_SIZE = 150;
 const liveQuotesCache = new Map();
+
+/**
+ * Flush live quotes cache (useful for cleanups, tab changes, and tests)
+ */
+export function clearMarketDataCache() {
+  liveQuotesCache.clear();
+}
+
+/**
+ * Get current live quotes cache entry count
+ */
+export function getMarketDataCacheSize() {
+  return liveQuotesCache.size;
+}
 
 /**
  * Generate standard option expiration dates (Weekly, Monthly, 45 DTE, Quarterly)
@@ -391,35 +406,9 @@ export async function fetchLiveQuote(asset) {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2500);
-    const proxyUrl = `/api/yahoo/chart?symbol=${encodeURIComponent(asset.ticker)}&range=5d&interval=1d`;
-    const res = await fetch(proxyUrl, { signal: controller.signal, headers: { 'Accept': 'application/json' } });
-    clearTimeout(timeoutId);
-
-    if (res.ok) {
-      const data = await res.json();
-      const meta = data?.chart?.result?.[0]?.meta;
-      if (meta && meta.regularMarketPrice) {
-        price = meta.regularMarketPrice;
-        const prevClose = meta.previousClose || meta.chartPreviousClose || price;
-        change = price - prevClose;
-        changePercent = ((price - prevClose) / prevClose) * 100;
-        volume = meta.regularMarketVolume || volume;
-        dayHigh = meta.regularMarketDayHigh || price * 1.01;
-        dayLow = meta.regularMarketDayLow || price * 0.99;
-        fetched = true;
-      }
-    }
-  } catch (_) {}
-
-  // If proxy did not return, try direct query with fast timeout
-  if (!fetched) {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(asset.ticker)}?interval=1d&range=5d`;
-      const res = await fetch(url, { signal: controller.signal, headers: { 'Accept': 'application/json' } });
-      clearTimeout(timeoutId);
-
+      const proxyUrl = `/api/yahoo/chart?symbol=${encodeURIComponent(asset.ticker)}&range=5d&interval=1d`;
+      const res = await fetch(proxyUrl, { signal: controller.signal, headers: { 'Accept': 'application/json' } });
       if (res.ok) {
         const data = await res.json();
         const meta = data?.chart?.result?.[0]?.meta;
@@ -433,6 +422,36 @@ export async function fetchLiveQuote(asset) {
           dayLow = meta.regularMarketDayLow || price * 0.99;
           fetched = true;
         }
+      }
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  } catch (_) {}
+
+  // If proxy did not return, try direct query with fast timeout
+  if (!fetched) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      try {
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(asset.ticker)}?interval=1d&range=5d`;
+        const res = await fetch(url, { signal: controller.signal, headers: { 'Accept': 'application/json' } });
+        if (res.ok) {
+          const data = await res.json();
+          const meta = data?.chart?.result?.[0]?.meta;
+          if (meta && meta.regularMarketPrice) {
+            price = meta.regularMarketPrice;
+            const prevClose = meta.previousClose || meta.chartPreviousClose || price;
+            change = price - prevClose;
+            changePercent = ((price - prevClose) / prevClose) * 100;
+            volume = meta.regularMarketVolume || volume;
+            dayHigh = meta.regularMarketDayHigh || price * 1.01;
+            dayLow = meta.regularMarketDayLow || price * 0.99;
+            fetched = true;
+          }
+        }
+      } finally {
+        clearTimeout(timeoutId);
       }
     } catch (_) {}
   }
@@ -460,6 +479,11 @@ export async function fetchLiveQuote(asset) {
     lastUpdated: new Date().toLocaleTimeString()
   };
 
+  // Enforce bounded cache size with FIFO eviction to prevent memory leaks
+  if (liveQuotesCache.size >= MAX_CACHE_SIZE) {
+    const oldestKey = liveQuotesCache.keys().next().value;
+    if (oldestKey) liveQuotesCache.delete(oldestKey);
+  }
   liveQuotesCache.set(asset.ticker, { timestamp: now, quote });
   return quote;
 }

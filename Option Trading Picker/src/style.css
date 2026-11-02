@@ -716,16 +716,155 @@ body.light-theme .view-mode-btn.active {
 }
 
 /* =========================================================
-   Tabular Strategy Scanner Format (Default)
+   Tabular Strategy Scanner Format (Default) & Horizontal Scroll
    ========================================================= */
+.scanner-table-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 2rem;
+}
+
+.table-scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 15;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-surface-elevated, #161f30);
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.15));
+  color: var(--cyan, #00f2fe);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.95;
+}
+
+.table-scroll-btn:hover {
+  background: var(--cyan, #00f2fe);
+  color: #080d1a;
+  transform: translateY(-50%) scale(1.12);
+  box-shadow: 0 6px 20px rgba(0, 242, 254, 0.45);
+}
+
+.table-scroll-btn:disabled,
+.table-scroll-btn.disabled,
+.table-scroll-btn.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%) scale(0.85);
+}
+
+.table-scroll-btn-left {
+  left: -14px;
+}
+
+.table-scroll-btn-right {
+  right: -14px;
+}
+
 .scanner-table-container {
   width: 100%;
   overflow-x: auto;
+  scroll-behavior: smooth;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
   box-shadow: var(--shadow-sm);
-  margin-bottom: 2rem;
+  outline: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scanner-table-container:focus-visible {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 2px rgba(0, 242, 254, 0.4), 0 4px 20px rgba(0, 242, 254, 0.15);
+}
+
+/* Elegant Thin Scrollbar */
+.scanner-table-container::-webkit-scrollbar {
+  height: 7px;
+}
+
+.scanner-table-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.scanner-table-container::-webkit-scrollbar-thumb {
+  background: rgba(0, 242, 254, 0.35);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.scanner-table-container::-webkit-scrollbar-thumb:hover {
+  background: var(--cyan);
+}
+
+/* Horizontal Scroll Footer & Keyboard Badges */
+.table-scroll-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.72rem;
+  border: 1px solid var(--border-subtle);
+  border-top: none;
+  background: var(--bg-secondary);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  color: var(--text-dim);
+  user-select: none;
+}
+
+.table-scroll-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.kbd-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--cyan);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.table-scroll-progress-bar {
+  flex: 1;
+  max-width: 200px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  margin: 0 1rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.table-scroll-progress-thumb {
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, var(--cyan), var(--emerald));
+  border-radius: 2px;
+  transition: transform 0.12s ease-out;
+}
+
+.table-scroll-position {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-dim);
 }
 
 .scanner-table {

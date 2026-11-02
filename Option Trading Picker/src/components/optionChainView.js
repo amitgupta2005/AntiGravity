@@ -215,29 +215,34 @@ export function renderOptionChain(containerId, quote, selectedDte = null, onAddL
     window.refreshIcons();
   }
 
-  // Bind Expiry chips
-  container.querySelectorAll('#chainExpiryChips .expiry-chip').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const dte = Number(e.currentTarget.dataset.dte);
+  // High-performance single event delegation listener (replaces 160+ individual cell listeners)
+  container.onclick = (e) => {
+    const target = e.target;
+    if (!target) return;
+
+    // 1. Expiry Chip
+    const chip = target.closest('#chainExpiryChips .expiry-chip');
+    if (chip) {
+      const dte = Number(chip.dataset.dte);
       renderOptionChain(containerId, quote, dte, onAddLegToBuilder);
-    });
-  });
+      return;
+    }
 
-  // Bind View Mode buttons
-  container.querySelectorAll('#chainViewModeToggle .view-mode-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      currentChainViewMode = e.currentTarget.dataset.mode;
+    // 2. View Mode button
+    const modeBtn = target.closest('#chainViewModeToggle .view-mode-btn');
+    if (modeBtn) {
+      currentChainViewMode = modeBtn.dataset.mode;
       renderOptionChain(containerId, quote, activeDte, onAddLegToBuilder);
-    });
-  });
+      return;
+    }
 
-  // Bind Clickable Prices to add leg directly to builder
-  container.querySelectorAll('.clickable-price').forEach(cell => {
-    cell.addEventListener('click', (e) => {
-      const type = e.currentTarget.dataset.type;
-      const action = e.currentTarget.dataset.action;
-      const strike = Number(e.currentTarget.dataset.strike);
-      const premium = Number(e.currentTarget.dataset.prem);
+    // 3. Clickable Price Cell (Bid / Ask click to add leg to builder)
+    const priceCell = target.closest('.clickable-price');
+    if (priceCell) {
+      const type = priceCell.dataset.type;
+      const action = priceCell.dataset.action;
+      const strike = Number(priceCell.dataset.strike);
+      const premium = Number(priceCell.dataset.prem);
 
       if (typeof onAddLegToBuilder === 'function') {
         onAddLegToBuilder({
@@ -253,8 +258,9 @@ export function renderOptionChain(containerId, quote, selectedDte = null, onAddL
           dte: activeDte
         });
       }
-    });
-  });
+      return;
+    }
+  };
 }
 
 /**

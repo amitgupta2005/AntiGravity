@@ -82,6 +82,7 @@ export function filterStrategies(strategies, filters) {
  * Reusable Empty State Renderer
  */
 function renderEmptyState(container) {
+  cleanupTableHorizontalScroll();
   container.innerHTML = `
     <div class="empty-state-card">
       <i data-lucide="filter-x" class="empty-icon"></i>
@@ -324,38 +325,66 @@ export function renderScannerTable(containerId, strategies, onSelectStrategy, on
   }).join('');
 
   container.innerHTML = `
-    <div class="scanner-table-container">
-      <table class="scanner-table font-mono">
-        <thead>
-          <tr>
-            <th class="th-asset">Asset & Price</th>
-            <th class="th-strategy">Strategy / Bias</th>
-            <th class="th-expiry">Expiry / DTE</th>
-            <th class="th-structure">Legs Structure</th>
-            <th class="th-pop text-right">POP</th>
-            <th class="th-profit text-right">Max Profit</th>
-            <th class="th-loss text-right">Max Loss</th>
-            <th class="th-rr text-center">R:R</th>
-            <th class="th-be">Breakeven(s)</th>
-            <th class="th-ivr text-center">IVR / Theta</th>
-            <th class="th-exit">Simple Exit Rule</th>
-            <th class="th-actions text-center">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rowsHtml}
-        </tbody>
-      </table>
+    <div class="scanner-table-wrapper" id="scannerTableWrapper">
+      <!-- Quick Floating Scroll Arrows -->
+      <button class="table-scroll-btn table-scroll-btn-left" id="btnTableScrollLeft" aria-label="Scroll Table Left" title="Scroll Left (or press ← Arrow)">
+        <i data-lucide="chevron-left"></i>
+      </button>
+      <button class="table-scroll-btn table-scroll-btn-right" id="btnTableScrollRight" aria-label="Scroll Table Right" title="Scroll Right (or press → Arrow)">
+        <i data-lucide="chevron-right"></i>
+      </button>
+
+      <!-- Accessible Scroll Container with Arrow Key Navigation -->
+      <div class="scanner-table-container" id="scannerTableContainer" tabindex="0" role="region" aria-label="Strategy Scanner Table. Press Left and Right arrow keys to scroll.">
+        <table class="scanner-table font-mono">
+          <thead>
+            <tr>
+              <th class="th-asset">Asset & Price</th>
+              <th class="th-strategy">Strategy / Bias</th>
+              <th class="th-expiry">Expiry / DTE</th>
+              <th class="th-structure">Legs Structure</th>
+              <th class="th-pop text-right">POP</th>
+              <th class="th-profit text-right">Max Profit</th>
+              <th class="th-loss text-right">Max Loss</th>
+              <th class="th-rr text-center">R:R</th>
+              <th class="th-be">Breakeven(s)</th>
+              <th class="th-ivr text-center">IVR / Theta</th>
+              <th class="th-exit">Simple Exit Rule</th>
+              <th class="th-actions text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Horizontal Scroll Navigation Hint Bar -->
+      <div class="table-scroll-footer font-mono">
+        <div class="table-scroll-hint text-dim">
+          <span class="kbd-badge">←</span>
+          <span class="kbd-badge">→</span>
+          <span>Scroll columns with Left &amp; Right Arrow Keys</span>
+        </div>
+        <div class="table-scroll-progress-bar">
+          <div class="table-scroll-progress-thumb" id="tableScrollThumb"></div>
+        </div>
+        <div class="table-scroll-position text-dim" id="tableScrollPos">
+          Columns 1–12
+        </div>
+      </div>
     </div>
   `;
 
   attachScannerEvents(container, strategies, onSelectStrategy, onViewChain, onCustomBuild);
+  setupTableHorizontalScroll(container);
 }
 
 /**
  * Render strategy results in visual Card Grid format
  */
 export function renderScannerCards(containerId, strategies, onSelectStrategy, onViewChain, onCustomBuild) {
+  cleanupTableHorizontalScroll();
   const container = document.getElementById(containerId);
   if (!container) return;
 
@@ -600,67 +629,72 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
 }
 
 /**
- * Attach Event Listeners to rendered strategy view components
+ * Attach Event Listeners to rendered strategy view components using high-performance Event Delegation
  */
 function attachScannerEvents(container, strategies, onSelectStrategy, onViewChain, onCustomBuild) {
-  if (typeof window.refreshIcons === 'function') {
+  if (typeof window !== 'undefined' && typeof window.refreshIcons === 'function') {
     window.refreshIcons();
   }
 
-  // Analyze Buttons
-  container.querySelectorAll('.btn-analyze').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+  if (!container) return;
+
+  // Single delegated click listener replaces 1,000+ individual event listeners
+  container.onclick = (e) => {
+    const target = e.target;
+    if (!target) return;
+
+    // 1. Analyze Buttons
+    const analyzeBtn = target.closest('.btn-analyze');
+    if (analyzeBtn) {
       e.stopPropagation();
-      const id = e.currentTarget.dataset.id;
+      const id = analyzeBtn.dataset.id;
       const strat = strategies.find(s => s.id === id);
       if (strat && typeof onSelectStrategy === 'function') {
         onSelectStrategy(strat);
       }
-    });
-  });
+      return;
+    }
 
-  // Option Chain Buttons
-  container.querySelectorAll('.btn-chain').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    // 2. Option Chain Buttons
+    const chainBtn = target.closest('.btn-chain');
+    if (chainBtn) {
       e.stopPropagation();
-      const ticker = e.currentTarget.dataset.ticker;
+      const ticker = chainBtn.dataset.ticker;
       if (typeof onViewChain === 'function') {
         onViewChain(ticker);
       }
-    });
-  });
+      return;
+    }
 
-  // Customize in Builder Buttons
-  container.querySelectorAll('.btn-build').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    // 3. Customize in Builder Buttons
+    const buildBtn = target.closest('.btn-build');
+    if (buildBtn) {
       e.stopPropagation();
-      const id = e.currentTarget.dataset.id;
+      const id = buildBtn.dataset.id;
       const strat = strategies.find(s => s.id === id);
       if (strat && typeof onCustomBuild === 'function') {
         onCustomBuild(strat);
       }
-    });
-  });
+      return;
+    }
 
-  // Table Detail Row Expand / Collapse Toggle Buttons
-  container.querySelectorAll('.btn-table-expand').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    // 4. Table Detail Row Expand / Collapse Toggle Buttons
+    const expandBtn = target.closest('.btn-table-expand');
+    if (expandBtn) {
       e.stopPropagation();
-      const id = e.currentTarget.dataset.id;
+      const id = expandBtn.dataset.id;
       toggleTableRowDetail(id);
-    });
-  });
+      return;
+    }
 
-  // Click on Table Row (outside buttons) to expand details
-  container.querySelectorAll('.scanner-table-row').forEach(row => {
-    row.addEventListener('click', (e) => {
-      if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.badge')) {
-        return;
-      }
+    // 5. Click on Table Row (outside buttons, links, inputs, or badges)
+    const row = target.closest('.scanner-table-row');
+    if (row && !target.closest('button, a, input, select, textarea, .badge')) {
       const id = row.dataset.id;
       toggleTableRowDetail(id);
-    });
-  });
+      return;
+    }
+  };
 }
 
 /**
@@ -682,4 +716,196 @@ function toggleTableRowDetail(id) {
     parentRow?.classList.remove('row-expanded');
     if (icon) icon.style.transform = 'rotate(0deg)';
   }
+}
+
+// Active listeners for horizontal table scroll
+let activeGlobalTableKeyHandler = null;
+let activeScrollContainer = null;
+let activeScrollHandler = null;
+
+/**
+ * Remove any active global keydown listeners and scroll listeners for table horizontal scroll
+ */
+export function cleanupTableHorizontalScroll() {
+  if (activeGlobalTableKeyHandler && typeof window !== 'undefined' && window.removeEventListener) {
+    window.removeEventListener('keydown', activeGlobalTableKeyHandler);
+    activeGlobalTableKeyHandler = null;
+  }
+  if (activeScrollContainer && activeScrollHandler && typeof activeScrollContainer.removeEventListener === 'function') {
+    activeScrollContainer.removeEventListener('scroll', activeScrollHandler);
+    activeScrollContainer = null;
+    activeScrollHandler = null;
+  }
+}
+
+/**
+ * Setup keyboard-based horizontal scrolling and floating scroll buttons for Strategy Scanner Table
+ */
+export function setupTableHorizontalScroll(container) {
+  cleanupTableHorizontalScroll();
+
+  if (!container) return;
+  const tableContainer = container.querySelector ? container.querySelector('#scannerTableContainer') : (typeof document !== 'undefined' ? document.getElementById('scannerTableContainer') : null);
+  if (!tableContainer) return;
+
+  const btnLeft = container.querySelector ? container.querySelector('#btnTableScrollLeft') : (typeof document !== 'undefined' ? document.getElementById('btnTableScrollLeft') : null);
+  const btnRight = container.querySelector ? container.querySelector('#btnTableScrollRight') : (typeof document !== 'undefined' ? document.getElementById('btnTableScrollRight') : null);
+  const thumb = container.querySelector ? container.querySelector('#tableScrollThumb') : (typeof document !== 'undefined' ? document.getElementById('tableScrollThumb') : null);
+  const posEl = container.querySelector ? container.querySelector('#tableScrollPos') : (typeof document !== 'undefined' ? document.getElementById('tableScrollPos') : null);
+
+  const SCROLL_STEP = 240;
+
+  const updateScrollIndicators = () => {
+    if (!tableContainer) return;
+    const maxScroll = Math.max(0, (tableContainer.scrollWidth || 0) - (tableContainer.clientWidth || 0));
+    const currentScroll = tableContainer.scrollLeft || 0;
+
+    if (btnLeft) {
+      btnLeft.disabled = currentScroll <= 4;
+      btnLeft.classList?.toggle?.('disabled', currentScroll <= 4);
+    }
+    if (btnRight) {
+      btnRight.disabled = currentScroll >= maxScroll - 4;
+      btnRight.classList?.toggle?.('disabled', currentScroll >= maxScroll - 4);
+    }
+
+    if (thumb && thumb.style) {
+      if (maxScroll <= 0) {
+        thumb.style.width = '100%';
+        thumb.style.transform = 'translateX(0)';
+      } else {
+        const clientW = tableContainer.clientWidth || 1;
+        const scrollW = tableContainer.scrollWidth || 1;
+        const viewRatio = Math.min(1, clientW / scrollW);
+        const thumbWidthPct = Math.max(16, Math.min(60, Math.round(viewRatio * 100)));
+        const scrollPct = Math.min(1, Math.max(0, currentScroll / maxScroll));
+        const availablePct = 100 - thumbWidthPct;
+        thumb.style.width = `${thumbWidthPct}%`;
+        thumb.style.transform = `translateX(${scrollPct * (availablePct / (thumbWidthPct / 100))}%)`;
+      }
+    }
+
+    if (posEl) {
+      if (maxScroll <= 0) {
+        posEl.textContent = 'All Columns Visible';
+      } else {
+        const pct = Math.round((currentScroll / maxScroll) * 100);
+        if (pct <= 10) {
+          posEl.textContent = 'Cols 1–6 (Left)';
+        } else if (pct >= 90) {
+          posEl.textContent = 'Cols 7–12 (Right)';
+        } else {
+          posEl.textContent = `Scroll: ${pct}%`;
+        }
+      }
+    }
+  };
+
+  // 1. Floating Quick-Scroll Buttons
+  if (btnLeft) {
+    btnLeft.onclick = (e) => {
+      e?.preventDefault?.();
+      if (typeof tableContainer.scrollBy === 'function') {
+        tableContainer.scrollBy({ left: -SCROLL_STEP, behavior: 'smooth' });
+      } else {
+        tableContainer.scrollLeft = (tableContainer.scrollLeft || 0) - SCROLL_STEP;
+      }
+    };
+  }
+
+  if (btnRight) {
+    btnRight.onclick = (e) => {
+      e?.preventDefault?.();
+      if (typeof tableContainer.scrollBy === 'function') {
+        tableContainer.scrollBy({ left: SCROLL_STEP, behavior: 'smooth' });
+      } else {
+        tableContainer.scrollLeft = (tableContainer.scrollLeft || 0) + SCROLL_STEP;
+      }
+    };
+  }
+
+  // 2. Focused Container Keyboard Navigation (ArrowLeft, ArrowRight, Home, End)
+  tableContainer.onkeydown = (e) => {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault?.();
+      if (typeof tableContainer.scrollBy === 'function') {
+        tableContainer.scrollBy({ left: -SCROLL_STEP, behavior: 'smooth' });
+      } else {
+        tableContainer.scrollLeft = (tableContainer.scrollLeft || 0) - SCROLL_STEP;
+      }
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault?.();
+      if (typeof tableContainer.scrollBy === 'function') {
+        tableContainer.scrollBy({ left: SCROLL_STEP, behavior: 'smooth' });
+      } else {
+        tableContainer.scrollLeft = (tableContainer.scrollLeft || 0) + SCROLL_STEP;
+      }
+    } else if (e.key === 'Home') {
+      e.preventDefault?.();
+      if (typeof tableContainer.scrollTo === 'function') {
+        tableContainer.scrollTo({ left: 0, behavior: 'smooth' });
+      } else {
+        tableContainer.scrollLeft = 0;
+      }
+    } else if (e.key === 'End') {
+      e.preventDefault?.();
+      if (typeof tableContainer.scrollTo === 'function') {
+        tableContainer.scrollTo({ left: tableContainer.scrollWidth || 0, behavior: 'smooth' });
+      } else {
+        tableContainer.scrollLeft = tableContainer.scrollWidth || 0;
+      }
+    }
+  };
+
+  // 3. Global Keyboard Shortcut Routing (when table is in DOM and user is not inside an input/textarea/select)
+  const handleGlobalTableKey = (e) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+
+    if (typeof document !== 'undefined' && document.activeElement) {
+      const activeTag = document.activeElement.tagName ? document.activeElement.tagName.toLowerCase() : '';
+      if (
+        document.activeElement.isContentEditable ||
+        activeTag === 'input' ||
+        activeTag === 'textarea' ||
+        activeTag === 'select'
+      ) {
+        return; // Allow native cursor navigation in search bar or form inputs
+      }
+    }
+
+    if (typeof document !== 'undefined' && document.body && !document.body.contains(tableContainer)) {
+      return; // Table not in active DOM
+    }
+
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault?.();
+      if (typeof tableContainer.scrollBy === 'function') {
+        tableContainer.scrollBy({ left: -SCROLL_STEP, behavior: 'smooth' });
+      } else {
+        tableContainer.scrollLeft = (tableContainer.scrollLeft || 0) - SCROLL_STEP;
+      }
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault?.();
+      if (typeof tableContainer.scrollBy === 'function') {
+        tableContainer.scrollBy({ left: SCROLL_STEP, behavior: 'smooth' });
+      } else {
+        tableContainer.scrollLeft = (tableContainer.scrollLeft || 0) + SCROLL_STEP;
+      }
+    }
+  };
+
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    window.addEventListener('keydown', handleGlobalTableKey);
+    activeGlobalTableKeyHandler = handleGlobalTableKey;
+  }
+
+  // 4. Scroll Event for dynamic indicators
+  if (typeof tableContainer.addEventListener === 'function') {
+    activeScrollContainer = tableContainer;
+    activeScrollHandler = updateScrollIndicators;
+    tableContainer.addEventListener('scroll', updateScrollIndicators, { passive: true });
+  }
+
+  // Initial indicator sync
+  updateScrollIndicators();
 }
