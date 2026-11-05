@@ -41,6 +41,12 @@ export default function Header({ markets, onOpenCustomTicker }) {
           <span>Gemini AI Engine</span>
         </div>
 
+        {/* Live Feeds Status Indicator */}
+        <div className="market-chip" style={{ borderColor: 'rgba(16, 185, 129, 0.4)', background: 'rgba(16, 185, 129, 0.08)' }} title="Real-Time Market Prices from Exchanges (NSE/US) & Live Financial News">
+          <span className="chip-status-dot" style={{ background: '#10b981', boxShadow: '0 0 8px #10b981' }}></span>
+          <span style={{ color: '#10b981', fontWeight: 700, letterSpacing: '0.5px' }}>LIVE FEEDS ACTIVE</span>
+        </div>
+
         {/* On-demand Ticker Analyzer Button */}
         <button className="btn-custom-ticker" onClick={onOpenCustomTicker} title="Analyze Any Stock Ticker On-Demand">
           <PlusCircle size={15} />

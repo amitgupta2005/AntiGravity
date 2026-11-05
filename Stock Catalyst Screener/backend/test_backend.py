@@ -9,7 +9,7 @@ import unittest
 from stock_universe import INDIAN_STOCKS, US_STOCKS, get_stock_info
 from trade_engine import calculate_trade_parameters
 from ai_analyzer import analyze_catalyst_heuristic, TradeRecommendation
-from data_ingestion import CURATED_CATALYSTS
+from data_ingestion import classify_live_catalyst
 
 class TestStockCatalystBackend(unittest.TestCase):
 
@@ -94,18 +94,31 @@ class TestStockCatalystBackend(unittest.TestCase):
 
     def test_05_catalyst_recommendation_schema(self):
         """Verify heuristic catalyst analysis produces valid Pydantic TradeRecommendation objects."""
-        stock = get_stock_info("TATAMOTORS")
-        sample_catalyst = CURATED_CATALYSTS[1]  # Tata Motors contract
+        stock = get_stock_info("TATAPOWER")
         fake_quote = {
-            "current_price": 850.0,
+            "current_price": 420.0,
             "day_change_pct": 3.4,
             "rvol": 2.2,
             "currency": "₹"
         }
+        live_classification = classify_live_catalyst(
+            headline="Tata Power Bags ₹4,200 Cr Clean Energy Transmission Project from State Grid",
+            quote=fake_quote
+        )
+        sample_catalyst = {
+            "headline": "Tata Power Bags ₹4,200 Cr Clean Energy Transmission Project from State Grid",
+            "catalyst_type": live_classification["catalyst_type"],
+            "source": "Business Standard",
+            "published_at": "Today",
+            "catalyst_strength": live_classification["catalyst_strength"],
+            "timeframe": live_classification["timeframe"],
+            "financials": live_classification["financials"],
+            "summary": "Secured major clean energy transmission infrastructure order."
+        }
 
         rec = analyze_catalyst_heuristic(stock, fake_quote, sample_catalyst)
         self.assertIsInstance(rec, TradeRecommendation)
-        self.assertEqual(rec.display_ticker, "TATAMOTORS")
+        self.assertEqual(rec.display_ticker, "TATAPOWER")
         self.assertEqual(rec.market, "India")
         self.assertIn(rec.direction, ["BUY", "SELL"])
         self.assertIn(rec.timeframe, ["Intraday", "Short-term"])

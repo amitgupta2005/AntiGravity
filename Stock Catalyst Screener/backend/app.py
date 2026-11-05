@@ -10,11 +10,16 @@ import logging
 from typing import Dict, List, Any, Optional
 from fastapi import FastAPI, HTTPException, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
     pass
+
+from stock_universe import INDIAN_STOCKS, US_STOCKS, get_stock_info
+from data_ingestion import fetch_live_quote, fetch_live_news_feed, scan_all_live_catalysts
+from ai_analyzer import evaluate_stock_catalyst, TradeRecommendation
 
 logger = logging.getLogger("App")
 logging.basicConfig(level=logging.INFO)
@@ -94,24 +99,14 @@ def get_catalysts(
     timeframe: str = Query("All", description="Filter by timeframe: All, Intraday, Short-term"),
     direction: str = Query("All", description="Filter by direction: All, BUY, SELL"),
     catalyst_type: Optional[str] = Query(None, description="Filter by catalyst type"),
-    search: Optional[str] = Query(None, description="Search query across ticker, company, or catalyst")
+    search: Optional[str] = Query(None, description="Search query across ticker, company, or catalyst"),
+    refresh: bool = Query(False, description="Force fresh live exchange and news scan")
 ):
     """
-    Main screener endpoint: Evaluates active breaking news and earnings reports across
-    the dual-market universe and returns structured trading parameters.
+    Main screener endpoint: Ingests real-time market data from exchanges via yfinance
+    and live financial news, then evaluates catalysts with the AI / Quantitative engine.
     """
-    recommendations: List[TradeRecommendation] = []
-
-    # Process all curated active catalysts
-    for cat in CURATED_CATALYSTS:
-        try:
-            rec = evaluate_stock_catalyst(
-                symbol=cat["ticker"],
-                catalyst_data=cat
-            )
-            recommendations.append(rec)
-        except Exception as e:
-            logger.warning(f"Error processing catalyst for {cat.get('ticker')}: {e}")
+    recommendations = scan_all_live_catalysts(force_refresh=refresh)
 
     # Apply filters
     filtered = recommendations
@@ -144,20 +139,21 @@ def get_catalysts(
 
 @app.post("/api/scan", response_model=List[TradeRecommendation])
 def scan_stocks(payload: ScanRequest):
-    """Dynamic scan with custom parameters."""
+    """Dynamic scan with custom parameters and optional fresh exchange scan."""
     return get_catalysts(
         market=payload.market,
         timeframe=payload.timeframe,
         direction=payload.direction,
         catalyst_type=payload.catalyst_type,
-        search=payload.search
+        search=payload.search,
+        refresh=payload.refresh
     )
 
 @app.post("/api/analyze-ticker", response_model=TradeRecommendation)
 def analyze_custom_ticker(payload: CustomTickerRequest):
     """
     On-demand AI deep-dive on any user-provided ticker symbol.
-    Fetches latest price and breaking news from yfinance and generates trade levels.
+    Fetches latest price from exchange and breaking news via live RSS and generates trade levels.
     """
     sym = payload.symbol.strip().upper()
     if not sym:
@@ -165,7 +161,7 @@ def analyze_custom_ticker(payload: CustomTickerRequest):
 
     stock_info = get_stock_info(sym)
     quote = fetch_live_quote(stock_info["ticker"])
-    recent_news = get_live_news_for_ticker(stock_info["ticker"])
+    recent_news = fetch_live_news_feed(stock_info["ticker"], stock_info["name"], stock_info["market"])
 
     catalyst_data = None
     if recent_news:
@@ -180,7 +176,7 @@ def analyze_custom_ticker(payload: CustomTickerRequest):
             "summary": top_news.get("summary", top_news["headline"])
         }
     else:
-        # Synthesize from price action
+        # Synthesize from live market price action
         catalyst_data = {
             "headline": f"{stock_info['name']} displays rising institutional accumulation with volume {quote.get('rvol', 1.5)}x",
             "catalyst_type": "Breakout News",
@@ -188,7 +184,7 @@ def analyze_custom_ticker(payload: CustomTickerRequest):
             "published_at": "Today",
             "catalyst_strength": 82,
             "timeframe": "Short-term",
-            "summary": f"Strong price momentum of {quote['day_change_pct']}% with technical breakout above 20-DMA resistance."
+            "summary": f"Live exchange price momentum of {quote['day_change_pct']}% with technical volume breakout above 20-DMA."
         }
 
     recommendation = evaluate_stock_catalyst(

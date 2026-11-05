@@ -13,7 +13,7 @@ INDIAN_STOCKS: List[Dict[str, Any]] = [
     {"ticker": "HDFCBANK.NS", "display_ticker": "HDFCBANK", "name": "HDFC Bank Ltd", "sector": "Banking & Financials", "market": "India", "currency": "₹", "exchange": "NSE"},
     {"ticker": "INFY.NS", "display_ticker": "INFY", "name": "Infosys Ltd", "sector": "Information Technology", "market": "India", "currency": "₹", "exchange": "NSE"},
     {"ticker": "ICICIBANK.NS", "display_ticker": "ICICIBANK", "name": "ICICI Bank Ltd", "sector": "Banking & Financials", "market": "India", "currency": "₹", "exchange": "NSE"},
-    {"ticker": "TATAMOTORS.NS", "display_ticker": "TATAMOTORS", "name": "Tata Motors Ltd", "sector": "Automotive / EV", "market": "India", "currency": "₹", "exchange": "NSE"},
+    {"ticker": "TATAPOWER.NS", "display_ticker": "TATAPOWER", "name": "Tata Power Company Ltd", "sector": "Power & Clean Energy", "market": "India", "currency": "₹", "exchange": "NSE"},
     {"ticker": "BHARTIARTL.NS", "display_ticker": "BHARTIARTL", "name": "Bharti Airtel Ltd", "sector": "Telecom", "market": "India", "currency": "₹", "exchange": "NSE"},
     {"ticker": "SBIN.NS", "display_ticker": "SBIN", "name": "State Bank of India", "sector": "PSU Banking", "market": "India", "currency": "₹", "exchange": "NSE"},
     {"ticker": "LT.NS", "display_ticker": "LT", "name": "Larsen & Toubro Ltd", "sector": "Infrastructure & Defense", "market": "India", "currency": "₹", "exchange": "NSE"},

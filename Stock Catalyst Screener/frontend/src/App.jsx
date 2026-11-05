@@ -232,8 +232,8 @@ export default function App() {
   const [direction, setDirection] = useState('All');
   const [search, setSearch] = useState('');
 
-  // Fetch Catalysts from Backend
-  const fetchCatalysts = useCallback(async () => {
+  // Fetch Catalysts from Backend (Real-Time Exchange Quotes & Live News)
+  const fetchCatalysts = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -241,6 +241,7 @@ export default function App() {
       if (timeframe !== 'All') params.append('timeframe', timeframe);
       if (direction !== 'All') params.append('direction', direction);
       if (search.trim()) params.append('search', search.trim());
+      if (forceRefresh) params.append('refresh', 'true');
 
       const res = await fetch(`/api/catalysts?${params.toString()}`);
       if (res.ok) {
@@ -322,7 +323,7 @@ export default function App() {
         setDirection={setDirection}
         search={search}
         setSearch={setSearch}
-        onRefresh={fetchCatalysts}
+        onRefresh={() => fetchCatalysts(true)}
         loading={loading}
       />
 
