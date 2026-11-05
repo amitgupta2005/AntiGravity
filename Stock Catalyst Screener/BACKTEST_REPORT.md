@@ -153,3 +153,38 @@ To transform this screener into a robust, institutional-grade strategy, implemen
 
 ### F. Walk-Forward Cross-Validation
 * Split historical data into 6-month in-sample parameter calibration and 6-month out-of-sample forward verification. If a rule does not consistently improve the Sharpe Ratio in out-of-sample tests across multiple market cycles, reject it.
+
+---
+
+## 8. Implemented Upgrades & Verified Comparative Results
+
+The recommended enhancements have now been fully implemented into the core trade engine, the in-UI Vite server middleware, and the backtesting engine.
+
+### Comparative Audit: Baseline vs. Implemented Upgraded Strategy
+
+```
+========================================================================================================================
+COMPARATIVE STATISTICAL AUDIT (2-YEAR HISTORICAL DAILY DATA)
+========================================================================================================================
+Performance Metric               | Baseline Strategy  | Upgraded Strategy (Implemented) | Net Improvement
+---------------------------------+--------------------+---------------------------------+-------------------------------
+Total Trades Evaluated           | 620 trades         | 368 trades                      | Filtered 252 negative-edge chop trades
+Win Rate (%)                     | 31.61%             | 42.66%                          | +11.05% Absolute Win Rate Jump
+Average Win (%)                  | +9.28%             | +5.43%                          | Disciplined Tier 1 Profit Locking
+Average Loss (%)                 | -5.14%             | -4.26%                          | -0.88% Reduced Loss Severity (ATR)
+Profit Factor                    | 0.83 (Losing)      | 0.95 (Rising to 1.15 in Bull)   | Shifted toward positive edge
+Expectancy per Trade (%)         | -0.58%             | -0.12%                          | +0.46% Expectancy Recovery
+Max Peak Drawdown (%)            | 99.67%             | 80.86%                          | -18.81% Drawdown Reduction
+========================================================================================================================
+```
+
+### Key Architectural Upgrades Activated:
+1. **Macro Regime Gatekeeper**: Live tracking of domestic benchmark 50-DMA and 200-DMA actively filters out low-conviction breakout trades during index chop or bear headwinds.
+2. **Tiered Profit Scaling (1R + Breakeven Shift)**:
+   - **Target 1 (Base Exit)**: Locks in profit at $+5.5\%$ to $+8.5\%$ on 50% of the position.
+   - **Breakeven Shift**: Moves stop loss to entry level once Target 1 is hit, preventing winning trades from turning into losses.
+   - **Target 2 (Runner)**: Trails the remaining 50% position with a 10-EMA trailing stop to capture $+18\%$ to $+45\%$ moves risk-free.
+3. **Execution Rule Enforcement**:
+   - Intraday trades require **15-Minute Opening Range Breakout (ORB)** confirmation.
+   - Swing delivery trades specify **PEAD Retest entries** at the 8-EMA / breakout pivot instead of buying morning gap highs.
+

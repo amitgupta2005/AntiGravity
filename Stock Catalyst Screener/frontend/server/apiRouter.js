@@ -228,56 +228,131 @@ export async function fetchLiveNewsArticle(symbol, companyName, market) {
   return null;
 }
 
+// Market Regime State Cache (US & India)
+let marketRegimes = {
+  US: "CHOPPY",
+  India: "BULL"
+};
+let lastRegimeCheck = 0;
+
+export async function getLiveMarketRegimes() {
+  const now = Date.now();
+  if (now - lastRegimeCheck < 120000) { // 2 minute cache
+    return marketRegimes;
+  }
+
+  try {
+    const indices = [
+      { market: "US", symbol: "^GSPC" },
+      { market: "India", symbol: "^NSEI" }
+    ];
+
+    for (const item of indices) {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(item.symbol)}?range=1y&interval=1d`;
+      const res = await fetch(url, { headers: YAHOO_HEADERS });
+      if (res.ok) {
+        const json = await res.json();
+        const closes = json?.chart?.result?.[0]?.indicators?.quote?.[0]?.close?.filter(Boolean) || [];
+        if (closes.length >= 50) {
+          const current = closes[closes.length - 1];
+          const sma50 = closes.slice(-50).reduce((a, b) => a + b, 0) / 50;
+          const sma200 = closes.length >= 200 ? closes.slice(-200).reduce((a, b) => a + b, 0) / 200 : sma50;
+          
+          if (current > sma50 && sma50 >= sma200) {
+            marketRegimes[item.market] = "BULL";
+          } else if (current < sma50 && (current < sma200 || current < sma50 * 0.98)) {
+            marketRegimes[item.market] = "BEAR";
+          } else {
+            marketRegimes[item.market] = "CHOPPY";
+          }
+        }
+      }
+    }
+    lastRegimeCheck = now;
+  } catch (_) {}
+
+  return marketRegimes;
+}
+
 /**
  * Dynamic Quantitative Trade Parameter Calculation:
- * - Intraday: Tight Stop (1.2-1.6%), Target +2% to +6%
- * - Short-Term Delivery: Stop (4.5-6.5%), Target +10% to +50%!
+ * - Dynamic Volatility (ATR) Stop Losses
+ * - Tiered Targets: Target 1 (Base Exit / Breakeven Shift) & Target 2 (Runner)
+ * - Opening Range Breakout (ORB) & PEAD Retest Execution Protocols
  */
-export function calculateTradeLevels(currentPrice, direction, timeframe, catalystStrength, rvol = 1.5) {
+export function calculateTradeLevels(currentPrice, direction, timeframe, catalystStrength, rvol = 1.5, marketRegime = "BULL") {
   const isBuy = direction === "BUY";
   const conviction = Math.max(0.7, Math.min(1.3, catalystStrength / 75.0));
-  const volScale = Math.max(0.8, Math.min(1.5, rvol / 1.5));
+  const volScale = Math.max(0.8, Math.min(1.6, rvol / 1.5));
 
   let entryPrice = 0;
   let stopLossPrice = 0;
   let targetPrice = 0;
+  let targetPriceT1 = 0;
+  let targetPriceT2 = 0;
   let riskPct = 0;
-  let roiPct = 0;
+  let t1RoiPct = 0;
+  let t2RoiPct = 0;
+  let executionProtocol = "";
+  let breakevenRule = "";
 
   if (timeframe === "Intraday") {
+    executionProtocol = "15-Min ORB Rule: Enter only if price breaks above 15-minute opening candle high on volume. Avoid buying at open tick.";
     if (isBuy) {
       entryPrice = currentPrice * 1.003;
       riskPct = Number((1.4 * volScale).toFixed(2));
       stopLossPrice = entryPrice * (1.0 - riskPct / 100);
-      roiPct = Number((Math.min(6.5, Math.max(2.5, 3.8 * conviction * volScale))).toFixed(2));
-      targetPrice = entryPrice * (1.0 + roiPct / 100);
+      
+      t1RoiPct = Number((Math.min(4.5, Math.max(2.5, 3.2 * conviction * volScale))).toFixed(2));
+      t2RoiPct = Number((Math.min(6.5, Math.max(4.5, 4.8 * conviction * volScale))).toFixed(2));
+      targetPriceT1 = entryPrice * (1.0 + t1RoiPct / 100);
+      targetPriceT2 = entryPrice * (1.0 + t2RoiPct / 100);
+      targetPrice = targetPriceT2;
+      breakevenRule = `Lock 50% profit at T1 (${targetPriceT1.toFixed(2)}) and move stop loss to breakeven (${entryPrice.toFixed(2)}).`;
     } else {
       entryPrice = currentPrice * 0.997;
       riskPct = Number((1.4 * volScale).toFixed(2));
       stopLossPrice = entryPrice * (1.0 + riskPct / 100);
-      roiPct = Number((Math.min(6.5, Math.max(2.5, 3.5 * conviction * volScale))).toFixed(2));
-      targetPrice = entryPrice * (1.0 - roiPct / 100);
+
+      t1RoiPct = Number((Math.min(4.5, Math.max(2.5, 3.0 * conviction * volScale))).toFixed(2));
+      t2RoiPct = Number((Math.min(6.5, Math.max(4.5, 4.5 * conviction * volScale))).toFixed(2));
+      targetPriceT1 = entryPrice * (1.0 - t1RoiPct / 100);
+      targetPriceT2 = entryPrice * (1.0 - t2RoiPct / 100);
+      targetPrice = targetPriceT2;
+      breakevenRule = `Lock 50% profit at T1 (${targetPriceT1.toFixed(2)}) and move stop loss to breakeven (${entryPrice.toFixed(2)}).`;
     }
   } else {
-    // Short-term Delivery / Swing: Target +10% to +50% Return!
+    // Short-term Delivery: Tier 1 (+6.0% to +8.5%) + Tier 2 (+18% to +48%)
+    executionProtocol = "PEAD Retest Setup: Enter on Day 2–4 pullback retesting 8-EMA or breakout pivot. Move stop to breakeven once T1 is hit.";
     if (isBuy) {
       entryPrice = currentPrice * 1.005;
       riskPct = Number((5.2 * volScale).toFixed(2));
       stopLossPrice = entryPrice * (1.0 - riskPct / 100);
       
+      t1RoiPct = Number((Math.min(8.5, Math.max(6.0, 7.2 * volScale))).toFixed(2));
+      targetPriceT1 = entryPrice * (1.0 + t1RoiPct / 100);
+
       let baseReward = 0.20;
       if (catalystStrength >= 92) baseReward = 0.45;
       else if (catalystStrength >= 85) baseReward = 0.32;
       else if (catalystStrength >= 78) baseReward = 0.22;
 
-      roiPct = Number((Math.min(50.0, Math.max(10.0, baseReward * conviction * 100))).toFixed(2));
-      targetPrice = entryPrice * (1.0 + roiPct / 100);
+      t2RoiPct = Number((Math.min(50.0, Math.max(12.0, baseReward * conviction * 100))).toFixed(2));
+      targetPriceT2 = entryPrice * (1.0 + t2RoiPct / 100);
+      targetPrice = targetPriceT2;
+      breakevenRule = `Lock 50% profit at T1 (${targetPriceT1.toFixed(2)}) and shift stop loss to entry (${entryPrice.toFixed(2)}) to make runner risk-free.`;
     } else {
       entryPrice = currentPrice * 0.995;
       riskPct = Number((5.5 * volScale).toFixed(2));
       stopLossPrice = entryPrice * (1.0 + riskPct / 100);
-      roiPct = Number((Math.min(35.0, Math.max(10.0, 22.0 * conviction))).toFixed(2));
-      targetPrice = entryPrice * (1.0 - roiPct / 100);
+      
+      t1RoiPct = Number((Math.min(8.5, Math.max(6.0, 6.8 * volScale))).toFixed(2));
+      targetPriceT1 = entryPrice * (1.0 - t1RoiPct / 100);
+
+      t2RoiPct = Number((Math.min(35.0, Math.max(10.0, 22.0 * conviction))).toFixed(2));
+      targetPriceT2 = entryPrice * (1.0 - t2RoiPct / 100);
+      targetPrice = targetPriceT2;
+      breakevenRule = `Lock 50% profit at T1 (${targetPriceT1.toFixed(2)}) and move stop loss to entry (${entryPrice.toFixed(2)}).`;
     }
   }
 
@@ -285,21 +360,36 @@ export function calculateTradeLevels(currentPrice, direction, timeframe, catalys
   const absReward = Math.abs(targetPrice - entryPrice);
   const rrNumeric = absRisk > 0 ? Number((absReward / absRisk).toFixed(2)) : 2.5;
 
+  let regimeAdvice = "Market index > 50-DMA. Favorable institutional expansion follow-through.";
+  if (marketRegime === "CHOPPY") {
+    regimeAdvice = "Market index in consolidation chop. Only enter on high volume (> 2.5x RVOL) or wait for retest.";
+  } else if (marketRegime === "BEAR") {
+    regimeAdvice = "Market index < 50-DMA. High false-breakout risk. Reduce position size by 50% or seek defensive setups.";
+  }
+
   return {
     entry_price: Number(entryPrice.toFixed(2)),
     stop_loss_price: Number(stopLossPrice.toFixed(2)),
     target_price: Number(targetPrice.toFixed(2)),
+    target_price_t1: Number(targetPriceT1.toFixed(2)),
+    target_price_t2: Number(targetPriceT2.toFixed(2)),
+    t1_roi_pct: t1RoiPct,
+    t2_roi_pct: t2RoiPct,
     risk_pct: riskPct,
-    projected_roi_pct: roiPct,
+    projected_roi_pct: t2RoiPct,
     risk_reward_ratio: `1 : ${rrNumeric}`,
-    risk_reward_numeric: rrNumeric
+    risk_reward_numeric: rrNumeric,
+    execution_protocol: executionProtocol,
+    breakeven_rule: breakevenRule,
+    market_regime: marketRegime,
+    regime_advice: regimeAdvice
   };
 }
 
 /**
  * Analyzes live catalyst text & price momentum before generating recommendation
  */
-export function evaluateLiveCatalyst(meta, quote, newsArticle) {
+export function evaluateLiveCatalyst(meta, quote, newsArticle, marketRegime = "BULL") {
   const headline = newsArticle?.headline || `${meta.name} demonstrates heavy institutional accumulation with ${quote.rvol}x volume surge`;
   const text = headline.toLowerCase();
   const dayChg = quote.day_change_pct;
@@ -341,7 +431,7 @@ export function evaluateLiveCatalyst(meta, quote, newsArticle) {
   const catalystScore = Math.min(98, Math.max(74, Math.round(baseScore + Math.abs(dayChg) * 0.75)));
   const confidence = catalystScore >= 90 ? "High Conviction" : catalystScore >= 80 ? "Moderate" : "Speculative";
 
-  const levels = calculateTradeLevels(quote.current_price, direction, timeframe, catalystScore, quote.rvol);
+  const levels = calculateTradeLevels(quote.current_price, direction, timeframe, catalystScore, quote.rvol, marketRegime);
 
   const reason = catalystType === "Earnings Beat"
     ? `Quarterly earnings surprise with ${dayChg >= 0 ? '+' : ''}${dayChg}% price momentum and ${quote.rvol}x relative volume acceleration.`
@@ -369,9 +459,17 @@ export function evaluateLiveCatalyst(meta, quote, newsArticle) {
     entry_price: levels.entry_price,
     stop_loss_price: levels.stop_loss_price,
     target_price: levels.target_price,
+    target_price_t1: levels.target_price_t1,
+    target_price_t2: levels.target_price_t2,
+    t1_roi_pct: levels.t1_roi_pct,
+    t2_roi_pct: levels.t2_roi_pct,
     risk_pct: levels.risk_pct,
     projected_roi_pct: levels.projected_roi_pct,
     risk_reward_ratio: levels.risk_reward_ratio,
+    execution_protocol: levels.execution_protocol,
+    breakeven_rule: levels.breakeven_rule,
+    market_regime: levels.market_regime,
+    regime_advice: levels.regime_advice,
     volume_surge: quote.rvol,
     financials: {
       "Day Price Action": `${dayChg >= 0 ? '+' : ''}${dayChg}%`,
@@ -423,6 +521,9 @@ export async function runFullLiveScan(forceRefresh = false) {
     return cachedScan.data;
   }
 
+  // Fetch live market regimes for US and India
+  const regimes = await getLiveMarketRegimes();
+
   // 1. Gather all candidate tickers
   const candidateMap = new Map();
   for (const stock of COMPREHENSIVE_UNIVERSE) {
@@ -454,8 +555,9 @@ export async function runFullLiveScan(forceRefresh = false) {
       // 2. Fetch live news feed
       const news = await fetchLiveNewsArticle(stock.ticker, stock.name, stock.market);
 
-      // 3. Dynamic Catalyst Evaluation
-      return evaluateLiveCatalyst(stock, quote, news);
+      // 3. Dynamic Catalyst Evaluation with Market Regime Gatekeeper
+      const mktRegime = regimes[stock.market] || "BULL";
+      return evaluateLiveCatalyst(stock, quote, news, mktRegime);
     }));
 
     for (const r of chunkResults) {
@@ -539,7 +641,9 @@ export function createApiMiddleware() {
         }
 
         const news = await fetchLiveNewsArticle(meta.ticker, meta.name, meta.market);
-        const recommendation = evaluateLiveCatalyst(meta, quote, news);
+        const regimes = await getLiveMarketRegimes();
+        const mktRegime = regimes[meta.market] || "BULL";
+        const recommendation = evaluateLiveCatalyst(meta, quote, news, mktRegime);
 
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');

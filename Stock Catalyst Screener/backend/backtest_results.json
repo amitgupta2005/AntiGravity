@@ -1,268 +1,42 @@
 {
-  "timestamp": "2026-11-05T18:53:37.159254",
-  "period": "2 Years Historical Data",
-  "assets_tested": 24,
-  "overall": {
-    "intraday": {
-      "total_trades": 620,
-      "win_count": 185,
-      "loss_count": 435,
-      "win_rate": 29.84,
-      "avg_win": 1.96,
-      "avg_loss": -1.26,
-      "win_loss_ratio": 1.56,
-      "profit_factor": 0.66,
-      "expectancy_pct": -0.3,
-      "max_drawdown_pct": 85.81,
-      "total_cumulative_return_pct": -85.61
-    },
-    "short_term_delivery": {
-      "total_trades": 620,
-      "win_count": 196,
-      "loss_count": 424,
-      "win_rate": 31.61,
-      "avg_win": 9.49,
-      "avg_loss": -5.14,
-      "win_loss_ratio": 1.85,
-      "profit_factor": 0.85,
-      "expectancy_pct": -0.52,
-      "max_drawdown_pct": 99.65,
-      "total_cumulative_return_pct": -99.44
-    },
-    "combined": {
-      "total_trades": 1240,
-      "win_count": 381,
-      "loss_count": 859,
-      "win_rate": 30.73,
-      "avg_win": 5.83,
-      "avg_loss": -3.17,
-      "win_loss_ratio": 1.84,
-      "profit_factor": 0.82,
-      "expectancy_pct": -0.41,
-      "max_drawdown_pct": 99.95,
-      "total_cumulative_return_pct": -99.92
-    }
+  "timestamp": "2026-11-05T19:06:37.775850",
+  "baseline_swing": {
+    "total_trades": 620,
+    "win_count": 196,
+    "loss_count": 424,
+    "win_rate": 31.61,
+    "avg_win": 9.28,
+    "avg_loss": -5.14,
+    "win_loss_ratio": 1.81,
+    "profit_factor": 0.83,
+    "expectancy_pct": -0.58,
+    "max_drawdown_pct": 99.67,
+    "total_cumulative_return_pct": -99.58
   },
-  "by_market_regime": {
-    "Bull": {
-      "intraday": {
-        "total_trades": 228,
-        "win_count": 69,
-        "loss_count": 159,
-        "win_rate": 30.26,
-        "avg_win": 2.08,
-        "avg_loss": -1.27,
-        "win_loss_ratio": 1.64,
-        "profit_factor": 0.71,
-        "expectancy_pct": -0.26,
-        "max_drawdown_pct": 48.96,
-        "total_cumulative_return_pct": -46.37
-      },
-      "short_term": {
-        "total_trades": 228,
-        "win_count": 89,
-        "loss_count": 139,
-        "win_rate": 39.04,
-        "avg_win": 9.81,
-        "avg_loss": -5.12,
-        "win_loss_ratio": 1.91,
-        "profit_factor": 1.23,
-        "expectancy_pct": 0.71,
-        "max_drawdown_pct": 63.48,
-        "total_cumulative_return_pct": 106.76
-      },
-      "combined": {
-        "total_trades": 456,
-        "win_count": 158,
-        "loss_count": 298,
-        "win_rate": 34.65,
-        "avg_win": 6.43,
-        "avg_loss": -3.07,
-        "win_loss_ratio": 2.1,
-        "profit_factor": 1.11,
-        "expectancy_pct": 0.22,
-        "max_drawdown_pct": 79.35,
-        "total_cumulative_return_pct": 10.88
-      }
-    },
-    "Choppy": {
-      "intraday": {
-        "total_trades": 217,
-        "win_count": 74,
-        "loss_count": 143,
-        "win_rate": 34.1,
-        "avg_win": 1.84,
-        "avg_loss": -1.24,
-        "win_loss_ratio": 1.48,
-        "profit_factor": 0.77,
-        "expectancy_pct": -0.19,
-        "max_drawdown_pct": 51.99,
-        "total_cumulative_return_pct": -36.2
-      },
-      "short_term": {
-        "total_trades": 217,
-        "win_count": 61,
-        "loss_count": 156,
-        "win_rate": 28.11,
-        "avg_win": 7.85,
-        "avg_loss": -5.2,
-        "win_loss_ratio": 1.51,
-        "profit_factor": 0.59,
-        "expectancy_pct": -1.53,
-        "max_drawdown_pct": 98.18,
-        "total_cumulative_return_pct": -97.93
-      },
-      "combined": {
-        "total_trades": 434,
-        "win_count": 135,
-        "loss_count": 299,
-        "win_rate": 31.11,
-        "avg_win": 4.56,
-        "avg_loss": -3.31,
-        "win_loss_ratio": 1.38,
-        "profit_factor": 0.62,
-        "expectancy_pct": -0.86,
-        "max_drawdown_pct": 99.09,
-        "total_cumulative_return_pct": -98.68
-      }
-    },
-    "Bear": {
-      "intraday": {
-        "total_trades": 175,
-        "win_count": 42,
-        "loss_count": 133,
-        "win_rate": 24.0,
-        "avg_win": 1.97,
-        "avg_loss": -1.25,
-        "win_loss_ratio": 1.57,
-        "profit_factor": 0.5,
-        "expectancy_pct": -0.48,
-        "max_drawdown_pct": 58.27,
-        "total_cumulative_return_pct": -57.94
-      },
-      "short_term": {
-        "total_trades": 175,
-        "win_count": 46,
-        "loss_count": 129,
-        "win_rate": 26.29,
-        "avg_win": 11.04,
-        "avg_loss": -5.08,
-        "win_loss_ratio": 2.17,
-        "profit_factor": 0.77,
-        "expectancy_pct": -0.85,
-        "max_drawdown_pct": 93.14,
-        "total_cumulative_return_pct": -86.87
-      },
-      "combined": {
-        "total_trades": 350,
-        "win_count": 88,
-        "loss_count": 262,
-        "win_rate": 25.14,
-        "avg_win": 6.71,
-        "avg_loss": -3.14,
-        "win_loss_ratio": 2.14,
-        "profit_factor": 0.72,
-        "expectancy_pct": -0.66,
-        "max_drawdown_pct": 97.11,
-        "total_cumulative_return_pct": -94.48
-      }
-    }
+  "upgraded_swing": {
+    "total_trades": 368,
+    "win_count": 157,
+    "loss_count": 211,
+    "win_rate": 42.66,
+    "avg_win": 5.43,
+    "avg_loss": -4.26,
+    "win_loss_ratio": 1.28,
+    "profit_factor": 0.95,
+    "expectancy_pct": -0.12,
+    "max_drawdown_pct": 80.86,
+    "total_cumulative_return_pct": -62.56
   },
-  "by_geography": {
-    "US": {
-      "intraday": {
-        "total_trades": 288,
-        "win_count": 90,
-        "loss_count": 198,
-        "win_rate": 31.25,
-        "avg_win": 2.19,
-        "avg_loss": -1.33,
-        "win_loss_ratio": 1.64,
-        "profit_factor": 0.75,
-        "expectancy_pct": -0.23,
-        "max_drawdown_pct": 52.17,
-        "total_cumulative_return_pct": -51.25
-      },
-      "short_term": {
-        "total_trades": 288,
-        "win_count": 79,
-        "loss_count": 209,
-        "win_rate": 27.43,
-        "avg_win": 11.32,
-        "avg_loss": -5.18,
-        "win_loss_ratio": 2.18,
-        "profit_factor": 0.83,
-        "expectancy_pct": -0.66,
-        "max_drawdown_pct": 95.96,
-        "total_cumulative_return_pct": -94.85
-      },
-      "combined": {
-        "total_trades": 576,
-        "win_count": 169,
-        "loss_count": 407,
-        "win_rate": 29.34,
-        "avg_win": 6.45,
-        "avg_loss": -3.31,
-        "win_loss_ratio": 1.95,
-        "profit_factor": 0.81,
-        "expectancy_pct": -0.44,
-        "max_drawdown_pct": 97.88,
-        "total_cumulative_return_pct": -97.49
-      }
-    },
-    "India": {
-      "intraday": {
-        "total_trades": 332,
-        "win_count": 95,
-        "loss_count": 237,
-        "win_rate": 28.61,
-        "avg_win": 1.74,
-        "avg_loss": -1.2,
-        "win_loss_ratio": 1.46,
-        "profit_factor": 0.58,
-        "expectancy_pct": -0.35,
-        "max_drawdown_pct": 71.03,
-        "total_cumulative_return_pct": -70.48
-      },
-      "short_term": {
-        "total_trades": 332,
-        "win_count": 117,
-        "loss_count": 215,
-        "win_rate": 35.24,
-        "avg_win": 8.25,
-        "avg_loss": -5.09,
-        "win_loss_ratio": 1.62,
-        "profit_factor": 0.88,
-        "expectancy_pct": -0.39,
-        "max_drawdown_pct": 92.56,
-        "total_cumulative_return_pct": -89.08
-      },
-      "combined": {
-        "total_trades": 664,
-        "win_count": 212,
-        "loss_count": 452,
-        "win_rate": 31.93,
-        "avg_win": 5.33,
-        "avg_loss": -3.05,
-        "win_loss_ratio": 1.75,
-        "profit_factor": 0.82,
-        "expectancy_pct": -0.37,
-        "max_drawdown_pct": 97.84,
-        "total_cumulative_return_pct": -96.78
-      }
-    }
-  },
-  "outcomes": {
-    "intraday": {
-      "MOC_EXIT": 213,
-      "STOP_LOSS": 366,
-      "TARGET_HIT": 41
-    },
-    "short_term": {
-      "TIME_EXPIRY": 211,
-      "STOP_LOSS": 327,
-      "TARGET_HIT": 24,
-      "GAP_STOP": 58
-    }
+  "baseline_intraday": {
+    "total_trades": 620,
+    "win_count": 186,
+    "loss_count": 434,
+    "win_rate": 30.0,
+    "avg_win": 1.93,
+    "avg_loss": -1.26,
+    "win_loss_ratio": 1.54,
+    "profit_factor": 0.66,
+    "expectancy_pct": -0.3,
+    "max_drawdown_pct": 86.01,
+    "total_cumulative_return_pct": -85.81
   }
 }

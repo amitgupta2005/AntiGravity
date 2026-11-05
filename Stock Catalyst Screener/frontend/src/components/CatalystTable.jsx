@@ -204,10 +204,38 @@ export default function CatalystTable({ catalysts, onSelectCatalyst }) {
                     </span>
                   </td>
 
-                  {/* Reason & Catalyst Tag */}
+                  {/* Reason, Execution Protocol & Regime Gatekeeper */}
                   <td>
                     <div className="reason-cell">
-                      <span className="catalyst-tag">{item.catalyst_type}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                        <span className="catalyst-tag">{item.catalyst_type}</span>
+                        {item.execution_protocol && (
+                          <span style={{
+                            fontSize: '0.6875rem',
+                            fontWeight: 600,
+                            color: '#38bdf8',
+                            background: 'rgba(56, 189, 248, 0.1)',
+                            border: '1px solid rgba(56, 189, 248, 0.25)',
+                            padding: '1px 6px',
+                            borderRadius: '4px'
+                          }}>
+                            {item.timeframe === 'Intraday' ? '⚡ 15-Min ORB' : '🎯 PEAD Retest'}
+                          </span>
+                        )}
+                        {item.market_regime && (
+                          <span style={{
+                            fontSize: '0.6875rem',
+                            fontWeight: 600,
+                            color: item.market_regime === 'BULL' ? '#34d399' : item.market_regime === 'CHOPPY' ? '#fbbf24' : '#f87171',
+                            background: item.market_regime === 'BULL' ? 'rgba(52, 211, 153, 0.1)' : item.market_regime === 'CHOPPY' ? 'rgba(251, 191, 36, 0.1)' : 'rgba(248, 113, 113, 0.1)',
+                            border: `1px solid ${item.market_regime === 'BULL' ? 'rgba(52, 211, 153, 0.25)' : item.market_regime === 'CHOPPY' ? 'rgba(251, 191, 36, 0.25)' : 'rgba(248, 113, 113, 0.25)'}`,
+                            padding: '1px 6px',
+                            borderRadius: '4px'
+                          }} title={item.regime_advice}>
+                            {item.market_regime === 'BULL' ? '🟢 Bull Expansion' : item.market_regime === 'CHOPPY' ? '🟡 Range Chop' : '🔴 Bear Headwind'}
+                          </span>
+                        )}
+                      </div>
                       <p className="reason-text" title={item.reason}>
                         {item.reason}
                       </p>
@@ -228,27 +256,48 @@ export default function CatalystTable({ catalysts, onSelectCatalyst }) {
                     </span>
                   </td>
 
-                  {/* Stop Loss Price */}
+                  {/* Volatility (ATR) Anchored Stop Loss */}
                   <td>
                     <div>
                       <div className="price-value stop-loss-price">
                         {curr}{Number(item.stop_loss_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </div>
-                      <div className="stop-risk-sub">
-                        -{item.risk_pct}%
+                      <div className="stop-risk-sub" title="Volatility-adjusted (ATR) Stop Loss">
+                        ATR Stop: -{item.risk_pct}%
                       </div>
                     </div>
                   </td>
 
-                  {/* Target Price */}
+                  {/* Tiered Target Prices (T1 Base & T2 Runner) */}
                   <td>
                     <div>
-                      <div className="price-value target-price">
-                        {curr}{Number(item.target_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </div>
-                      <div className="target-roi-sub">
-                        +{item.projected_roi_pct}% Return
-                      </div>
+                      {item.target_price_t1 ? (
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#38bdf8', background: 'rgba(56, 189, 248, 0.12)', padding: '1px 4px', borderRadius: '3px' }}>T1</span>
+                            <span className="price-value" style={{ color: '#38bdf8', fontSize: '0.875rem' }}>
+                              {curr}{Number(item.target_price_t1).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                            <span style={{ fontSize: '0.6875rem', color: '#38bdf8', fontWeight: 600 }}>+{item.t1_roi_pct}%</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                            <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#34d399', background: 'rgba(52, 211, 153, 0.12)', padding: '1px 4px', borderRadius: '3px' }}>T2</span>
+                            <span className="price-value target-price" style={{ fontSize: '0.875rem' }}>
+                              {curr}{Number(item.target_price_t2 || item.target_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                            <span style={{ fontSize: '0.6875rem', color: '#34d399', fontWeight: 600 }}>+{item.t2_roi_pct || item.projected_roi_pct}%</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="price-value target-price">
+                            {curr}{Number(item.target_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                          <div className="target-roi-sub">
+                            +{item.projected_roi_pct}% Return
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </td>
 

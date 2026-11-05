@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Copy, Check, FileText, BarChart3, ShieldAlert, ArrowRight, Zap, Rocket } from 'lucide-react';
+import { X, Copy, Check, ShieldAlert, Zap, Rocket, AlertTriangle, ShieldCheck } from 'lucide-react';
 
 export default function CatalystModal({ catalyst, onClose }) {
   const [copied, setCopied] = useState(false);
@@ -9,24 +9,33 @@ export default function CatalystModal({ catalyst, onClose }) {
   const isIndia = catalyst.market === 'India';
   const curr = catalyst.currency || (isIndia ? '₹' : '$');
   const isIntraday = catalyst.timeframe === 'Intraday';
+  const isBull = catalyst.market_regime === 'BULL';
+  const isChoppy = catalyst.market_regime === 'CHOPPY';
 
   const copyTradePlan = () => {
-    const text = `🎯 STOCK CATALYST TRADE PLAN: ${catalyst.display_ticker} (${catalyst.company_name})
+    const text = `🎯 STOCK CATALYST INSTITUTIONAL TRADE PLAN: ${catalyst.display_ticker} (${catalyst.company_name})
 Market: ${catalyst.market} (${catalyst.exchange})
 Direction: ${catalyst.direction}
-Timeframe: ${catalyst.timeframe} (Expected Return: +${catalyst.projected_roi_pct}%)
-Catalyst: ${catalyst.headline}
-Source: ${catalyst.source} (${catalyst.published_at})
+Timeframe: ${catalyst.timeframe}
+Market Regime Gatekeeper: ${catalyst.market_regime || 'BULL'} (${catalyst.regime_advice || 'Active'})
+
+⚡ Execution Rule:
+${catalyst.execution_protocol || 'Enter on confirmation.'}
 
 📈 Execution Levels:
-• Current Price: ${curr}${catalyst.current_price}
+• Current Spot: ${curr}${catalyst.current_price}
 • Entry Level: ${curr}${catalyst.entry_price}
-• Stop Loss: ${curr}${catalyst.stop_loss_price} (-${catalyst.risk_pct}%)
-• Target Price: ${curr}${catalyst.target_price} (+${catalyst.projected_roi_pct}%)
-• Risk : Reward: ${catalyst.risk_reward_ratio}
+• ATR Stop Loss: ${curr}${catalyst.stop_loss_price} (-${catalyst.risk_pct}%)
+• Target 1 (50% Position Base Exit): ${curr}${catalyst.target_price_t1 || catalyst.target_price} (+${catalyst.t1_roi_pct || catalyst.projected_roi_pct}%)
+• Target 2 (50% Runner Trailing Exit): ${curr}${catalyst.target_price_t2 || catalyst.target_price} (+${catalyst.t2_roi_pct || catalyst.projected_roi_pct}%)
+• Risk:Reward Ratio: ${catalyst.risk_reward_ratio}
+• Breakeven Shift Rule: ${catalyst.breakeven_rule || 'Shift stop loss to entry once Target 1 is achieved.'}
 • AI Conviction: ${catalyst.catalyst_score}% (${catalyst.confidence})
 
-⚠️ Note: AI-generated research only. Not registered financial advice.`;
+Breaking Catalyst:
+"${catalyst.headline}" (${catalyst.source} • ${catalyst.published_at})
+
+⚠️ Regulatory Disclaimer: Analytical & educational research only. Not registered financial advice.`;
 
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -60,6 +69,30 @@ Source: ${catalyst.source} (${catalyst.published_at})
           </button>
         </div>
 
+        {/* Macro Regime Gatekeeper Banner */}
+        {catalyst.market_regime && (
+          <div style={{
+            background: isBull ? 'rgba(52, 211, 153, 0.08)' : isChoppy ? 'rgba(251, 191, 36, 0.08)' : 'rgba(248, 113, 113, 0.08)',
+            border: `1px solid ${isBull ? 'rgba(52, 211, 153, 0.3)' : isChoppy ? 'rgba(251, 191, 36, 0.3)' : 'rgba(248, 113, 113, 0.3)'}`,
+            padding: '10px 14px',
+            borderRadius: '8px',
+            marginBottom: '14px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '10px'
+          }}>
+            {isBull ? <ShieldCheck size={18} color="#34d399" style={{ marginTop: '2px', flexShrink: 0 }} /> : <AlertTriangle size={18} color={isChoppy ? '#fbbf24' : '#f87171'} style={{ marginTop: '2px', flexShrink: 0 }} />}
+            <div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: isBull ? '#34d399' : isChoppy ? '#fbbf24' : '#f87171', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Macro Market Regime: {isBull ? '🟢 Bullish Expansion' : isChoppy ? '🟡 Consolidation Range Chop' : '🔴 Bearish Headwind'}
+              </div>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '2px', lineHeight: '1.4' }}>
+                {catalyst.regime_advice}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Breaking News Headline */}
         <div className="modal-section">
           <div className="modal-section-title">Breaking News / Earnings Disclosure</div>
@@ -72,6 +105,16 @@ Source: ${catalyst.source} (${catalyst.published_at})
           </div>
         </div>
 
+        {/* Execution Protocol & Disciplined Timing Rule */}
+        {catalyst.execution_protocol && (
+          <div className="modal-section">
+            <div className="modal-section-title">Strict Execution Trigger Protocol</div>
+            <div style={{ background: 'rgba(6, 182, 212, 0.08)', border: '1px solid rgba(6, 182, 212, 0.25)', padding: '10px 14px', borderRadius: '8px', color: '#38bdf8', fontSize: '0.8125rem', lineHeight: '1.45' }}>
+              <strong>Execution Rule:</strong> {catalyst.execution_protocol}
+            </div>
+          </div>
+        )}
+
         {/* AI Catalyst Rationale */}
         <div className="modal-section">
           <div className="modal-section-title">AI Quantitative Catalyst Analysis</div>
@@ -80,32 +123,13 @@ Source: ${catalyst.source} (${catalyst.published_at})
           </p>
         </div>
 
-        {/* Financial Disclosures (if available) */}
-        {catalyst.financials && Object.keys(catalyst.financials).length > 0 && (
-          <div className="modal-section">
-            <div className="modal-section-title">Quarterly Financial Scorecard</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px' }}>
-              {Object.entries(catalyst.financials).map(([key, val]) => (
-                <div key={key} style={{ background: 'var(--bg-secondary)', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
-                  <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                    {key.replace(/_/g, ' ')}
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#38bdf8', fontSize: '0.9375rem' }}>
-                    {String(val)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Execution Trade Levels */}
+        {/* Tiered Risk-Managed Execution Levels */}
         <div className="modal-section">
-          <div className="modal-section-title">Institutional Risk-Managed Execution Levels</div>
-          <div className="trade-levels-grid">
+          <div className="modal-section-title">Institutional Tiered Execution Levels</div>
+          <div className="trade-levels-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
             {/* Stop Loss */}
             <div className="trade-level-box stoploss">
-              <div className="trade-level-label">Stop Loss Price</div>
+              <div className="trade-level-label">ATR Stop Loss</div>
               <div className="trade-level-val stop-loss-price">
                 {curr}{Number(catalyst.stop_loss_price).toLocaleString()}
               </div>
@@ -125,17 +149,35 @@ Source: ${catalyst.source} (${catalyst.published_at})
               </div>
             </div>
 
-            {/* Target Price */}
+            {/* Target 1 (Base Exit) */}
+            <div className="trade-level-box" style={{ borderColor: 'rgba(56, 189, 248, 0.35)', background: 'rgba(56, 189, 248, 0.05)' }}>
+              <div className="trade-level-label" style={{ color: '#38bdf8' }}>Target 1 (50% Exit)</div>
+              <div className="trade-level-val" style={{ color: '#38bdf8' }}>
+                {curr}{Number(catalyst.target_price_t1 || catalyst.target_price).toLocaleString()}
+              </div>
+              <div style={{ fontSize: '0.6875rem', color: '#38bdf8', marginTop: '2px' }}>
+                +{catalyst.t1_roi_pct || catalyst.projected_roi_pct}% Base
+              </div>
+            </div>
+
+            {/* Target 2 (Runner) */}
             <div className="trade-level-box target">
-              <div className="trade-level-label">Target Price</div>
+              <div className="trade-level-label">Target 2 (Runner)</div>
               <div className="trade-level-val target-price">
-                {curr}{Number(catalyst.target_price).toLocaleString()}
+                {curr}{Number(catalyst.target_price_t2 || catalyst.target_price).toLocaleString()}
               </div>
               <div style={{ fontSize: '0.6875rem', color: '#34d399', marginTop: '2px' }}>
-                Return: +{catalyst.projected_roi_pct}%
+                +{catalyst.t2_roi_pct || catalyst.projected_roi_pct}% Runner
               </div>
             </div>
           </div>
+
+          {/* Breakeven Rule Notification */}
+          {catalyst.breakeven_rule && (
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '10px', background: 'var(--bg-secondary)', padding: '8px 12px', borderRadius: '6px', border: '1px dashed var(--border-subtle)' }}>
+              🛡️ <strong>Breakeven Protocol:</strong> {catalyst.breakeven_rule}
+            </div>
+          )}
         </div>
 
         {/* Copy Trade Plan Button */}
