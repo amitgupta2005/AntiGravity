@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Search, Sparkles, AlertCircle, ArrowRight } from 'lucide-react';
+import { X, Search, Sparkles, AlertCircle } from 'lucide-react';
+import { analyzeCustomStockOnDemand } from '../services/catalystEngine';
 
 export default function TickerAnalyzerModal({ isOpen, onClose, onAnalyzeComplete }) {
   const [tickerInput, setTickerInput] = useState('');
@@ -17,17 +18,7 @@ export default function TickerAnalyzerModal({ isOpen, onClose, onAnalyzeComplete
     setError(null);
 
     try {
-      const res = await fetch('/api/analyze-ticker', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol: sym })
-      });
-
-      if (!res.ok) {
-        throw new Error(`Failed to analyze ticker (${res.status})`);
-      }
-
-      const data = await res.json();
+      const data = await analyzeCustomStockOnDemand(sym);
       onAnalyzeComplete(data);
       onClose();
     } catch (err) {

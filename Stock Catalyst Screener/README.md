@@ -49,42 +49,27 @@ All recommendations are presented in an institutional, high-density **Tabular Sc
 
 ```mermaid
 graph TD
-    subgraph Data_Layer["Data Ingestion & Feed Layer"]
-        D1["yfinance API (Spot Quotes, RVOL, 52W High/Low)"]
-        D2["Yahoo Finance News & Financial RSS Feeds"]
-        D3["Quarterly Earnings Calendars & Disclosures"]
+    subgraph Data_Layer["Real-Time Market & News Data Layer"]
+        D1["yfinance API (Live Spot, RVOL, 52W High/Low via Yahoo Finance v8)"]
+        D2["Live Breaking News RSS (Google News Financial & Exchange Feeds)"]
+        D3["Quarterly Financial & Earnings Calendars"]
     end
 
-    subgraph Backend_Layer["Python FastAPI Backend (:8001)"]
-        B1["stock_universe.py (Dual-Market Catalog)"]
-        B2["data_ingestion.py (Quote Caching & News Aggregator)"]
-        B3["ai_analyzer.py (Gemini 2.5 Flash + Pydantic Schema)"]
-        B4["trade_engine.py (Quantitative Risk & Target Math)"]
-        B5["app.py (REST Endpoints with CORS)"]
+    subgraph Unified_App["Unified In-UI Platform (Vite + React on :5177)"]
+        U1["server/apiRouter.js (In-UI Backend API: /api/scan, /api/analyze, /api/markets)"]
+        U2["catalystEngine.js (Live Exchange Feed Verifier & Catalyst Analyzer)"]
+        U3["trade_engine (Intraday 2-6% & Short-Term 10-50% Target Math)"]
+        U4["High-Density Tabular UI (Click-to-Sort, Multi-Horizon Filters)"]
+        U5["On-Demand Custom Ticker Analyzer Modal"]
     end
 
-    subgraph Frontend_Layer["Vite + React Tabular Frontend (:5177)"]
-        F1["Header & Market Pulse Badges (NIFTY & S&P 500)"]
-        F2["Summary KPI Cards (Total Catalysts, Top Picks)"]
-        F3["Filter Toolbar & Search Omnibar"]
-        F4["Sortable High-Density Screener Table"]
-        F5["Deep-Dive Modal Drawer (Trade Plan & Financials)"]
-        F6["Custom Ticker Analyzer Modal"]
-    end
-
-    D1 --> B2
-    D2 --> B2
-    D3 --> B2
-    B1 --> B2
-    B2 --> B3
-    B3 --> B4
-    B4 --> B5
-    B5 --> F1
-    B5 --> F2
-    B5 --> F3
-    B5 --> F4
-    B5 --> F5
-    B5 --> F6
+    D1 --> U1
+    D2 --> U1
+    D3 --> U1
+    U1 --> U2
+    U2 --> U3
+    U3 --> U4
+    U3 --> U5
 ```
 
 ---
@@ -94,24 +79,29 @@ graph TD
 ```
 Stock Catalyst Screener/
 ├── .env.example                     # Sample API keys (GEMINI_API_KEY, PORT)
+├── .gitignore                       # Git ignore rules for node_modules, dist, __pycache__
 ├── README.md                        # Project documentation and architecture guide
-├── start.sh                         # 1-Click launcher for both Backend and Frontend
-├── backend/
+├── start.sh                         # Unified 1-Click launcher for http://localhost:5177
+├── backend/                         # Optional Python FastAPI service (if running standalone)
 │   ├── app.py                       # FastAPI REST API endpoints (/api/catalysts, /api/markets, /api/scan)
 │   ├── ai_analyzer.py               # Gemini AI prompt engine & quantitative heuristic fallback
-│   ├── data_ingestion.py            # yfinance live quote fetcher, news parser & curated catalysts
+│   ├── data_ingestion.py            # Real-time exchange feed and news parser
 │   ├── trade_engine.py              # Quantitative Entry, Stop Loss, Target, and R:R calculator
 │   ├── stock_universe.py            # Curated catalog for Indian (NSE) and US (NYSE/NASDAQ) stocks
 │   ├── requirements.txt             # Python dependencies
 │   └── test_backend.py              # Automated unit tests for trade math, schemas, and stock universe
-└── frontend/
+└── frontend/                        # Unified In-UI Web Application
     ├── package.json                 # React 18, Vite 6, and Lucide-react dependencies
-    ├── vite.config.js               # Vite configuration with /api backend proxy
+    ├── vite.config.js               # Vite configuration with embedded in-UI API middleware
     ├── index.html                   # HTML shell with Google Fonts (Inter, Outfit, JetBrains Mono)
+    ├── server/                      # In-UI Backend API Engine
+    │   └── apiRouter.js             # Endpoints for /api/scan, /api/analyze, /api/markets, /api/trending
     └── src/
-        ├── App.jsx                  # Main application state and layout
+        ├── App.jsx                  # Main application state and live scan coordinator
         ├── main.jsx                 # React DOM mount point
         ├── style.css                # Institutional Bloomberg-style dark design system
+        ├── services/
+        │   └── catalystEngine.js    # Client-side API caller & resilient fallback engine
         └── components/
             ├── Header.jsx           # App branding, live market chips, and custom ticker button
             ├── DisclaimerBanner.jsx # Mandatory regulatory non-advisory compliance banner
@@ -126,52 +116,21 @@ Stock Catalyst Screener/
 
 ## 🚀 Getting Started
 
-### Prerequisites
-* **Python 3.10+**
-* **Node.js 18+** and **npm 9+**
-
 ### 1-Click Launch (Recommended)
-Run the automated launcher script to start both backend and frontend servers simultaneously:
+Run the unified platform launcher script:
 ```bash
+cd "Stock Catalyst Screener"
 ./start.sh
 ```
-* **Frontend UI**: Open [http://localhost:5177/](http://localhost:5177/)
-* **Backend API Docs**: Open [http://localhost:8001/docs](http://localhost:8001/docs)
-
----
-
-### Manual Setup & Execution
-
-#### 1. Backend Setup
+Or directly with npm:
 ```bash
-cd backend
-
-# (Optional) Create and activate a virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run automated verification tests
-python3 test_backend.py
-
-# Launch FastAPI backend server
-uvicorn app:app --host 0.0.0.0 --port 8001 --reload
-```
-
-#### 2. Frontend Setup
-In a separate terminal:
-```bash
-cd frontend
-
-# Install client packages
-npm install
-
-# Start Vite React dev server
+cd "Stock Catalyst Screener/frontend"
 npm run dev
 ```
+
 Open **[http://localhost:5177/](http://localhost:5177/)** in your browser.
+
+> **Zero Extra Server Required**: All exchange market feeds, news ingestion, AI catalyst scoring, and trade calculations run directly inside the unified UI platform on port `5177`. No separate backend server process is required!
 
 ---
 
