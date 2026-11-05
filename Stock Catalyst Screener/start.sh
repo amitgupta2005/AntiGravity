@@ -2,7 +2,7 @@
 
 # ==========================================================
 # Stock Catalyst Screener - 1-Click Startup Script
-# Starts both FastAPI Backend (:8000) and Vite React Frontend (:5177)
+# Starts both FastAPI Backend (:8001) and Vite React Frontend (:5177)
 # ==========================================================
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -23,9 +23,9 @@ fi
 echo "🐍 Using Python: $PYTHON_BIN"
 
 # 2. Start Backend Server
-echo "🚀 Launching FastAPI Backend on http://localhost:8000..."
+echo "🚀 Launching FastAPI Backend on http://localhost:8001..."
 cd "$SCRIPT_DIR/backend"
-$PYTHON_BIN -m uvicorn app:app --host 0.0.0.0 --port 8000 --reload &
+$PYTHON_BIN -m uvicorn app:app --host 0.0.0.0 --port 8001 --reload &
 BACKEND_PID=$!
 cd "$SCRIPT_DIR"
 
@@ -39,7 +39,7 @@ cd "$SCRIPT_DIR"
 echo ""
 echo "✅ Application running!"
 echo "👉 Frontend UI: http://localhost:5177"
-echo "👉 Backend API Docs: http://localhost:8000/docs"
+echo "👉 Backend API Docs: http://localhost:8001/docs"
 echo ""
 echo "Press [CTRL+C] to stop all servers."
 

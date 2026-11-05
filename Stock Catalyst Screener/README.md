@@ -55,7 +55,7 @@ graph TD
         D3["Quarterly Earnings Calendars & Disclosures"]
     end
 
-    subgraph Backend_Layer["Python FastAPI Backend (:8000)"]
+    subgraph Backend_Layer["Python FastAPI Backend (:8001)"]
         B1["stock_universe.py (Dual-Market Catalog)"]
         B2["data_ingestion.py (Quote Caching & News Aggregator)"]
         B3["ai_analyzer.py (Gemini 2.5 Flash + Pydantic Schema)"]
@@ -136,7 +136,7 @@ Run the automated launcher script to start both backend and frontend servers sim
 ./start.sh
 ```
 * **Frontend UI**: Open [http://localhost:5177/](http://localhost:5177/)
-* **Backend API Docs**: Open [http://localhost:8000/docs](http://localhost:8000/docs)
+* **Backend API Docs**: Open [http://localhost:8001/docs](http://localhost:8001/docs)
 
 ---
 
@@ -157,7 +157,7 @@ pip install -r requirements.txt
 python3 test_backend.py
 
 # Launch FastAPI backend server
-uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app:app --host 0.0.0.0 --port 8001 --reload
 ```
 
 #### 2. Frontend Setup
@@ -187,7 +187,7 @@ Populate with your optional API keys:
 GEMINI_API_KEY=your_actual_key_here
 
 # Backend Port
-BACKEND_PORT=8000
+BACKEND_PORT=8001
 ```
 > **Note**: Even without a `GEMINI_API_KEY`, the application automatically uses its built-in quantitative heuristic engine, guaranteeing 100% operational functionality out of the box!
 
