@@ -63,7 +63,7 @@ graph TD
         B5["app.py (REST Endpoints with CORS)"]
     end
 
-    subgraph Frontend_Layer["Vite + React Tabular Frontend (:5175)"]
+    subgraph Frontend_Layer["Vite + React Tabular Frontend (:5177)"]
         F1["Header & Market Pulse Badges (NIFTY & S&P 500)"]
         F2["Summary KPI Cards (Total Catalysts, Top Picks)"]
         F3["Filter Toolbar & Search Omnibar"]
@@ -135,7 +135,7 @@ Run the automated launcher script to start both backend and frontend servers sim
 ```bash
 ./start.sh
 ```
-* **Frontend UI**: Open [http://localhost:5175/](http://localhost:5175/)
+* **Frontend UI**: Open [http://localhost:5177/](http://localhost:5177/)
 * **Backend API Docs**: Open [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
@@ -171,7 +171,7 @@ npm install
 # Start Vite React dev server
 npm run dev
 ```
-Open **[http://localhost:5175/](http://localhost:5175/)** in your browser.
+Open **[http://localhost:5177/](http://localhost:5177/)** in your browser.
 
 ---
 

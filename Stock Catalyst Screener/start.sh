@@ -2,7 +2,7 @@
 
 # ==========================================================
 # Stock Catalyst Screener - 1-Click Startup Script
-# Starts both FastAPI Backend (:8000) and Vite React Frontend (:5175)
+# Starts both FastAPI Backend (:8000) and Vite React Frontend (:5177)
 # ==========================================================
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -30,7 +30,7 @@ BACKEND_PID=$!
 cd "$SCRIPT_DIR"
 
 # 3. Start Frontend Dev Server
-echo "⚡ Launching Vite React Frontend on http://localhost:5175..."
+echo "⚡ Launching Vite React Frontend on http://localhost:5177..."
 cd "$SCRIPT_DIR/frontend"
 npm run dev &
 FRONTEND_PID=$!
@@ -38,7 +38,7 @@ cd "$SCRIPT_DIR"
 
 echo ""
 echo "✅ Application running!"
-echo "👉 Frontend UI: http://localhost:5175"
+echo "👉 Frontend UI: http://localhost:5177"
 echo "👉 Backend API Docs: http://localhost:8000/docs"
 echo ""
 echo "Press [CTRL+C] to stop all servers."
