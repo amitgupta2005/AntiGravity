@@ -730,13 +730,22 @@ async function fetchScreener(marketKey = currentMarket, isAuto = false) {
         playAlertSound();
       }
 
-      // If no active ticker or current ticker not in list, auto-select top conviction pick from displayedStocks
-      if (!currentTicker || !displayedStocks.some(s => s.ticker === currentTicker)) {
-        if (displayedStocks.length > 0) {
-          selectStock(displayedStocks[0].ticker);
+      // Preserve applied filters and current stock selection across auto-scans
+      if (!isAuto) {
+        if (!currentTicker || !displayedStocks.some(s => s.ticker === currentTicker)) {
+          if (displayedStocks.length > 0) {
+            selectStock(displayedStocks[0].ticker);
+          }
+        } else {
+          loadChartData(currentTicker, currentTimeframe, true);
         }
       } else {
-        loadChartData(currentTicker, currentTimeframe, true);
+        // Auto-scan (5s / 10s / 15s): PRESERVE user's active ticker and filters
+        if (!currentTicker && displayedStocks.length > 0) {
+          selectStock(displayedStocks[0].ticker);
+        } else if (currentTicker) {
+          loadChartData(currentTicker, currentTimeframe, true);
+        }
       }
     }
   } catch (err) {
@@ -755,6 +764,8 @@ async function fetchScreener(marketKey = currentMarket, isAuto = false) {
 }
 
 function renderStockCards() {
+  const prevScrollTop = stockCardsContainer ? stockCardsContainer.scrollTop : 0;
+
   if (!currentStocks || currentStocks.length === 0) {
     stockCardsContainer.innerHTML = `
       <div class="state-container">
@@ -936,6 +947,10 @@ function renderStockCards() {
     card.dataset.ticker = stock.ticker;
     stockCardsContainer.appendChild(card);
   });
+
+  if (stockCardsContainer && prevScrollTop > 0) {
+    stockCardsContainer.scrollTop = prevScrollTop;
+  }
 }
 
 function selectStock(ticker, shouldFocus = false) {
@@ -1787,7 +1802,20 @@ function setupEventListeners() {
     autoScanPulseBadge.style.cursor = "pointer";
     autoScanPulseBadge.addEventListener("click", () => {
       const currentVal = parseInt(autoRefreshSelect.value, 10);
-      autoRefreshSelect.value = currentVal === 5 ? "0" : "5";
+      autoRefreshSelect.value = currentVal > 0 ? "0" : "5";
+      localStorage.setItem("apex_auto_refresh", autoRefreshSelect.value);
+      setupAutoRefresh();
+      if (autoRefreshSelect.value === "5") {
+        fetchScreener(currentMarket, true);
+      }
+    });
+  }
+
+  const btnSwitchOffAuto = document.getElementById("btn-switch-off-auto");
+  if (btnSwitchOffAuto) {
+    btnSwitchOffAuto.addEventListener("click", () => {
+      const currentVal = parseInt(autoRefreshSelect.value, 10);
+      autoRefreshSelect.value = currentVal > 0 ? "0" : "5";
       localStorage.setItem("apex_auto_refresh", autoRefreshSelect.value);
       setupAutoRefresh();
       if (autoRefreshSelect.value === "5") {
@@ -2354,11 +2382,26 @@ function setupAutoRefresh() {
       autoScanPulseBadge.classList.add("active");
       const beaconText = autoScanPulseBadge.querySelector(".pulse-beacon-text");
       if (beaconText) beaconText.textContent = `${secs}s Live`;
+      autoScanPulseBadge.title = `Auto-Scan active (${secs}s): Click to Switch Off`;
     } else {
       autoScanPulseBadge.classList.remove("active");
       autoScanPulseBadge.classList.add("paused");
       const beaconText = autoScanPulseBadge.querySelector(".pulse-beacon-text");
       if (beaconText) beaconText.textContent = `Auto Off`;
+      autoScanPulseBadge.title = `Auto-Scan off: Click to Turn On (5s)`;
+    }
+  }
+
+  const btnSwitchOffAuto = document.getElementById("btn-switch-off-auto");
+  if (btnSwitchOffAuto) {
+    if (secs > 0) {
+      btnSwitchOffAuto.textContent = "Switch Off";
+      btnSwitchOffAuto.style.color = "#f43f5e";
+      btnSwitchOffAuto.title = "Click to Switch Off Auto-Scan";
+    } else {
+      btnSwitchOffAuto.textContent = "Turn On (5s)";
+      btnSwitchOffAuto.style.color = "#10b981";
+      btnSwitchOffAuto.title = "Click to Turn On 5s Auto-Scan";
     }
   }
 

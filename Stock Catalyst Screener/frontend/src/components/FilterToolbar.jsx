@@ -12,9 +12,8 @@ export default function FilterToolbar({
   setSearch,
   onRefresh,
   loading,
-  autoScan,
-  setAutoScan,
-  isAutoScanActive
+  autoScanInterval,
+  setAutoScanInterval
 }) {
   return (
     <div className="toolbar-container">
@@ -115,17 +114,45 @@ export default function FilterToolbar({
           />
         </div>
 
-        {/* Auto-Scan 5s Status / Toggle Button */}
-        <button
-          type="button"
-          className={`btn-auto-scan ${isAutoScanActive ? 'active' : 'paused'}`}
-          onClick={() => setAutoScan(prev => !prev)}
-          title={isAutoScanActive ? "Auto-Scan active: Scanning live exchange feeds every 5 seconds (Click to pause)" : "Auto-Scan paused: Click to enable 5s live exchange scanning"}
-        >
-          <span className="pulse-beacon"></span>
-          <Activity size={14} />
-          <span>{isAutoScanActive ? 'Auto-Scan: 5s' : 'Auto-Scan: Off'}</span>
-        </button>
+        {/* Auto-Scan Controls: 5s (Default), 10s, 15s, and Switch Off */}
+        <div className="auto-scan-control">
+          <span className={`pulse-beacon ${autoScanInterval > 0 ? 'active' : 'off'}`}></span>
+          <label htmlFor="auto-scan-select" className="auto-scan-label">
+            <Activity size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />
+            Auto-Scan:
+          </label>
+          <select
+            id="auto-scan-select"
+            className={`auto-scan-select ${autoScanInterval > 0 ? 'active' : 'off'}`}
+            value={autoScanInterval}
+            onChange={(e) => setAutoScanInterval(Number(e.target.value))}
+            title="Auto-Scan interval for live exchange feeds (Default: 5 sec)"
+          >
+            <option value={5}>⚡ 5s (Default)</option>
+            <option value={10}>⚡ 10s</option>
+            <option value={15}>⚡ 15s</option>
+            <option value={0}>⏹ Off</option>
+          </select>
+          {autoScanInterval > 0 ? (
+            <button
+              type="button"
+              className="btn-auto-scan-toggle"
+              onClick={() => setAutoScanInterval(0)}
+              title="Click to Switch Off Auto-Scan"
+            >
+              Switch Off
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn-auto-scan-toggle on"
+              onClick={() => setAutoScanInterval(5)}
+              title="Click to Turn On 5s Auto-Scan"
+            >
+              Turn On (5s)
+            </button>
+          )}
+        </div>
 
         {/* Re-scan / Refresh Button */}
         <button

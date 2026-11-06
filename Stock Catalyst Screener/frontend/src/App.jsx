@@ -17,12 +17,14 @@ export default function App() {
   const [selectedCatalyst, setSelectedCatalyst] = useState(null);
   const [customTickerOpen, setCustomTickerOpen] = useState(false);
 
-  // Filters
+  // Filters (Preserved across all 5s / 10s / 15s auto-scans)
   const [market, setMarket] = useState('All');
   const [timeframe, setTimeframe] = useState('All');
   const [direction, setDirection] = useState('All');
   const [search, setSearch] = useState('');
-  const [autoScan, setAutoScan] = useState(true);
+  
+  // Auto-Scan interval in seconds: 5 (default), 10, 15, or 0 (Switch Off)
+  const [autoScanInterval, setAutoScanInterval] = useState(5);
 
   // Unmounted lifecycle guard & In-Flight Concurrency Guard
   const isMountedRef = useRef(true);
@@ -35,7 +37,7 @@ export default function App() {
     };
   }, []);
 
-  // Live Exchange Scanning Routine (Supports silent 5s background ticks)
+  // Live Exchange Scanning Routine (Supports silent background auto-ticks without resetting filters)
   const runLiveScan = useCallback(async (forceRefresh = false, isSilent = false) => {
     if (!isMountedRef.current || inFlightRef.current) return;
     inFlightRef.current = true;
@@ -50,7 +52,19 @@ export default function App() {
       }, forceRefresh);
 
       if (isMountedRef.current && results && results.length > 0) {
-        setCatalysts(results);
+        // Update stock metrics without clearing custom analyzed stocks or resetting filters
+        setCatalysts(prev => {
+          const freshMap = new Map(results.map(r => [r.ticker, r]));
+          const retainedCustom = prev.filter(c => c.is_custom && !freshMap.has(c.ticker));
+          return [...retainedCustom, ...results];
+        });
+
+        // Also update open modal catalyst without closing it or resetting view
+        setSelectedCatalyst(current => {
+          if (!current) return null;
+          const fresh = results.find(r => r.ticker === current.ticker);
+          return fresh ? { ...current, ...fresh } : current;
+        });
       }
     } catch (err) {
       console.warn('Error during live exchange scan:', err);
@@ -89,32 +103,31 @@ export default function App() {
     fetchMarkets();
   }, [runLiveScan, fetchMarkets]);
 
-  // Auto-scan every 5 seconds for Intraday (or when autoScan is enabled)
-  const isAutoScanActive = autoScan || timeframe === 'Intraday';
-
+  // Auto-Scan interval in seconds: 5s (default), 10s, 15s, or 0 (Switch Off)
+  // When autoScanInterval is 0, auto-scan is completely switched off
   useEffect(() => {
-    if (!isAutoScanActive) return;
+    if (autoScanInterval <= 0) return;
 
     const intervalId = setInterval(() => {
       // Pause automatic background polling when tab is hidden or scan already in flight
       if (!document.hidden && !inFlightRef.current && isMountedRef.current) {
         runLiveScan(true, true);
       }
-    }, 5000);
+    }, autoScanInterval * 1000);
 
     return () => clearInterval(intervalId);
-  }, [isAutoScanActive, runLiveScan]);
+  }, [autoScanInterval, runLiveScan]);
 
   // Instant refresh on returning to tab if auto-scan is active
   useEffect(() => {
     const handleVisibility = () => {
-      if (!document.hidden && isAutoScanActive && isMountedRef.current && !inFlightRef.current) {
+      if (!document.hidden && autoScanInterval > 0 && isMountedRef.current && !inFlightRef.current) {
         runLiveScan(true, true);
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [isAutoScanActive, runLiveScan]);
+  }, [autoScanInterval, runLiveScan]);
 
   // Handle addition of custom ticker recommendation
   const handleCustomTickerAnalyzed = useCallback((rec) => {
@@ -170,9 +183,8 @@ export default function App() {
         setSearch={setSearch}
         onRefresh={() => runLiveScan(true, false)}
         loading={loading}
-        autoScan={autoScan}
-        setAutoScan={setAutoScan}
-        isAutoScanActive={isAutoScanActive}
+        autoScanInterval={autoScanInterval}
+        setAutoScanInterval={setAutoScanInterval}
       />
 
       {/* Live Scan Status Banner */}

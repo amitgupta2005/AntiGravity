@@ -407,6 +407,100 @@ body::before {
   animation: spin 1s linear infinite;
 }
 
+.auto-scan-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+}
+
+.auto-scan-control:hover {
+  border-color: var(--text-muted);
+}
+
+.auto-scan-control .pulse-beacon {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+  animation: pulse-beacon-screener 1.5s infinite ease-in-out;
+}
+
+.auto-scan-control .pulse-beacon.off {
+  background: #94a3b8;
+  box-shadow: none;
+  animation: none;
+}
+
+.auto-scan-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.auto-scan-select {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.auto-scan-select.active {
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+.auto-scan-select.off {
+  color: var(--text-muted);
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.auto-scan-select option {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.btn-auto-scan-toggle {
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #f43f5e;
+  padding: 4px 9px;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.btn-auto-scan-toggle:hover {
+  background: rgba(244, 63, 94, 0.22);
+  border-color: #f43f5e;
+}
+
+.btn-auto-scan-toggle.on {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.45);
+  color: #10b981;
+}
+
+.btn-auto-scan-toggle.on:hover {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #10b981;
+}
+
 .btn-auto-scan {
   display: inline-flex;
   align-items: center;

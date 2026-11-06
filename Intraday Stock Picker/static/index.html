@@ -114,19 +114,23 @@
       </button>
 
       <div class="refresh-control">
-        <span id="auto-scan-pulse-badge" class="auto-scan-pulse-badge active" title="Real-time 5-second automatic market scan active">
+        <span id="auto-scan-pulse-badge" class="auto-scan-pulse-badge active" title="Click to Switch Off Auto-Scan">
           <span class="pulse-beacon-dot"></span>
           <span class="pulse-beacon-text">5s Live</span>
         </span>
 
         <select id="auto-refresh-select" class="btn-secondary" style="font-size: 0.75rem;">
-          <option value="0">Auto: Off</option>
-          <option value="5" selected>Auto: 5s</option>
+          <option value="5" selected>Auto: 5s (Default)</option>
           <option value="10">Auto: 10s</option>
           <option value="15">Auto: 15s</option>
+          <option value="0">Auto: Off (Switch Off)</option>
           <option value="30">Auto: 30s</option>
           <option value="60">Auto: 60s</option>
         </select>
+
+        <button type="button" class="btn-secondary" id="btn-switch-off-auto" style="font-size: 0.72rem; padding: 4px 8px; color: #f43f5e; font-weight: 600;" title="Switch Off Auto-Scan">
+          Switch Off
+        </button>
 
         <button class="btn-action" id="btn-manual-scan">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
