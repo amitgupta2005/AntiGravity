@@ -205,9 +205,9 @@ def analyze_stock_setup(
 
     # 4. Factor MTF Alignment - Precompute MTF alignment before scoring section
     mtf_data = compute_mtf_alignment(df)
-    bull_tfs = sum(1 for tf in mtf_data.get("timeframes", {}).values() if tf.get("bias") == "BULLISH")
-    bear_tfs = sum(1 for tf in mtf_data.get("timeframes", {}).values() if tf.get("bias") == "BEARISH")
-    tf_count = len(mtf_data.get("timeframes", {}))
+    bull_tfs = mtf_data.get("bull_count", 0)
+    bear_tfs = mtf_data.get("bear_count", 0)
+    tf_count = mtf_data.get("total_timeframes", 4)
 
     # 10-bar recent swing low and swing high
     recent_len = min(10, len(df))
@@ -530,37 +530,37 @@ def analyze_stock_setup(
     # Extract confluence:
     # If action == "LONG" and 3/3 timeframes are bullish, add +15 to score. If 0/3 are bullish (fighting trend), subtract -30.
     # Apply inverse logic for action == "SHORT".
-    # 4. Factor Multi-Timeframe Alignment (1m, 5m, 10m, 15m) into the Score
+    # 4. Factor Multi-Timeframe Alignment (1m, 5m, 15m, 30m) into the Score
     direction_bias = "LONG" if (score > 0 or (score == 0 and close >= vwap)) else "SHORT"
     if tf_count >= 3:
         if direction_bias == "LONG":
             if bull_tfs == 4:
                 score += 30
                 checks.append({
-                    "factor": "MTF Confluence (1m, 5m, 10m, 15m)",
+                    "factor": "MTF Confluence (1m, 5m, 15m, 30m)",
                     "status": "Full 4-TF Bullish Alignment (4/4) - Recommended",
                     "score": "+30",
-                    "detail": "All 4 Timeframes (1m, 5m, 10m, 15m) satisfy bullish criteria above VWAP. Maximum probability institutional breakout setup."
+                    "detail": "All 4 Timeframes (1m, 5m, 15m, 30m) satisfy bullish criteria above VWAP. Maximum probability institutional breakout setup."
                 })
             elif bull_tfs == 3:
                 score += 15
                 checks.append({
-                    "factor": "MTF Confluence (1m, 5m, 10m, 15m)",
+                    "factor": "MTF Confluence (1m, 5m, 15m, 30m)",
                     "status": "Partial Bullish Confluence (3/4) - Not Recommended Yet",
                     "score": "+15",
-                    "detail": "3 of 4 Timeframes confirm bullish momentum; awaiting all 4 timeframes before issuing Buy recommendation."
+                    "detail": "3 of 4 Timeframes confirm bullish momentum; awaiting all 4 timeframes (1m, 5m, 15m, 30m) before issuing Buy recommendation."
                 })
             elif bull_tfs <= 1:
                 score -= 30
                 checks.append({
-                    "factor": "MTF Confluence (1m, 5m, 10m, 15m)",
+                    "factor": "MTF Confluence (1m, 5m, 15m, 30m)",
                     "status": "Fighting Higher Timeframe Trend",
                     "score": "-30",
-                    "detail": f"Only {bull_tfs} of 4 timeframes are Bullish. 1-minute rally is fighting prevailing 5m/10m/15m supply resistance."
+                    "detail": f"Only {bull_tfs} of 4 timeframes are Bullish. 1-minute rally is fighting prevailing 5m/15m/30m supply resistance."
                 })
             else:
                 checks.append({
-                    "factor": "MTF Confluence (1m, 5m, 10m, 15m)",
+                    "factor": "MTF Confluence (1m, 5m, 15m, 30m)",
                     "status": f"{bull_tfs}/4 Bullish Timeframes",
                     "score": "0",
                     "detail": f"{bull_tfs} of 4 timeframes show bullish momentum; awaiting full confluence."
@@ -570,30 +570,30 @@ def analyze_stock_setup(
             if bear_tfs == 4:
                 score -= 30
                 checks.append({
-                    "factor": "MTF Confluence (1m, 5m, 10m, 15m)",
+                    "factor": "MTF Confluence (1m, 5m, 15m, 30m)",
                     "status": "Full 4-TF Bearish Alignment (4/4) - Recommended",
                     "score": "-30",
-                    "detail": "All 4 Timeframes (1m, 5m, 10m, 15m) satisfy bearish criteria below VWAP. High conviction institutional short setup."
+                    "detail": "All 4 Timeframes (1m, 5m, 15m, 30m) satisfy bearish criteria below VWAP. High conviction institutional short setup."
                 })
             elif bear_tfs == 3:
                 score -= 15
                 checks.append({
-                    "factor": "MTF Confluence (1m, 5m, 10m, 15m)",
+                    "factor": "MTF Confluence (1m, 5m, 15m, 30m)",
                     "status": "Partial Bearish Confluence (3/4) - Not Recommended Yet",
                     "score": "-15",
-                    "detail": "3 of 4 Timeframes confirm downward supply pressure; awaiting all 4 timeframes before issuing Short recommendation."
+                    "detail": "3 of 4 Timeframes confirm downward supply pressure; awaiting all 4 timeframes (1m, 5m, 15m, 30m) before issuing Short recommendation."
                 })
             elif bear_tfs <= 1:
                 score += 30
                 checks.append({
-                    "factor": "MTF Confluence (1m, 5m, 10m, 15m)",
+                    "factor": "MTF Confluence (1m, 5m, 15m, 30m)",
                     "status": "Shorting into Higher TF Support",
                     "score": "+30",
-                    "detail": f"Only {bear_tfs} of 4 timeframes are Bearish. Shorting into prevailing 5m/10m/15m buyer support."
+                    "detail": f"Only {bear_tfs} of 4 timeframes are Bearish. Shorting into prevailing 5m/15m/30m buyer support."
                 })
             else:
                 checks.append({
-                    "factor": "MTF Confluence (1m, 5m, 10m, 15m)",
+                    "factor": "MTF Confluence (1m, 5m, 15m, 30m)",
                     "status": f"{bear_tfs}/4 Bearish Timeframes",
                     "score": "0",
                     "detail": f"{bear_tfs} of 4 timeframes show bearish momentum."
@@ -746,19 +746,19 @@ def analyze_stock_setup(
         action = "WATCH"
         color = "#38BDF8"
         setup_name = "Awaiting 4-TF Confluence (3/4 Bullish)"
-        setup_desc = "Satisfies 3 of 4 timeframes (1m, 5m, 10m, 15m). Awaiting all 4 timeframes to align before recommending."
+        setup_desc = "Satisfies 3 of 4 timeframes (1m, 5m, 15m, 30m). Awaiting all 4 timeframes to align before recommending."
     elif bear_tfs == 3 and score <= -35:
         signal = "WATCH - 3/4 MTF"
         action = "WATCH"
         color = "#FB923C"
         setup_name = "Awaiting 4-TF Confluence (3/4 Bearish)"
-        setup_desc = "Satisfies 3 of 4 timeframes (1m, 5m, 10m, 15m). Awaiting all 4 timeframes to align before recommending."
+        setup_desc = "Satisfies 3 of 4 timeframes (1m, 5m, 15m, 30m). Awaiting all 4 timeframes to align before recommending."
     elif (score >= 35 and bull_tfs < 3) or (score <= -35 and bear_tfs < 3):
         signal = "WATCH - MTF CONFLICT"
         action = "WATCH"
         color = "#EAB308"
         setup_name = f"MTF Divergence ({bull_tfs}/4 Bullish)" if score > 0 else f"MTF Divergence ({bear_tfs}/4 Bearish)"
-        setup_desc = "1-minute momentum is contradicted across 5m, 10m, and 15m charts. Awaiting higher timeframe alignment."
+        setup_desc = "1-minute momentum is contradicted across 5m, 15m, and 30m charts. Awaiting higher timeframe alignment."
     else:
         signal = "NEUTRAL"
         action = "WATCH"
@@ -889,21 +889,49 @@ def analyze_stock_setup(
         f"**5. Volatility & Stop Loss Rule**: 1-minute ATR is {currency_symbol}{atr_val:,.2f}. Strict Stop Loss placed at **{currency_symbol}{sl_price:,.2f}** ({sl_pct:+.2f}% risk), safely anchored below key structural support (Swing Low / VWAP buffer).",
         f"**6. Target Projections & Runner Lock-in**: Target 1 at **{currency_symbol}{t1_price:,.2f}** ({t1_pct:+.2f}%, 1:1.5 R:R); Target 2 at **{currency_symbol}{t2_price:,.2f}** ({t2_pct:+.2f}%, 1:2.5 R:R). Upon reaching Target 1, 50% is booked and runner Stop Loss trails to +0.5R (**{currency_symbol}{round(entry_price + (0.5 * risk_amount), 2) if action == 'LONG' else round(entry_price - (0.5 * risk_amount), 2):,.2f}**), ensuring the trade cannot regress to a loss.",
         (
-            f"**7. Multi-Timeframe Alignment (1m, 5m, 10m, 15m)**: FULL 4-TF CONFLUENCE (RECOMMENDED - {mtf_data.get('confluence_score', '')}). "
+            f"**7. Multi-Timeframe Alignment (1m, 5m, 15m, 30m)**: FULL 4-TF CONFLUENCE (RECOMMENDED - {mtf_data.get('confluence_score', '')}). "
             f"[1m: {mtf_data.get('timeframes', {}).get('1m', {}).get('bias', 'N/A')} | "
             f"5m: {mtf_data.get('timeframes', {}).get('5m', {}).get('bias', 'N/A')} | "
-            f"10m: {mtf_data.get('timeframes', {}).get('10m', {}).get('bias', 'N/A')} | "
-            f"15m: {mtf_data.get('timeframes', {}).get('15m', {}).get('bias', 'N/A')}]. "
-            "Satisfies ALL 4 time periods (1m, 5m, 10m, 15m) simultaneously. Validated for institutional recommendation."
+            f"15m: {mtf_data.get('timeframes', {}).get('15m', {}).get('bias', 'N/A')} | "
+            f"30m: {mtf_data.get('timeframes', {}).get('30m', {}).get('bias', 'N/A')}]. "
+            "Satisfies ALL 4 time periods (1m, 5m, 15m, 30m) simultaneously. Validated for institutional recommendation."
         ) if is_recommended else (
-            f"**7. Multi-Timeframe Alignment (1m, 5m, 10m, 15m)**: PARTIAL / CONFLICTED ({mtf_data.get('confluence_score', '')}) - NOT RECOMMENDED. "
+            f"**7. Multi-Timeframe Alignment (1m, 5m, 15m, 30m)**: PARTIAL / CONFLICTED ({mtf_data.get('confluence_score', '')}) - NOT RECOMMENDED. "
             f"[1m: {mtf_data.get('timeframes', {}).get('1m', {}).get('bias', 'N/A')} | "
             f"5m: {mtf_data.get('timeframes', {}).get('5m', {}).get('bias', 'N/A')} | "
-            f"10m: {mtf_data.get('timeframes', {}).get('10m', {}).get('bias', 'N/A')} | "
-            f"15m: {mtf_data.get('timeframes', {}).get('15m', {}).get('bias', 'N/A')}]. "
-            "Fails full 4-timeframe criteria. Recommendation withheld until 1m, 5m, 10m, and 15m align in unison."
+            f"15m: {mtf_data.get('timeframes', {}).get('15m', {}).get('bias', 'N/A')} | "
+            f"30m: {mtf_data.get('timeframes', {}).get('30m', {}).get('bias', 'N/A')}]. "
+            "Fails full 4-timeframe criteria. Recommendation withheld until 1m, 5m, 15m, and 30m align in unison."
         )
     ]
+
+    # Optimal Pick Time Window and Holding Duration Window calculations
+    time_str = local_time.strftime('%I:%M %p') if local_time is not None else "Current Session"
+    if action == "LONG":
+        pick_time_window = (
+            f"Optimal Pick Window: Enter on 1m/5m green confirmation candle holding above VWAP ({currency_symbol}{vwap:,.2f}) "
+            f"or on pullback retest to 9-EMA ({currency_symbol}{ema9:,.2f}) / 15m ORB High ({currency_symbol}{orb_high:,.2f}) between {time_str} - 11:30 AM {market_tz_label}. "
+            f"Limit slippage: Avoid buying if price expands > 0.4% above {currency_symbol}{entry_price:,.2f}."
+        )
+        holding_time_window = (
+            f"Holding Duration: 35 to 75 minutes. Lock 50% profit at Target 1 ({currency_symbol}{t1_price:,.2f}, +{t1_pct}%), immediately shift Stop Loss to Entry ({currency_symbol}{entry_price:,.2f}) for a risk-free runner. "
+            f"Trail remaining position toward Target 2 ({currency_symbol}{t2_price:,.2f}) using 5m 21-EMA support. Mandatory intraday square-off before 15:15 {market_tz_label}."
+        )
+    elif action == "SHORT":
+        pick_time_window = (
+            f"Optimal Pick Window: Enter on 1m/5m red confirmation candle breaking below VWAP ({currency_symbol}{vwap:,.2f}) "
+            f"or on rejection from 9-EMA ({currency_symbol}{ema9:,.2f}) / 15m ORB Low ({currency_symbol}{orb_low:,.2f}) between {time_str} - 11:30 AM {market_tz_label}."
+        )
+        holding_time_window = (
+            f"Holding Duration: 35 to 75 minutes. Lock 50% profit at Target 1 ({currency_symbol}{t1_price:,.2f}, {t1_pct}%), shift Stop Loss to Entry ({currency_symbol}{entry_price:,.2f}). "
+            f"Trail balance toward Target 2 ({currency_symbol}{t2_price:,.2f}) with 5m 21-EMA resistance. Mandatory auto-square-off before 15:15 {market_tz_label}."
+        )
+    else:
+        pick_time_window = f"Awaiting multi-timeframe directional alignment across 1m, 5m, 15m, and 30m candles ({time_str} {market_tz_label})."
+        holding_time_window = "Setup on WATCH. Do not enter until all 4 timeframes align."
+
+    rationale_points.append(f"**8. Execution Timing**: {pick_time_window}")
+    rationale_points.append(f"**9. Holding Period**: {holding_time_window}")
 
     roi_pct = round(abs(t2_pct), 2)
     locked_sl_price = round(entry_price + (0.5 * risk_amount), 2) if action == "LONG" else round(entry_price - (0.5 * risk_amount), 2)
@@ -929,6 +957,8 @@ def analyze_stock_setup(
         "t3_roi_pct": round(abs(t3_pct), 2),
         "risk_reward_ratio": rrr,
         "risk_per_share": risk_amount,
+        "pick_time_window": pick_time_window,
+        "holding_time_window": holding_time_window,
         "execution_strategy": (
             f"Book 50% position at Target 1 ({currency_symbol}{t1_price:,.2f}, +1.5R). "
             f"Immediately trail Stop Loss to Lock-in Profit at +0.5R ({currency_symbol}{locked_sl_price:,.2f}) to guarantee positive expectancy, "
@@ -1009,6 +1039,8 @@ def analyze_stock_setup(
         "checks": checks,
         "rationale_points": rationale_points,
         "trade_plan": trade_plan,
+        "pick_time_window": pick_time_window,
+        "holding_time_window": holding_time_window,
         "mtf_alignment": mtf_data,
         "chart_markers": markers
     }
@@ -1152,7 +1184,7 @@ def detect_candlestick_patterns_and_markers(df: pd.DataFrame, action: str = "LON
 
 def compute_mtf_alignment(df_1m: pd.DataFrame) -> Dict[str, Any]:
     """
-    Computes multi-timeframe alignment across 1m, 5m, 10m, and 15m intervals.
+    Computes multi-timeframe alignment across 1m, 5m, 15m, and 30m intervals.
     Recommends high-conviction trades when all 4 timeframes satisfy the directional trend.
     """
     if df_1m.empty or len(df_1m) < 10:
@@ -1197,7 +1229,39 @@ def compute_mtf_alignment(df_1m: pd.DataFrame) -> Dict[str, Any]:
     else:
         close_5m, vwap_5m, rsi_5m, ema9_5m, ema21_5m, bias_5m = close_1m, vwap_1m, rsi_1m, ema9_1m, ema21_1m, bias_1m
 
-    # 3. 10-Minute (Intermediate)
+    # 3. 15-Minute (ORB & Breakout Structure)
+    df_15m = df_1m.resample('15min').agg(agg_rules).dropna()
+    df_15m = calculate_intraday_indicators(df_15m, light=True)
+    if not df_15m.empty and 'VWAP' in df_15m.columns:
+        last_15m = df_15m.iloc[-1]
+        close_15m = float(last_15m['Close'])
+        vwap_15m = float(last_15m.get('VWAP', close_15m))
+        rsi_15m = float(last_15m.get('RSI', 50.0))
+        ema9_15m = float(last_15m.get('EMA9', close_15m))
+        ema21_15m = float(last_15m.get('EMA21', close_15m))
+        bias_15m = "BULLISH" if (close_15m >= vwap_15m and ema9_15m >= ema21_15m and rsi_15m >= 48.0) else (
+            "BEARISH" if (close_15m < vwap_15m and ema9_15m <= ema21_15m and rsi_15m <= 52.0) else "NEUTRAL"
+        )
+    else:
+        close_15m, vwap_15m, rsi_15m, ema9_15m, ema21_15m, bias_15m = close_5m, vwap_5m, rsi_5m, ema9_5m, ema21_5m, bias_5m
+
+    # 4. 30-Minute (Macro Trend & Intraday Structure Anchor)
+    df_30m = df_1m.resample('30min').agg(agg_rules).dropna()
+    df_30m = calculate_intraday_indicators(df_30m, light=True)
+    if not df_30m.empty and 'VWAP' in df_30m.columns:
+        last_30m = df_30m.iloc[-1]
+        close_30m = float(last_30m['Close'])
+        vwap_30m = float(last_30m.get('VWAP', close_30m))
+        rsi_30m = float(last_30m.get('RSI', 50.0))
+        ema9_30m = float(last_30m.get('EMA9', close_30m))
+        ema21_30m = float(last_30m.get('EMA21', close_30m))
+        bias_30m = "BULLISH" if (close_30m >= vwap_30m and ema9_30m >= ema21_30m and rsi_30m >= 48.0) else (
+            "BEARISH" if (close_30m < vwap_30m and ema9_30m <= ema21_30m and rsi_30m <= 52.0) else "NEUTRAL"
+        )
+    else:
+        close_30m, vwap_30m, rsi_30m, ema9_30m, ema21_30m, bias_30m = close_15m, vwap_15m, rsi_15m, ema9_15m, ema21_15m, bias_15m
+
+    # Optional 10-minute for backwards compatibility
     df_10m = df_1m.resample('10min').agg(agg_rules).dropna()
     df_10m = calculate_intraday_indicators(df_10m, light=True)
     if not df_10m.empty and 'VWAP' in df_10m.columns:
@@ -1213,24 +1277,8 @@ def compute_mtf_alignment(df_1m: pd.DataFrame) -> Dict[str, Any]:
     else:
         close_10m, vwap_10m, rsi_10m, ema9_10m, ema21_10m, bias_10m = close_5m, vwap_5m, rsi_5m, ema9_5m, ema21_5m, bias_5m
 
-    # 4. 15-Minute (Macro)
-    df_15m = df_1m.resample('15min').agg(agg_rules).dropna()
-    df_15m = calculate_intraday_indicators(df_15m, light=True)
-    if not df_15m.empty and 'VWAP' in df_15m.columns:
-        last_15m = df_15m.iloc[-1]
-        close_15m = float(last_15m['Close'])
-        vwap_15m = float(last_15m.get('VWAP', close_15m))
-        rsi_15m = float(last_15m.get('RSI', 50.0))
-        ema9_15m = float(last_15m.get('EMA9', close_15m))
-        ema21_15m = float(last_15m.get('EMA21', close_15m))
-        bias_15m = "BULLISH" if (close_15m >= vwap_15m and ema9_15m >= ema21_15m and rsi_15m >= 48.0) else (
-            "BEARISH" if (close_15m < vwap_15m and ema9_15m <= ema21_15m and rsi_15m <= 52.0) else "NEUTRAL"
-        )
-    else:
-        close_15m, vwap_15m, rsi_15m, ema9_15m, ema21_15m, bias_15m = close_10m, vwap_10m, rsi_10m, ema9_10m, ema21_10m, bias_10m
-
-    # Confluence calculation across 4 time periods: 1m, 5m, 10m, 15m
-    all_biases = [bias_1m, bias_5m, bias_10m, bias_15m]
+    # Confluence calculation across 4 primary time periods: 1m, 5m, 15m, 30m
+    all_biases = [bias_1m, bias_5m, bias_15m, bias_30m]
     bulls = all_biases.count("BULLISH")
     bears = all_biases.count("BEARISH")
     all_aligned = (bulls == 4 or bears == 4)
@@ -1239,37 +1287,37 @@ def compute_mtf_alignment(df_1m: pd.DataFrame) -> Dict[str, Any]:
         confluence_level = "FULL 4-TF BULLISH ALIGNMENT"
         confluence_score = "4/4 High Conviction"
         badge_color = "#10b981"
-        verdict = "All 4 Timeframes (1m, 5m, 10m, 15m) satisfy bullish criteria above VWAP. Maximum probability institutional breakout setup."
+        verdict = "All 4 Timeframes (1m, 5m, 15m, 30m) satisfy bullish criteria above VWAP. Maximum probability institutional breakout setup."
     elif bears == 4:
         confluence_level = "FULL 4-TF BEARISH ALIGNMENT"
         confluence_score = "4/4 High Conviction"
         badge_color = "#ef4444"
-        verdict = "All 4 Timeframes (1m, 5m, 10m, 15m) satisfy bearish criteria below VWAP. High conviction institutional short setup."
+        verdict = "All 4 Timeframes (1m, 5m, 15m, 30m) satisfy bearish criteria below VWAP. High conviction institutional short setup."
     elif bulls == 3:
         confluence_level = "STRONG BULLISH CONFLUENCE"
         confluence_score = "3/4 Good Confluence"
         badge_color = "#34d399"
-        verdict = "3 of 4 Timeframes satisfy bullish momentum; watch for 1m/5m pullback retest to 21 EMA."
+        verdict = "3 of 4 Timeframes (1m, 5m, 15m, 30m) satisfy bullish momentum; watch for 1m/5m pullback retest to 21 EMA."
     elif bears == 3:
         confluence_level = "STRONG BEARISH CONFLUENCE"
         confluence_score = "3/4 Good Confluence"
         badge_color = "#f87171"
-        verdict = "3 of 4 Timeframes confirm persistent downward supply pressure."
+        verdict = "3 of 4 Timeframes (1m, 5m, 15m, 30m) confirm persistent downward supply pressure."
     elif bulls == 2 and bears == 0:
         confluence_level = "MILD BULLISH BIAS"
         confluence_score = "2/4 Developing"
         badge_color = "#60a5fa"
-        verdict = "2 of 4 Timeframes turning bullish; awaiting 10m and 15m confirmation."
+        verdict = "2 of 4 Timeframes turning bullish; awaiting 15m and 30m confirmation."
     elif bears == 2 and bulls == 0:
         confluence_level = "MILD BEARISH BIAS"
         confluence_score = "2/4 Developing"
         badge_color = "#fb923c"
-        verdict = "2 of 4 Timeframes turning bearish; awaiting 10m and 15m breakdown confirmation."
+        verdict = "2 of 4 Timeframes turning bearish; awaiting 15m and 30m breakdown confirmation."
     else:
         confluence_level = "MIXED / MTF CONFLICT"
         confluence_score = f"{max(bulls, bears)}/4 Conflicted"
         badge_color = "#94a3b8"
-        verdict = "Timeframes are out of sync across 1m, 5m, 10m, 15m. Waiting for alignment to prevent chop whipsaws."
+        verdict = "Timeframes are out of sync across 1m, 5m, 15m, 30m. Waiting for alignment to prevent chop whipsaws."
 
     return {
         "confluence_level": confluence_level,
@@ -1320,6 +1368,16 @@ def compute_mtf_alignment(df_1m: pd.DataFrame) -> Dict[str, Any]:
                 "ema21": round(ema21_15m, 2),
                 "above_vwap": close_15m >= vwap_15m,
                 "ema_bullish": ema9_15m >= ema21_15m
+            },
+            "30m": {
+                "bias": bias_30m,
+                "close": round(close_30m, 2),
+                "vwap": round(vwap_30m, 2),
+                "rsi": round(rsi_30m, 1),
+                "ema9": round(ema9_30m, 2),
+                "ema21": round(ema21_30m, 2),
+                "above_vwap": close_30m >= vwap_30m,
+                "ema_bullish": ema9_30m >= ema21_30m
             }
         }
     }

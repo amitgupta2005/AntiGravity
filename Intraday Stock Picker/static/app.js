@@ -1294,8 +1294,8 @@ function renderMtfMatrix(mtf) {
 
   const tf1 = mtf.timeframes["1m"] || {};
   const tf5 = mtf.timeframes["5m"] || {};
-  const tf10 = mtf.timeframes["10m"] || {};
   const tf15 = mtf.timeframes["15m"] || {};
+  const tf30 = mtf.timeframes["30m"] || {};
 
   function getBadgeHtml(bias) {
     const b = (bias || "NEUTRAL").toLowerCase();
@@ -1315,14 +1315,14 @@ function renderMtfMatrix(mtf) {
         <div class="mtf-stats">RSI ${tf5.rsi || '--'}</div>
       </div>
       <div class="mtf-card">
-        <div class="mtf-tf-label">10-Min (Intermed)</div>
-        <div>${getBadgeHtml(tf10.bias)}</div>
-        <div class="mtf-stats">RSI ${tf10.rsi || '--'}</div>
-      </div>
-      <div class="mtf-card">
-        <div class="mtf-tf-label">15-Min (Macro)</div>
+        <div class="mtf-tf-label">15-Min (Breakout)</div>
         <div>${getBadgeHtml(tf15.bias)}</div>
         <div class="mtf-stats">RSI ${tf15.rsi || '--'}</div>
+      </div>
+      <div class="mtf-card">
+        <div class="mtf-tf-label">30-Min (Macro)</div>
+        <div>${getBadgeHtml(tf30.bias)}</div>
+        <div class="mtf-stats">RSI ${tf30.rsi || '--'}</div>
       </div>
     </div>
     <div class="mtf-confluence-banner" style="border-left-color: ${mtf.badge_color};">
