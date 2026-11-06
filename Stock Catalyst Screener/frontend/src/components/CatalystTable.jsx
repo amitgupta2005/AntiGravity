@@ -308,7 +308,7 @@ export default function CatalystTable({ catalysts, onSelectCatalyst }) {
                   <td>
                     <span className={`badge-direction ${isBuy ? 'buy' : 'sell'}`}>
                       {isBuy ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                      {item.direction}
+                      {item.direction === 'SELL' && isIntraday ? 'SHORT' : item.direction}
                     </span>
                   </td>
 
@@ -325,6 +325,19 @@ export default function CatalystTable({ catalysts, onSelectCatalyst }) {
                     <div className="reason-cell">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
                         <span className="catalyst-tag">{item.catalyst_type}</span>
+                        {(item.market_zone || item.direction === 'SHORT' || (item.direction === 'SELL' && isIntraday)) && (
+                          <span style={{
+                            fontSize: '0.6875rem',
+                            fontWeight: 700,
+                            color: (item.direction === 'SHORT' || (item.direction === 'SELL' && isIntraday)) ? '#f87171' : '#34d399',
+                            background: (item.direction === 'SHORT' || (item.direction === 'SELL' && isIntraday)) ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                            border: `1px solid ${(item.direction === 'SHORT' || (item.direction === 'SELL' && isIntraday)) ? 'rgba(239, 68, 68, 0.35)' : 'rgba(16, 185, 129, 0.35)'}`,
+                            padding: '1px 6px',
+                            borderRadius: '4px'
+                          }}>
+                            {(item.direction === 'SHORT' || (item.direction === 'SELL' && isIntraday)) ? '🔻 Sell Zone (Short)' : '🟢 Buy Zone'}
+                          </span>
+                        )}
                         {item.execution_protocol && (
                           <span style={{
                             fontSize: '0.6875rem',

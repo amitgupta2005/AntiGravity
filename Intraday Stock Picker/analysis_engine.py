@@ -737,7 +737,7 @@ def analyze_stock_setup(
             setup_desc = f"Stock is testing lows but is green on the day (+{day_change_pct:.2f}%). Dips into green days are frequently bought by institutional algos. Shorting blocked."
             is_recommended = False
         else:
-            signal = "STRONG SELL" if score <= -60 else "SELL"
+            signal = "STRONG SHORT" if score <= -60 else "SHORT"
             action = "SHORT"
             color = "#EF4444" if score <= -60 else "#F87171"
             is_recommended = True
@@ -806,10 +806,13 @@ def analyze_stock_setup(
         setup_name = "Range Consolidation / No Direction"
         setup_desc = "Price oscillating around VWAP without decisive volume impulse."
 
-    # --- CALCULATE PRECISE STOP LOSS & TARGETS ---
-    # Intraday risk rules:
-    # Stop loss must be structurally placed behind key levels (VWAP, recent swing low/high, or 1.5x ATR).
-    # Risk per share is bounded to realistic intraday volatility (0.3% - 1.5%).
+    # --- CALCULATE PRECISE STOP LOSS & TARGETS (REALISTIC 0-3% INTRADAY PROFIT) ---
+    # Realistic Intraday Risk & Return Rules:
+    # Intraday single-session equity targets realistically fall within 0.5% - 3.0% (instead of 2-5%).
+    # Stop loss is structurally anchored behind VWAP, 9-EMA, or 10-bar swing (0.30% - 0.85% risk).
+    # Target 1: Quick scalp / partial profit at 0.6% - 1.2% (1:1.5 R:R).
+    # Target 2: Main session target at 1.5% - 2.5% (1:2.5 R:R, strictly within realistic 0-3% range).
+    # Target 3: Extended runner at max 3.0% (1:3.5 R:R ceiling).
     entry_price = round(close, 2)
     atr_val = max(atr, close * 0.002)  # Floor ATR at 0.2%
 
@@ -817,63 +820,85 @@ def analyze_stock_setup(
         # Primary SL candidate 1: Swing low of last 10 candles with a tiny buffer
         cand_sl1 = recent_swing_low - (0.2 * atr_val)
         # Primary SL candidate 2: Just below VWAP (if close is above VWAP)
-        cand_sl2 = vwap - (0.3 * atr_val) if close > vwap else (entry_price - 1.5 * atr_val)
-        # Volatility SL candidate 3: Entry - 1.5x ATR
-        cand_sl3 = entry_price - (1.5 * atr_val)
+        cand_sl2 = vwap - (0.25 * atr_val) if close > vwap else (entry_price - 1.2 * atr_val)
+        # Volatility SL candidate 3: Entry - 1.2x ATR
+        cand_sl3 = entry_price - (1.2 * atr_val)
 
-        # We take the nearest logical structural support level, but at least 0.4% away
+        # Nearest logical structural support level
         chosen_sl = max(cand_sl1, cand_sl2)
-        # Guardrails: Ensure risk is not too tiny (< 0.25%) or too loose (> 2.0%)
-        min_sl = entry_price * 0.980  # Max 2% loss
-        max_sl = entry_price * 0.9975 # Min 0.25% buffer
+        # Guardrails: Disciplined intraday risk: Min 0.30% buffer, Max 0.85% loss
+        min_sl = entry_price * 0.9915 # Max 0.85% loss
+        max_sl = entry_price * 0.9970 # Min 0.30% buffer
         sl_price = round(min(max(chosen_sl, min_sl), max_sl), 2)
 
         risk_amount = round(entry_price - sl_price, 2)
         if risk_amount <= 0:
-            risk_amount = round(atr_val * 1.5, 2)
+            risk_amount = round(max(atr_val * 1.0, entry_price * 0.004), 2)
             sl_price = round(entry_price - risk_amount, 2)
 
         sl_pct = round(((sl_price - entry_price) / entry_price) * 100.0, 2)
 
-        # Targets based on Risk Multiple:
-        # Target 1 (Scalp / Partial Profit Booking at 1:1.5 R:R)
-        t1_price = round(entry_price + (1.5 * risk_amount), 2)
+        # Realistic Intraday Targets (0% - 3% profit profile):
+        # Target 1 (Scalp / Partial Profit Booking at 1:1.5 R:R, bounded to 0.6% - 1.2%)
+        t1_raw = entry_price + (1.5 * risk_amount)
+        t1_clamped = min(max(t1_raw, entry_price * 1.006), entry_price * 1.012)
+        t1_price = round(t1_clamped, 2)
         t1_pct = round(((t1_price - entry_price) / entry_price) * 100.0, 2)
 
-        # Target 2 (Main Day Target at 1:2.5 R:R, or Day High + expansion)
-        t2_price = round(max(entry_price + (2.5 * risk_amount), day_high + (0.5 * atr_val) if day_high > entry_price else entry_price + (2.5 * risk_amount)), 2)
+        # Target 2 (Main Session Target at 1:2.5 R:R, bounded to realistic 1.5% - 2.5%, max 2.8%)
+        t2_raw = entry_price + (2.5 * risk_amount)
+        if day_high > entry_price:
+            t2_raw = min(max(t2_raw, day_high), entry_price * 1.026)
+        t2_clamped = min(max(t2_raw, entry_price * 1.015), entry_price * 1.028)
+        t2_price = round(t2_clamped, 2)
         t2_pct = round(((t2_price - entry_price) / entry_price) * 100.0, 2)
 
-        # Target 3 (Trend Runner at 1:3.5 R:R)
-        t3_price = round(entry_price + (3.5 * risk_amount), 2)
+        # Target 3 (Trend Runner capped at 3.0% maximum realistic intraday target)
+        t3_raw = entry_price + (3.5 * risk_amount)
+        t3_clamped = min(max(t3_raw, entry_price * 1.022), entry_price * 1.030)
+        t3_price = round(t3_clamped, 2)
         t3_pct = round(((t3_price - entry_price) / entry_price) * 100.0, 2)
 
         rrr = "1 : 2.5"
 
     else:  # SHORT
+        # Primary SL candidate 1: Swing high of last 10 candles with a tiny buffer
         cand_sl1 = recent_swing_high + (0.2 * atr_val)
-        cand_sl2 = vwap + (0.3 * atr_val) if close < vwap else (entry_price + 1.5 * atr_val)
+        # Primary SL candidate 2: Just above VWAP (if close is below VWAP)
+        cand_sl2 = vwap + (0.25 * atr_val) if close < vwap else (entry_price + 1.2 * atr_val)
         chosen_sl = min(cand_sl1, cand_sl2)
         
-        min_sl = entry_price * 1.0025 # Min 0.25% buffer
-        max_sl = entry_price * 1.020  # Max 2% loss
+        # Guardrails: Disciplined intraday risk for short: Min 0.30% buffer, Max 0.85% loss
+        min_sl = entry_price * 1.0030 # Min 0.30% buffer
+        max_sl = entry_price * 1.0085 # Max 0.85% loss
         sl_price = round(max(min(chosen_sl, max_sl), min_sl), 2)
 
         risk_amount = round(sl_price - entry_price, 2)
         if risk_amount <= 0:
-            risk_amount = round(atr_val * 1.5, 2)
+            risk_amount = round(max(atr_val * 1.0, entry_price * 0.004), 2)
             sl_price = round(entry_price + risk_amount, 2)
 
         sl_pct = round(((sl_price - entry_price) / entry_price) * 100.0, 2)
 
-        # Targets for Short
-        t1_price = round(entry_price - (1.5 * risk_amount), 2)
+        # Realistic Intraday Targets for Short (0% - 3% profit profile):
+        # Target 1 (Scalp / Partial Cover at 1:1.5 R:R, bounded to 0.6% - 1.2% downside)
+        t1_raw = entry_price - (1.5 * risk_amount)
+        t1_clamped = max(min(t1_raw, entry_price * 0.994), entry_price * 0.988)
+        t1_price = round(t1_clamped, 2)
         t1_pct = round(((t1_price - entry_price) / entry_price) * 100.0, 2)
 
-        t2_price = round(min(entry_price - (2.5 * risk_amount), day_low - (0.5 * atr_val) if day_low < entry_price else entry_price - (2.5 * risk_amount)), 2)
+        # Target 2 (Main Session Target at 1:2.5 R:R, bounded to realistic 1.5% - 2.5%, max 2.8% downside)
+        t2_raw = entry_price - (2.5 * risk_amount)
+        if day_low < entry_price:
+            t2_raw = max(min(t2_raw, day_low), entry_price * 0.974)
+        t2_clamped = max(min(t2_raw, entry_price * 0.985), entry_price * 0.972)
+        t2_price = round(t2_clamped, 2)
         t2_pct = round(((t2_price - entry_price) / entry_price) * 100.0, 2)
 
-        t3_price = round(entry_price - (3.5 * risk_amount), 2)
+        # Target 3 (Trend Runner capped at 3.0% maximum realistic downside target)
+        t3_raw = entry_price - (3.5 * risk_amount)
+        t3_clamped = max(min(t3_raw, entry_price * 0.978), entry_price * 0.970)
+        t3_price = round(t3_clamped, 2)
         t3_pct = round(((t3_price - entry_price) / entry_price) * 100.0, 2)
 
         rrr = "1 : 2.5"
@@ -886,8 +911,8 @@ def analyze_stock_setup(
         f"**2. Institutional Volume Flow**: RVOL is **{rvol:.2f}x** with current 1-min candle volume at {volume:,.0f} shares. {'Institutional volume accumulation confirms buying interest.' if rvol >= 1.5 and close >= prev['Close'] else 'Volume aligns with current momentum.'}",
         f"**3. Price Action & Range**: Day High is {currency_symbol}{day_high:,.2f} and Day Low is {currency_symbol}{day_low:,.2f}. 15-Min Opening Range: {currency_symbol}{orb_low:,.2f} - {currency_symbol}{orb_high:,.2f}. Setup: **{setup_name}**.",
         f"**4. Momentum (RSI 14)**: RSI is currently **{rsi:.1f}**. {'Optimal bullish trajectory, plenty of headroom before overbought exhaustion.' if 50 <= rsi <= 72 else ('High momentum, watch for pullback' if rsi > 72 else 'Bearish momentum dominance.')}",
-        f"**5. Volatility & Stop Loss Rule**: 1-minute ATR is {currency_symbol}{atr_val:,.2f}. Strict Stop Loss placed at **{currency_symbol}{sl_price:,.2f}** ({sl_pct:+.2f}% risk), safely anchored below key structural support (Swing Low / VWAP buffer).",
-        f"**6. Target Projections & Runner Lock-in**: Target 1 at **{currency_symbol}{t1_price:,.2f}** ({t1_pct:+.2f}%, 1:1.5 R:R); Target 2 at **{currency_symbol}{t2_price:,.2f}** ({t2_pct:+.2f}%, 1:2.5 R:R). Upon reaching Target 1, 50% is booked and runner Stop Loss trails to +0.5R (**{currency_symbol}{round(entry_price + (0.5 * risk_amount), 2) if action == 'LONG' else round(entry_price - (0.5 * risk_amount), 2):,.2f}**), ensuring the trade cannot regress to a loss.",
+        f"**5. Volatility & Stop Loss Rule**: 1-minute ATR is {currency_symbol}{atr_val:,.2f}. Strict Stop Loss placed at **{currency_symbol}{sl_price:,.2f}** ({sl_pct:+.2f}% risk), safely anchored behind key structural support (Swing Low / VWAP buffer).",
+        f"**6. Target Projections & Runner Lock-in**: Target 1 at **{currency_symbol}{t1_price:,.2f}** ({t1_pct:+.2f}%, 1:1.5 R:R); Target 2 at **{currency_symbol}{t2_price:,.2f}** ({t2_pct:+.2f}%, 1:2.5 R:R) within the realistic 0-3% intraday profit zone. Upon reaching Target 1, 50% is booked and runner Stop Loss trails to +0.5R (**{currency_symbol}{round(entry_price + (0.5 * risk_amount), 2) if action == 'LONG' else round(entry_price - (0.5 * risk_amount), 2):,.2f}**), ensuring the trade cannot regress to a loss.",
         (
             f"**7. Multi-Timeframe Alignment (1m, 5m, 15m, 30m)**: FULL 4-TF CONFLUENCE (RECOMMENDED - {mtf_data.get('confluence_score', '')}). "
             f"[1m: {mtf_data.get('timeframes', {}).get('1m', {}).get('bias', 'N/A')} | "
@@ -914,17 +939,17 @@ def analyze_stock_setup(
             f"Limit slippage: Avoid buying if price expands > 0.4% above {currency_symbol}{entry_price:,.2f}."
         )
         holding_time_window = (
-            f"Holding Duration: 35 to 75 minutes. Lock 50% profit at Target 1 ({currency_symbol}{t1_price:,.2f}, +{t1_pct}%), immediately shift Stop Loss to Entry ({currency_symbol}{entry_price:,.2f}) for a risk-free runner. "
-            f"Trail remaining position toward Target 2 ({currency_symbol}{t2_price:,.2f}) using 5m 21-EMA support. Mandatory intraday square-off before 15:15 {market_tz_label}."
+            f"Holding Duration: 35 to 75 minutes. Lock 50% profit at Target 1 ({currency_symbol}{t1_price:,.2f}, +{abs(t1_pct):.2f}%), immediately shift Stop Loss to Entry ({currency_symbol}{entry_price:,.2f}) for a risk-free runner. "
+            f"Trail remaining position toward Target 2 ({currency_symbol}{t2_price:,.2f}, +{abs(t2_pct):.2f}% realistic target) using 5m 21-EMA support. Mandatory intraday square-off before 15:15 {market_tz_label}."
         )
     elif action == "SHORT":
         pick_time_window = (
-            f"Optimal Pick Window: Enter on 1m/5m red confirmation candle breaking below VWAP ({currency_symbol}{vwap:,.2f}) "
+            f"Optimal Pick Window: Enter Short on 1m/5m red confirmation candle breaking below VWAP ({currency_symbol}{vwap:,.2f}) "
             f"or on rejection from 9-EMA ({currency_symbol}{ema9:,.2f}) / 15m ORB Low ({currency_symbol}{orb_low:,.2f}) between {time_str} - 11:30 AM {market_tz_label}."
         )
         holding_time_window = (
-            f"Holding Duration: 35 to 75 minutes. Lock 50% profit at Target 1 ({currency_symbol}{t1_price:,.2f}, {t1_pct}%), shift Stop Loss to Entry ({currency_symbol}{entry_price:,.2f}). "
-            f"Trail balance toward Target 2 ({currency_symbol}{t2_price:,.2f}) with 5m 21-EMA resistance. Mandatory auto-square-off before 15:15 {market_tz_label}."
+            f"Holding Duration: 35 to 75 minutes. Lock 50% profit at Target 1 ({currency_symbol}{t1_price:,.2f}, +{abs(t1_pct):.2f}% profit), shift Stop Loss to Entry ({currency_symbol}{entry_price:,.2f}). "
+            f"Trail balance toward Target 2 ({currency_symbol}{t2_price:,.2f}, +{abs(t2_pct):.2f}% realistic target) with 5m 21-EMA resistance. Mandatory auto-square-off before 15:15 {market_tz_label}."
         )
     else:
         pick_time_window = f"Awaiting multi-timeframe directional alignment across 1m, 5m, 15m, and 30m candles ({time_str} {market_tz_label})."
@@ -936,6 +961,22 @@ def analyze_stock_setup(
     roi_pct = round(abs(t2_pct), 2)
     locked_sl_price = round(entry_price + (0.5 * risk_amount), 2) if action == "LONG" else round(entry_price - (0.5 * risk_amount), 2)
     locked_sl_pct = round(((locked_sl_price - entry_price) / entry_price) * 100.0, 2) if action == "LONG" else round(((entry_price - locked_sl_price) / entry_price) * 100.0, 2)
+
+    # Tailor execution strategy for LONG vs SHORT with realistic 0-3% profit targets
+    if action == "LONG":
+        exec_strategy = (
+            f"Book 50% position at Target 1 ({currency_symbol}{t1_price:,.2f}, +{abs(t1_pct):.2f}% profit, +1.5R). "
+            f"Immediately trail Stop Loss to Lock-in Profit at +0.5R ({currency_symbol}{locked_sl_price:,.2f}) to guarantee positive expectancy, "
+            f"and let remaining 50% runner target Target 2 ({currency_symbol}{t2_price:,.2f}, +{abs(t2_pct):.2f}% realistic intraday profit, +2.5R)."
+        )
+    elif action == "SHORT":
+        exec_strategy = (
+            f"Execute Short Sell order (MIS/Intraday). Cover 50% position at Target 1 ({currency_symbol}{t1_price:,.2f}, +{abs(t1_pct):.2f}% profit, +1.5R). "
+            f"Immediately trail Stop Loss to Lock-in Profit at +0.5R ({currency_symbol}{locked_sl_price:,.2f}) to eliminate upside risk, "
+            f"and let remaining 50% runner target Target 2 ({currency_symbol}{t2_price:,.2f}, +{abs(t2_pct):.2f}% realistic intraday profit, +2.5R)."
+        )
+    else:
+        exec_strategy = "Setup on WATCH. Awaiting 4-timeframe alignment before initiating position."
 
     trade_plan = {
         "action": action,
@@ -959,11 +1000,7 @@ def analyze_stock_setup(
         "risk_per_share": risk_amount,
         "pick_time_window": pick_time_window,
         "holding_time_window": holding_time_window,
-        "execution_strategy": (
-            f"Book 50% position at Target 1 ({currency_symbol}{t1_price:,.2f}, +1.5R). "
-            f"Immediately trail Stop Loss to Lock-in Profit at +0.5R ({currency_symbol}{locked_sl_price:,.2f}) to guarantee positive expectancy, "
-            f"and let remaining 50% runner target Target 2 ({currency_symbol}{t2_price:,.2f}, +2.5R)."
-        )
+        "execution_strategy": exec_strategy
     }
 
     # Detect visual chart markers for patterns & triggers
@@ -1024,6 +1061,10 @@ def analyze_stock_setup(
         "score": score,
         "display_score": display_score,
         "signal": signal,
+        "action": action,
+        "is_sell_zone": bool(score < 0 or close < vwap or bear_tfs >= 3 or action == "SHORT"),
+        "market_zone": "SELL_ZONE" if (score < 0 or close < vwap or bear_tfs >= 3 or action == "SHORT") else "BUY_ZONE",
+        "market_zone_label": "Sell Zone (Shorting)" if (score < 0 or close < vwap or bear_tfs >= 3 or action == "SHORT") else "Buy Zone (Long)",
         "is_recommended": is_recommended,
         "roi_pct": roi_pct,
         "color": color,

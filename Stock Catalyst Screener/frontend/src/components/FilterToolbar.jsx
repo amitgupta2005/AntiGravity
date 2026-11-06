@@ -58,7 +58,7 @@ export default function FilterToolbar({
               onClick={() => setTimeframe('Intraday')}
             >
               <Zap size={14} color="#f59e0b" />
-              <span>Intraday (2-6%)</span>
+              <span>Intraday (0-3%)</span>
             </button>
             <button
               className={`segmented-btn ${timeframe === 'Short-term' ? 'active' : ''}`}

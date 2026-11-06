@@ -747,16 +747,39 @@ body {
   color: #94a3b8;
 }
 
-.badge-signal.sell {
+.badge-signal.sell,
+.badge-signal.short {
   background: rgba(248, 113, 113, 0.12);
   border: 1px solid rgba(248, 113, 113, 0.3);
   color: #f87171;
 }
 
-.badge-signal.strong-sell {
+.badge-signal.strong-sell,
+.badge-signal.strong-short {
   background: var(--accent-red-bg);
   border: 1px solid var(--accent-red-border);
   color: var(--accent-red);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.25);
+}
+
+.badge-zone-sell {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.badge-zone-buy {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
 }
 
 .badge-signal.watch-3-4-mtf {

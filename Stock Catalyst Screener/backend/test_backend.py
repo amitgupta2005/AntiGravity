@@ -29,7 +29,7 @@ class TestStockCatalystBackend(unittest.TestCase):
         print("✅ Test 1 Passed: Stock Universe lookup verified.")
 
     def test_02_intraday_trade_math(self):
-        """Verify Intraday trade parameters adhere to tight stops and 2-6% target returns."""
+        """Verify Intraday trade parameters adhere to tight stops and realistic 0-3% target returns."""
         spot = 1000.0
         params = calculate_trade_parameters(
             current_price=spot,
@@ -46,8 +46,8 @@ class TestStockCatalystBackend(unittest.TestCase):
 
         self.assertGreater(entry, sl, "Stop loss must be strictly lower than entry for BUY")
         self.assertGreater(target, entry, "Target must be strictly higher than entry for BUY")
-        self.assertGreaterEqual(roi, 2.0, "Intraday ROI must be at least 2.0%")
-        self.assertLessEqual(roi, 7.0, "Intraday ROI should be capped under 7.0%")
+        self.assertGreaterEqual(roi, 1.0, "Intraday ROI must be at least 1.0%")
+        self.assertLessEqual(roi, 3.0, "Intraday ROI should be realistically capped at 3.0%")
         self.assertGreaterEqual(rr, 1.8, "Intraday Risk:Reward ratio must be favorable (>= 1:1.8)")
         print(f"✅ Test 2 Passed: Intraday BUY Math verified (Entry: {entry}, SL: {sl}, Target: {target}, ROI: +{roi}%, R:R: {params['risk_reward_ratio']}).")
 

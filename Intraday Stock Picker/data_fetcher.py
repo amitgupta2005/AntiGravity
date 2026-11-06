@@ -758,7 +758,7 @@ def scan_watchlist(watchlist_key: str = "NSE_MOMENTUM", custom_tickers: Optional
     def _rank_key(x):
         # 1 for actionable recommendations (STRONG BUY, BUY, STRONG SELL, SELL)
         sig = str(x.get("signal", "")).upper()
-        is_rec = 1 if any(w in sig for w in ["BUY", "SELL"]) and "NEUTRAL" not in sig else 0
+        is_rec = 1 if (x.get("is_recommended") or (any(w in sig for w in ["BUY", "SELL", "SHORT"]) and "NEUTRAL" not in sig)) else 0
         roi = float(x.get("roi_pct") or x.get("trade_plan", {}).get("roi_pct", 0.0))
         score = abs(x.get("score", 0))
         rvol = float(x.get("rvol", 0.0))

@@ -227,7 +227,7 @@ def run_enhanced_backtest(period="7d", interval="1m") -> Dict[str, Any]:
                     is_rec = analysis.get("is_recommended", False)
                     plan = analysis.get("trade_plan")
 
-                    if is_rec and signal in ["STRONG BUY", "BUY", "STRONG SELL", "SELL"] and plan:
+                    if is_rec and signal in ["STRONG BUY", "BUY", "STRONG SELL", "SELL", "STRONG SHORT", "SHORT"] and plan:
                         setup = analysis.get("setup_name", "")
                         close_p = float(curr_bar['Close'])
                         orb_h = float(curr_bar.get('ORB_High', 0))

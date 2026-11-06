@@ -44,37 +44,38 @@ def calculate_trade_parameters(
         regime_advice = "Market index > 50-DMA & 200-DMA. Institutional expansion regime with strong follow-through probability."
 
     if timeframe == "Intraday":
-        # Intraday Execution: Opening Range Breakout (ORB)
-        execution_protocol = "15-Min ORB Rule: Enter only if price breaks above 15-minute opening candle high on above-average volume. Avoid entering at open tick."
-        
         if direction == "BUY":
-            entry_buffer = 0.003 * vol_scale
+            execution_protocol = "15-Min ORB Rule: Enter only if price breaks above 15-minute opening candle high on above-average volume. Avoid entering at open tick."
+            entry_buffer = 0.002 * vol_scale
             entry_price = current_price * (1.0 + entry_buffer)
-            # Volatility-anchored stop (1.2% - 1.8% based on ATR scale)
-            risk_pct = 0.014 * vol_scale
+            # Disciplined intraday stop loss (0.45% - 0.95%)
+            risk_pct = 0.0065 * vol_scale
             stop_loss = entry_price * (1.0 - risk_pct)
 
-            # Tier 1 Target (Base exit 50% position): +2.8% to +3.8%
-            t1_roi = max(0.025, min(0.045, 0.032 * conviction_mult * vol_scale))
+            # Tier 1 Target (Realistic Scalp / Base exit): +0.6% to +1.4%
+            t1_roi = max(0.006, min(0.014, 0.010 * conviction_mult * vol_scale))
             target_t1 = entry_price * (1.0 + t1_roi)
 
-            # Tier 2 Target (Runner target 50% position): +4.5% to +6.5%
-            t2_roi = max(0.045, min(0.065, 0.048 * conviction_mult * vol_scale))
+            # Tier 2 Target (Realistic Main Intraday Target 0-3%): +1.5% to +3.0%
+            t2_roi = max(0.015, min(0.030, 0.022 * conviction_mult * vol_scale))
             target_t2 = entry_price * (1.0 + t2_roi)
 
-            # Primary Target matches T2 for headline R:R
             target_price = target_t2
             reward_pct = t2_roi
-        else: # SELL
-            entry_buffer = 0.003 * vol_scale
+        else: # SELL / SHORT (Sell Zone)
+            execution_protocol = "15-Min ORB Breakdown Rule: Enter Short on breakdown below 15-minute opening candle low / VWAP with above-average volume."
+            entry_buffer = 0.002 * vol_scale
             entry_price = current_price * (1.0 - entry_buffer)
-            risk_pct = 0.014 * vol_scale
+            # Disciplined intraday stop loss for short (0.45% - 0.95%)
+            risk_pct = 0.0065 * vol_scale
             stop_loss = entry_price * (1.0 + risk_pct)
 
-            t1_roi = max(0.025, min(0.045, 0.030 * conviction_mult * vol_scale))
+            # Tier 1 Target (Realistic Short Cover / Scalp): +0.6% to +1.4% downside
+            t1_roi = max(0.006, min(0.014, 0.010 * conviction_mult * vol_scale))
             target_t1 = entry_price * (1.0 - t1_roi)
 
-            t2_roi = max(0.045, min(0.065, 0.045 * conviction_mult * vol_scale))
+            # Tier 2 Target (Realistic Main Short Target 0-3%): +1.5% to +3.0% downside
+            t2_roi = max(0.015, min(0.030, 0.022 * conviction_mult * vol_scale))
             target_t2 = entry_price * (1.0 - t2_roi)
 
             target_price = target_t2

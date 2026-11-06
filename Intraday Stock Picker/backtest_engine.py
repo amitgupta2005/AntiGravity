@@ -242,7 +242,7 @@ def run_intraday_backtest(universe=TEST_UNIVERSE, period="7d", interval="1m") ->
                     plan = analysis.get("trade_plan")
 
                     # We only trade high-conviction recommended setups that satisfy 4-TF confluence
-                    if is_rec and signal in ["STRONG BUY", "BUY", "STRONG SELL", "SELL"] and plan:
+                    if is_rec and signal in ["STRONG BUY", "BUY", "STRONG SELL", "SELL", "STRONG SHORT", "SHORT"] and plan:
                         action = "LONG" if "BUY" in signal else "SHORT"
                         risk_amount = abs(float(plan["entry_price"]) - float(plan["stop_loss"]))
                         if risk_amount <= 0:

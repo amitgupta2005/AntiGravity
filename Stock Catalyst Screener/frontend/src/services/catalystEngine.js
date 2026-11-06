@@ -338,29 +338,33 @@ export function calculateTradeLevels(currentPrice, direction, timeframe, catalys
   let breakevenRule = "";
 
   if (timeframe === "Intraday") {
-    executionProtocol = "15-Min ORB Rule: Enter only if price breaks above 15-minute opening candle high on volume. Avoid buying at open tick.";
     if (isBuy) {
-      entryPrice = currentPrice * 1.003;
-      riskPct = Number((1.4 * volScale).toFixed(2));
+      executionProtocol = "15-Min ORB Rule: Enter only if price breaks above 15-minute opening candle high on volume. Avoid buying at open tick.";
+      entryPrice = currentPrice * 1.002;
+      riskPct = Number((0.65 * volScale).toFixed(2));
       stopLossPrice = entryPrice * (1.0 - riskPct / 100);
       
-      t1RoiPct = Number((Math.min(4.5, Math.max(2.5, 3.2 * conviction * volScale))).toFixed(2));
-      t2RoiPct = Number((Math.min(6.5, Math.max(4.5, 4.8 * conviction * volScale))).toFixed(2));
+      // Realistic Intraday Profit: 0.6% to 1.4% (T1) & 1.5% to 3.0% (T2)
+      t1RoiPct = Number((Math.min(1.4, Math.max(0.6, 1.0 * conviction * volScale))).toFixed(2));
+      t2RoiPct = Number((Math.min(3.0, Math.max(1.5, 2.2 * conviction * volScale))).toFixed(2));
       targetPriceT1 = entryPrice * (1.0 + t1RoiPct / 100);
       targetPriceT2 = entryPrice * (1.0 + t2RoiPct / 100);
       targetPrice = targetPriceT2;
-      breakevenRule = `Lock 50% profit at T1 (${targetPriceT1.toFixed(2)}) and move stop loss to breakeven (${entryPrice.toFixed(2)}).`;
+      breakevenRule = `Lock 50% profit at T1 (${targetPriceT1.toFixed(2)}, +${t1RoiPct}%) and move stop loss to breakeven (${entryPrice.toFixed(2)}).`;
     } else {
-      entryPrice = currentPrice * 0.997;
-      riskPct = Number((1.4 * volScale).toFixed(2));
+      // Sell Zone Setup: Marked for Shorting
+      executionProtocol = "15-Min ORB Breakdown Rule: Enter Short on breakdown below 15-minute opening candle low / VWAP. Avoid shorting at open tick.";
+      entryPrice = currentPrice * 0.998;
+      riskPct = Number((0.65 * volScale).toFixed(2));
       stopLossPrice = entryPrice * (1.0 + riskPct / 100);
 
-      t1RoiPct = Number((Math.min(4.5, Math.max(2.5, 3.0 * conviction * volScale))).toFixed(2));
-      t2RoiPct = Number((Math.min(6.5, Math.max(4.5, 4.5 * conviction * volScale))).toFixed(2));
+      // Realistic Intraday Short Profit: 0.6% to 1.4% (T1) & 1.5% to 3.0% (T2)
+      t1RoiPct = Number((Math.min(1.4, Math.max(0.6, 1.0 * conviction * volScale))).toFixed(2));
+      t2RoiPct = Number((Math.min(3.0, Math.max(1.5, 2.2 * conviction * volScale))).toFixed(2));
       targetPriceT1 = entryPrice * (1.0 - t1RoiPct / 100);
       targetPriceT2 = entryPrice * (1.0 - t2RoiPct / 100);
       targetPrice = targetPriceT2;
-      breakevenRule = `Lock 50% profit at T1 (${targetPriceT1.toFixed(2)}) and move stop loss to breakeven (${entryPrice.toFixed(2)}).`;
+      breakevenRule = `Lock 50% profit at T1 (${targetPriceT1.toFixed(2)}, +${t1RoiPct}%) and move stop loss to breakeven (${entryPrice.toFixed(2)}).`;
     }
   } else {
     // Short-term Delivery: Tier 1 (+6.0% to +8.5%) + Tier 2 (+18% to +48%)
@@ -461,20 +465,26 @@ export function evaluateLiveCatalyst(quote, newsArticle, marketRegime = "BULL") 
     catalystType = "Breakout News";
     timeframe = "Intraday";
     baseScore = 87;
-  } else if (text.match(/slump|drops|plunge|loss|warning|penalty|fraud|probe|cut|miss/)) {
+  } else if (text.match(/slump|drops|plunge|loss|warning|penalty|fraud|probe|cut|miss|downgrade|tumble|tank/) || dayChg <= -0.5) {
     catalystType = "Earnings Miss / Breakdown";
     direction = "SELL";
-    timeframe = "Short-term";
+    timeframe = (text.match(/earnings|quarter|results|pat/) && !text.match(/intraday/)) ? "Short-term" : "Intraday";
     baseScore = 85;
   }
+
+  // Intraday Sell Zone stocks are explicitly marked for Shorting (SHORT)
+  const effectiveDirection = (timeframe === "Intraday" && (direction === "SELL" || direction === "SHORT")) ? "SHORT" : direction;
 
   // Adjust score based on real day momentum
   const catalystScore = Math.min(98, Math.max(74, Math.round(baseScore + Math.abs(dayChg) * 0.75)));
   const confidence = catalystScore >= 90 ? "High Conviction" : catalystScore >= 80 ? "Moderate" : "Speculative";
 
-  const levels = calculateTradeLevels(quote.current_price, direction, timeframe, catalystScore, quote.rvol, marketRegime);
+  const levels = calculateTradeLevels(quote.current_price, effectiveDirection, timeframe, catalystScore, quote.rvol, marketRegime);
 
-  const reason = catalystType === "Earnings Beat"
+  const isSellZone = (effectiveDirection === "SHORT" || effectiveDirection === "SELL");
+  const reason = effectiveDirection === "SHORT"
+    ? `Sell Zone breakdown catalyst driving ${dayChg >= 0 ? '+' : ''}${dayChg}% move. Marked for Intraday Shorting with realistic 0-3% profit targets (+${levels.t1_roi_pct}% - +${levels.t2_roi_pct}%) and favorable ${levels.risk_reward_ratio} R:R.`
+    : catalystType === "Earnings Beat"
     ? `Quarterly earnings surprise with ${dayChg >= 0 ? '+' : ''}${dayChg}% day price momentum and ${quote.rvol}x relative volume acceleration.`
     : catalystType === "Major Contract/Order"
     ? `Major institutional order contract expanding order book visibility alongside strong ${quote.rvol}x accumulation.`
@@ -487,7 +497,9 @@ export function evaluateLiveCatalyst(quote, newsArticle, marketRegime = "BULL") 
     market: quote.market,
     exchange: quote.exchange,
     currency: quote.currency,
-    direction,
+    direction: effectiveDirection,
+    market_zone: isSellZone ? "Sell Zone (Shorting)" : "Buy Zone (Long)",
+    is_short: effectiveDirection === "SHORT",
     timeframe,
     catalyst_type: catalystType,
     catalyst_score: catalystScore,

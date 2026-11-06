@@ -93,7 +93,11 @@ export default function App() {
     return catalysts.filter(c => {
       if (market !== 'All' && c.market.toLowerCase() !== market.toLowerCase()) return false;
       if (timeframe !== 'All' && c.timeframe.toLowerCase() !== timeframe.toLowerCase()) return false;
-      if (direction !== 'All' && c.direction.toLowerCase() !== direction.toLowerCase()) return false;
+      if (direction !== 'All') {
+        const cDir = (c.direction || '').toUpperCase();
+        if (direction === 'BUY' && !cDir.includes('BUY')) return false;
+        if (direction === 'SELL' && (!cDir.includes('SELL') && !cDir.includes('SHORT'))) return false;
+      }
       if (search.trim()) {
         const q = search.toLowerCase();
         const match = c.display_ticker.toLowerCase().includes(q) ||

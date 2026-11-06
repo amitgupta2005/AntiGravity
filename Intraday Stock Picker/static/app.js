@@ -771,10 +771,10 @@ function renderStockCards() {
 
     const setup = (stock.setup_name || "").toLowerCase();
     const stockCap = (stock.cap || "").toLowerCase();
-    const isRecommended = Boolean(stock.is_recommended || (stock.mtf_alignment?.all_aligned === true && ((stock.signal || "").includes("BUY") || (stock.signal || "").includes("SELL"))));
+    const isRecommended = Boolean(stock.is_recommended || (stock.mtf_alignment?.all_aligned === true && ((stock.signal || "").includes("BUY") || (stock.signal || "").includes("SELL") || (stock.signal || "").includes("SHORT"))));
     if (currentFilter === "mtf") return isRecommended || stock.mtf_alignment?.bull_count === 4 || stock.mtf_alignment?.bear_count === 4 || stock.mtf_alignment?.all_aligned === true || stock.mtf_alignment?.confluence_score === "4/4";
-    if (currentFilter === "buy") return isRecommended && (stock.signal || "").includes("BUY");
-    if (currentFilter === "sell") return isRecommended && (stock.signal || "").includes("SELL");
+    if (currentFilter === "buy") return isRecommended && ((stock.signal || "").includes("BUY") || stock.trade_plan?.action === "LONG");
+    if (currentFilter === "sell") return isRecommended && ((stock.signal || "").includes("SELL") || (stock.signal || "").includes("SHORT") || stock.trade_plan?.action === "SHORT" || stock.is_sell_zone);
     if (currentFilter === "midcap") return stockCap === "mid";
     if (currentFilter === "smallcap") return stockCap === "small";
     if (currentFilter === "rvol") return stock.rvol >= 1.5;
@@ -808,8 +808,8 @@ function renderStockCards() {
       if (roiA !== roiB) return roiA - roiB;
       return scoreA - scoreB;
     } else if (currentSort === "roi-rec") {
-      const isRecA = a.is_recommended || (a.mtf_alignment?.all_aligned && ((a.signal || "").includes("BUY") || (a.signal || "").includes("SELL"))) ? 1 : 0;
-      const isRecB = b.is_recommended || (b.mtf_alignment?.all_aligned && ((b.signal || "").includes("BUY") || (b.signal || "").includes("SELL"))) ? 1 : 0;
+      const isRecA = a.is_recommended || (a.mtf_alignment?.all_aligned && ((a.signal || "").includes("BUY") || (a.signal || "").includes("SELL") || (a.signal || "").includes("SHORT"))) ? 1 : 0;
+      const isRecB = b.is_recommended || (b.mtf_alignment?.all_aligned && ((b.signal || "").includes("BUY") || (b.signal || "").includes("SELL") || (b.signal || "").includes("SHORT"))) ? 1 : 0;
       if (isRecA !== isRecB) return isRecB - isRecA;
       if (roiB !== roiA) return roiB - roiA;
       return scoreB - scoreA;
@@ -865,8 +865,13 @@ function renderStockCards() {
     const sigClass = stock.signal.toLowerCase().replace(/[^a-z0-9]+/g, "-");
     const stockRoi = Number(stock.roi_pct != null ? stock.roi_pct : Math.abs(stock.trade_plan?.target_2_pct || 0));
 
-    const isRecommended = Boolean(stock.is_recommended || (stock.mtf_alignment?.all_aligned === true && ((stock.signal || "").includes("BUY") || (stock.signal || "").includes("SELL"))));
-    const recBadge = isRecommended ? `<span class="badge-rec" title="Satisfies All 4 Timeframes (1m, 5m, 10m, 15m)">⭐ 4/4 REC</span>` : "";
+    const isRecommended = Boolean(stock.is_recommended || (stock.mtf_alignment?.all_aligned === true && ((stock.signal || "").includes("BUY") || (stock.signal || "").includes("SELL") || (stock.signal || "").includes("SHORT"))));
+    const recBadge = isRecommended ? `<span class="badge-rec" title="Satisfies All 4 Timeframes (1m, 5m, 15m, 30m)">⭐ 4/4 REC</span>` : "";
+
+    const isSellZone = Boolean(stock.is_sell_zone || stock.action === "SHORT" || stock.trade_plan?.action === "SHORT" || (stock.signal || "").includes("SHORT") || (stock.signal || "").includes("SELL"));
+    const zoneBadge = isSellZone
+      ? `<span class="badge-zone-sell" title="Classified in Sell Zone: Marked for Intraday Shorting">🔻 SELL ZONE (SHORT)</span>`
+      : (stock.score >= 35 ? `<span class="badge-zone-buy" title="Classified in Buy Zone: Marked for Long">🟢 BUY ZONE</span>` : "");
 
     const mtfScore = stock.mtf_alignment?.confluence_score || "";
     const mtfColor = stock.mtf_alignment?.badge_color || "#3b82f6";
@@ -897,13 +902,14 @@ function renderStockCards() {
 
       <div class="card-middle">
         <span class="badge-signal ${sigClass}">${stock.signal}</span>
+        ${zoneBadge}
         ${recBadge}
         <span class="badge-cap cap-${(stock.cap || 'large').toLowerCase()}">${stock.cap || 'LARGE'}</span>
         ${tzBadge}
         ${feedBadge}
         ${mtfBadge}
         <span class="badge-time ${isIndia ? 'time-ist' : 'time-est'}" title="Pick Time (${isIndia ? 'Indian Standard Time' : 'US Eastern Time'})">🕒 ${pickTimeStr}</span>
-        <span class="badge-roi" title="Projected Target 2 ROI">🎯 ROI: +${stockRoi.toFixed(1)}%</span>
+        <span class="badge-roi" title="Projected Target 2 ROI (Realistic 0-3%)">🎯 ROI: +${stockRoi.toFixed(1)}%</span>
         <span class="badge-rvol">${stock.rvol.toFixed(1)}x Vol</span>
         <span class="badge-setup">${stock.setup_name}</span>
       </div>
@@ -1235,17 +1241,17 @@ function renderAnalysisBlueprint(analysis) {
   const plan = analysis.trade_plan || {};
   const entryVal = plan.entry_price != null ? plan.entry_price : (analysis.price || 0);
   planEntry.textContent = `${sym}${Number(entryVal).toFixed(2)}`;
-  planActionType.textContent = plan.action || "WATCH";
-  planActionType.style.color = plan.action === "LONG" ? "#10b981" : (plan.action === "SHORT" ? "#ef4444" : "#f59e0b");
+  planActionType.textContent = plan.action || (analysis.is_sell_zone ? "SHORT" : "WATCH");
+  planActionType.style.color = plan.action === "LONG" ? "#10b981" : ((plan.action === "SHORT" || analysis.is_sell_zone) ? "#ef4444" : "#f59e0b");
 
   planSl.textContent = plan.stop_loss != null ? `${sym}${Number(plan.stop_loss).toFixed(2)}` : "N/A";
-  planSlDiff.textContent = plan.stop_loss_pct != null ? `${plan.stop_loss_pct > 0 ? "+" : ""}${Number(plan.stop_loss_pct).toFixed(2)}% Risk` : "N/A";
+  planSlDiff.textContent = plan.stop_loss_pct != null ? `${Math.abs(Number(plan.stop_loss_pct)).toFixed(2)}% Risk` : "N/A";
 
   planT1.textContent = plan.target_1 != null ? `${sym}${Number(plan.target_1).toFixed(2)}` : "N/A";
-  planT1Diff.textContent = plan.target_1_pct != null ? `+${Number(plan.target_1_pct).toFixed(2)}% (1:1.5)` : "N/A";
+  planT1Diff.textContent = plan.target_1_pct != null ? `+${Math.abs(Number(plan.target_1_pct)).toFixed(2)}% Profit (1:1.5)` : "N/A";
 
   planT2.textContent = plan.target_2 != null ? `${sym}${Number(plan.target_2).toFixed(2)}` : "N/A";
-  planT2Diff.textContent = plan.target_2_pct != null ? `+${Number(plan.target_2_pct).toFixed(2)}% (1:2.5)` : "N/A";
+  planT2Diff.textContent = plan.target_2_pct != null ? `+${Math.abs(Number(plan.target_2_pct)).toFixed(2)}% Profit (1:2.5)` : "N/A";
 
   planExecRule.textContent = plan.execution_strategy || "Monitor price action relative to VWAP and key support/resistance.";
 

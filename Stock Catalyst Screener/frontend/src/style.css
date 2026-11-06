@@ -609,7 +609,8 @@ body::before {
   color: var(--accent-emerald);
 }
 
-.badge-direction.sell {
+.badge-direction.sell,
+.badge-direction.short {
   background: var(--accent-rose-glow);
   border: 1px solid rgba(244, 63, 94, 0.4);
   color: var(--accent-rose);
