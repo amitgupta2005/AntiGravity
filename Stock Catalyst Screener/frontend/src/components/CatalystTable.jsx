@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Zap, Rocket, TrendingUp, TrendingDown, Info } from 'lucide-react';
 
 export default function CatalystTable({ catalysts, onSelectCatalyst }) {
@@ -15,26 +15,28 @@ export default function CatalystTable({ catalysts, onSelectCatalyst }) {
     }
   };
 
-  // Sorting logic
-  const sortedCatalysts = [...catalysts].sort((a, b) => {
-    let aVal = a[sortColumn];
-    let bVal = b[sortColumn];
+  // Memoized sorting logic (avoids expensive array clone and sort on unrelated parent re-renders)
+  const sortedCatalysts = useMemo(() => {
+    return [...catalysts].sort((a, b) => {
+      let aVal = a[sortColumn];
+      let bVal = b[sortColumn];
 
-    if (sortColumn === 'risk_reward_ratio') {
-      aVal = parseFloat(a.risk_reward_ratio?.replace('1 : ', '')) || 0;
-      bVal = parseFloat(b.risk_reward_ratio?.replace('1 : ', '')) || 0;
-    }
+      if (sortColumn === 'risk_reward_ratio') {
+        aVal = parseFloat(a.risk_reward_ratio?.replace('1 : ', '')) || 0;
+        bVal = parseFloat(b.risk_reward_ratio?.replace('1 : ', '')) || 0;
+      }
 
-    if (typeof aVal === 'string') {
-      return sortDirection === 'asc' 
-        ? aVal.localeCompare(bVal) 
-        : bVal.localeCompare(aVal);
-    }
+      if (typeof aVal === 'string') {
+        return sortDirection === 'asc' 
+          ? aVal.localeCompare(bVal) 
+          : bVal.localeCompare(aVal);
+      }
 
-    aVal = Number(aVal) || 0;
-    bVal = Number(bVal) || 0;
-    return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
-  });
+      aVal = Number(aVal) || 0;
+      bVal = Number(bVal) || 0;
+      return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+    });
+  }, [catalysts, sortColumn, sortDirection]);
 
   const renderSortIndicator = (column) => {
     if (sortColumn !== column) {

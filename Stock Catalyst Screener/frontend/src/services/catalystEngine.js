@@ -86,8 +86,63 @@ export const COMPREHENSIVE_UNIVERSE = [
   { ticker: "JPM", display_ticker: "JPM", name: "JPMorgan Chase & Co", sector: "Diversified Banking", market: "US", currency: "$", exchange: "NYSE" }
 ];
 
-// In-memory quote & scan caches
-const quoteCache = new Map();
+// ============================================================================
+// High-Performance Bounded TTL / LRU Cache to Prevent Memory Leaks
+// ============================================================================
+export class BoundedTTLCache {
+  constructor(maxSize = 200, ttlMs = 45000) {
+    this.maxSize = maxSize;
+    this.ttlMs = ttlMs;
+    this.cache = new Map();
+  }
+
+  get(key) {
+    if (!this.cache.has(key)) return null;
+    const entry = this.cache.get(key);
+    if (Date.now() - entry.time > this.ttlMs) {
+      this.cache.delete(key);
+      return null;
+    }
+    // Refresh access order (LRU)
+    this.cache.delete(key);
+    this.cache.set(key, entry);
+    return entry.data;
+  }
+
+  set(key, data) {
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    } else if (this.cache.size >= this.maxSize) {
+      // Evict oldest (least recently used)
+      const oldestKey = this.cache.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.cache.delete(oldestKey);
+      }
+    }
+    this.cache.set(key, { data, time: Date.now() });
+  }
+
+  has(key) {
+    return this.get(key) !== null;
+  }
+
+  delete(key) {
+    return this.cache.delete(key);
+  }
+
+  clear() {
+    this.cache.clear();
+  }
+
+  get size() {
+    return this.cache.size;
+  }
+}
+
+// Bounded in-memory caches (Strictly capped size + TTL to prevent unbounded heap growth)
+export const quoteCache = new BoundedTTLCache(200, 30000);   // 30s TTL, max 200 items
+export const newsCache = new BoundedTTLCache(200, 180000);   // 3 min TTL, max 200 items
+
 let lastScanResults = [];
 let lastScanTime = 0;
 const SCAN_CACHE_TTL_MS = 60000; // 60 seconds cache
@@ -121,16 +176,14 @@ export function resolveStockMetadata(symbol) {
 
 /**
  * Fetches real-time price feed from exchanges using Yahoo Finance v8 chart API
+ * Guaranteed zero timer leak with try...finally cleanup.
  */
 export async function fetchLiveStockFeed(symbol) {
   const meta = resolveStockMetadata(symbol);
-  const now = Date.now();
   
-  if (quoteCache.has(meta.ticker)) {
-    const cached = quoteCache.get(meta.ticker);
-    if (now - cached.time < 30000) {
-      return cached.data;
-    }
+  const cached = quoteCache.get(meta.ticker);
+  if (cached) {
+    return cached;
   }
 
   const endpoints = [
@@ -142,14 +195,14 @@ export async function fetchLiveStockFeed(symbol) {
   let quoteData = null;
 
   for (const url of endpoints) {
+    let timeoutId;
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      timeoutId = setTimeout(() => controller.abort(), 3500);
       const res = await fetch(url, { 
         signal: controller.signal,
         headers: { 'Accept': 'application/json' }
       });
-      clearTimeout(timeoutId);
 
       if (res.ok) {
         const json = await res.json();
@@ -180,11 +233,17 @@ export async function fetchLiveStockFeed(symbol) {
           break;
         }
       }
-    } catch (_) {}
+    } catch (_) {
+      // Gracefully handled; try next endpoint
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId); // Guaranteed cleanup
+      }
+    }
   }
 
   if (quoteData) {
-    quoteCache.set(meta.ticker, { data: quoteData, time: now });
+    quoteCache.set(meta.ticker, quoteData);
   }
 
   return quoteData;
@@ -192,8 +251,15 @@ export async function fetchLiveStockFeed(symbol) {
 
 /**
  * Ingests live financial breaking news & earnings via real-time RSS
+ * Uses newsCache and try...finally timer cleanup to prevent memory leaks.
  */
 export async function fetchLiveNewsArticle(symbol, companyName, market) {
+  const cacheKey = `${symbol}_${market}`;
+  const cached = newsCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   try {
     const cleanName = companyName.split('(')[0].replace(/Ltd|Limited|Corporation|Inc\./gi, '').trim();
     const query = market === 'US'
@@ -209,16 +275,27 @@ export async function fetchLiveNewsArticle(symbol, companyName, market) {
     const proxyUrl = `/api/rss/news?url=${encodeURIComponent(rssUrl)}`;
     let text = '';
     
+    let timeoutId;
     try {
-      const res = await fetch(proxyUrl);
+      const controller = new AbortController();
+      timeoutId = setTimeout(() => controller.abort(), 3500);
+      const res = await fetch(proxyUrl, { signal: controller.signal });
       if (res.ok) text = await res.text();
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
 
     if (!text) {
       try {
-        const res = await fetch(rssUrl);
+        const controller = new AbortController();
+        timeoutId = setTimeout(() => controller.abort(), 3500);
+        const res = await fetch(rssUrl, { signal: controller.signal });
         if (res.ok) text = await res.text();
-      } catch (_) {}
+      } catch (_) {
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+      }
     }
 
     if (text) {
@@ -228,7 +305,9 @@ export async function fetchLiveNewsArticle(symbol, companyName, market) {
         const rawTitle = match[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim();
         const pubDate = match[2].trim().slice(0, 16);
         const source = match[3].replace(/<!\[CDATA\[|\]\]>/g, '').trim() || "Financial Press";
-        return { headline: rawTitle, source, published_at: pubDate };
+        const article = { headline: rawTitle, source, published_at: pubDate };
+        newsCache.set(cacheKey, article);
+        return article;
       }
     }
   } catch (_) {}

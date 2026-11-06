@@ -95,8 +95,63 @@ export const COMPREHENSIVE_UNIVERSE = [
   { ticker: "JPM", display_ticker: "JPM", name: "JPMorgan Chase & Co", sector: "Diversified Banking", market: "US", currency: "$", exchange: "NYSE" }
 ];
 
-// In-memory quote & scan caches
-const quoteCache = new Map();
+// ============================================================================
+// High-Performance Bounded TTL / LRU Cache to Prevent Memory Leaks
+// ============================================================================
+export class BoundedTTLCache {
+  constructor(maxSize = 200, ttlMs = 45000) {
+    this.maxSize = maxSize;
+    this.ttlMs = ttlMs;
+    this.cache = new Map();
+  }
+
+  get(key) {
+    if (!this.cache.has(key)) return null;
+    const entry = this.cache.get(key);
+    if (Date.now() - entry.time > this.ttlMs) {
+      this.cache.delete(key);
+      return null;
+    }
+    // Refresh access order (LRU)
+    this.cache.delete(key);
+    this.cache.set(key, entry);
+    return entry.data;
+  }
+
+  set(key, data) {
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    } else if (this.cache.size >= this.maxSize) {
+      // Evict oldest (least recently used)
+      const oldestKey = this.cache.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.cache.delete(oldestKey);
+      }
+    }
+    this.cache.set(key, { data, time: Date.now() });
+  }
+
+  has(key) {
+    return this.get(key) !== null;
+  }
+
+  delete(key) {
+    return this.cache.delete(key);
+  }
+
+  clear() {
+    this.cache.clear();
+  }
+
+  get size() {
+    return this.cache.size;
+  }
+}
+
+// Bounded in-memory caches (Strictly capped size + TTL to prevent unbounded growth)
+export const quoteCache = new BoundedTTLCache(200, 30000);   // 30s TTL, max 200 items
+export const newsCache = new BoundedTTLCache(200, 180000);   // 3 min TTL, max 200 items
+
 let cachedScan = {
   data: [],
   timestamp: 0
@@ -132,14 +187,12 @@ export function resolveStockMetadata(symbol) {
 
 /**
  * Fetches real-time price feed from exchanges using Yahoo Finance v8 chart API
+ * Guaranteed zero timer leak with try...finally cleanup.
  */
 export async function fetchLiveStockFeed(ticker) {
-  const now = Date.now();
-  if (quoteCache.has(ticker)) {
-    const cached = quoteCache.get(ticker);
-    if (now - cached.time < 30000) {
-      return cached.data;
-    }
+  const cached = quoteCache.get(ticker);
+  if (cached) {
+    return cached;
   }
 
   const endpoints = [
@@ -148,14 +201,14 @@ export async function fetchLiveStockFeed(ticker) {
   ];
 
   for (const url of endpoints) {
+    let timeoutId;
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      timeoutId = setTimeout(() => controller.abort(), 4000);
       const res = await fetch(url, {
         headers: YAHOO_HEADERS,
         signal: controller.signal
       });
-      clearTimeout(timeoutId);
 
       if (res.ok) {
         const json = await res.json();
@@ -179,11 +232,17 @@ export async function fetchLiveStockFeed(ticker) {
             is_live_available: true
           };
 
-          quoteCache.set(ticker, { data: quoteData, time: now });
+          quoteCache.set(ticker, quoteData);
           return quoteData;
         }
       }
-    } catch (_) {}
+    } catch (_) {
+      // Gracefully handled; try next fallback endpoint
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId); // Critical: eliminates timer handle leaks
+      }
+    }
   }
 
   return null;
@@ -191,8 +250,16 @@ export async function fetchLiveStockFeed(ticker) {
 
 /**
  * Ingests live financial breaking news & earnings via real-time RSS
+ * Uses newsCache to minimize rate limits and memory footprint.
  */
 export async function fetchLiveNewsArticle(symbol, companyName, market) {
+  const cacheKey = `${symbol}_${market}`;
+  const cached = newsCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  let timeoutId;
   try {
     const cleanName = companyName.split('(')[0].replace(/Ltd|Limited|Corporation|Inc\./gi, '').trim();
     const query = market === 'US'
@@ -205,12 +272,11 @@ export async function fetchLiveNewsArticle(symbol, companyName, market) {
     const rssUrl = `https://news.google.com/rss/search?q=${encoded}+when:5d&hl=en&gl=${gl}&ceid=${ceid}`;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    timeoutId = setTimeout(() => controller.abort(), 3500);
     const res = await fetch(rssUrl, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
       signal: controller.signal
     });
-    clearTimeout(timeoutId);
 
     if (res.ok) {
       const text = await res.text();
@@ -220,10 +286,17 @@ export async function fetchLiveNewsArticle(symbol, companyName, market) {
         const rawTitle = match[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim();
         const pubDate = match[2].trim().slice(0, 16);
         const source = match[3].replace(/<!\[CDATA\[|\]\]>/g, '').trim() || "Financial Press";
-        return { headline: rawTitle, source, published_at: pubDate };
+        const article = { headline: rawTitle, source, published_at: pubDate };
+        newsCache.set(cacheKey, article);
+        return article;
       }
     }
-  } catch (_) {}
+  } catch (_) {
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId); // Critical: eliminates timer handle leaks
+    }
+  }
 
   return null;
 }
@@ -248,24 +321,32 @@ export async function getLiveMarketRegimes() {
     ];
 
     for (const item of indices) {
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(item.symbol)}?range=1y&interval=1d`;
-      const res = await fetch(url, { headers: YAHOO_HEADERS });
-      if (res.ok) {
-        const json = await res.json();
-        const closes = json?.chart?.result?.[0]?.indicators?.quote?.[0]?.close?.filter(Boolean) || [];
-        if (closes.length >= 50) {
-          const current = closes[closes.length - 1];
-          const sma50 = closes.slice(-50).reduce((a, b) => a + b, 0) / 50;
-          const sma200 = closes.length >= 200 ? closes.slice(-200).reduce((a, b) => a + b, 0) / 200 : sma50;
-          
-          if (current > sma50 && sma50 >= sma200) {
-            marketRegimes[item.market] = "BULL";
-          } else if (current < sma50 && (current < sma200 || current < sma50 * 0.98)) {
-            marketRegimes[item.market] = "BEAR";
-          } else {
-            marketRegimes[item.market] = "CHOPPY";
+      let timeoutId;
+      try {
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(item.symbol)}?range=1y&interval=1d`;
+        const controller = new AbortController();
+        timeoutId = setTimeout(() => controller.abort(), 4000);
+        const res = await fetch(url, { headers: YAHOO_HEADERS, signal: controller.signal });
+        if (res.ok) {
+          const json = await res.json();
+          const closes = json?.chart?.result?.[0]?.indicators?.quote?.[0]?.close?.filter(Boolean) || [];
+          if (closes.length >= 50) {
+            const current = closes[closes.length - 1];
+            const sma50 = closes.slice(-50).reduce((a, b) => a + b, 0) / 50;
+            const sma200 = closes.length >= 200 ? closes.slice(-200).reduce((a, b) => a + b, 0) / 200 : sma50;
+            
+            if (current > sma50 && sma50 >= sma200) {
+              marketRegimes[item.market] = "BULL";
+            } else if (current < sma50 && (current < sma200 || current < sma50 * 0.98)) {
+              marketRegimes[item.market] = "BEAR";
+            } else {
+              marketRegimes[item.market] = "CHOPPY";
+            }
           }
         }
+      } catch (_) {
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
       }
     }
     lastRegimeCheck = now;

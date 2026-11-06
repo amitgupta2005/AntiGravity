@@ -1,32 +1,38 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Zap, Rocket, ShieldCheck, Activity } from 'lucide-react';
 
 export default function SummaryCards({ catalysts }) {
   const total = catalysts.length;
   
-  // Top Intraday
-  const intradayList = catalysts.filter(c => c.timeframe === 'Intraday');
-  const topIntraday = intradayList.sort((a, b) => b.catalyst_score - a.catalyst_score)[0] || {
-    display_ticker: 'TATAMOTORS',
-    projected_roi_pct: 4.5,
-    currency: '₹'
-  };
+  // Memoized top intraday, delivery, and average R:R calculations
+  const { topIntraday, topDelivery, avgRR } = useMemo(() => {
+    const intradayList = catalysts.filter(c => c.timeframe === 'Intraday');
+    const bestIntraday = intradayList.sort((a, b) => b.catalyst_score - a.catalyst_score)[0] || {
+      display_ticker: 'TATAMOTORS',
+      projected_roi_pct: 4.5,
+      currency: '₹'
+    };
 
-  // Top Short-term
-  const deliveryList = catalysts.filter(c => c.timeframe === 'Short-term');
-  const topDelivery = deliveryList.sort((a, b) => b.projected_roi_pct - a.projected_roi_pct)[0] || {
-    display_ticker: 'DIXON',
-    projected_roi_pct: 38.0,
-    currency: '₹'
-  };
+    const deliveryList = catalysts.filter(c => c.timeframe === 'Short-term');
+    const bestDelivery = deliveryList.sort((a, b) => b.projected_roi_pct - a.projected_roi_pct)[0] || {
+      display_ticker: 'DIXON',
+      projected_roi_pct: 38.0,
+      currency: '₹'
+    };
 
-  // Average R:R
-  const avgRR = catalysts.length > 0 
-    ? (catalysts.reduce((acc, c) => {
-        const val = parseFloat(c.risk_reward_ratio?.replace('1 : ', '')) || 2.5;
-        return acc + val;
-      }, 0) / catalysts.length).toFixed(1)
-    : '3.2';
+    const calculatedAvgRR = catalysts.length > 0 
+      ? (catalysts.reduce((acc, c) => {
+          const val = parseFloat(c.risk_reward_ratio?.replace('1 : ', '')) || 2.5;
+          return acc + val;
+        }, 0) / catalysts.length).toFixed(1)
+      : '3.2';
+
+    return {
+      topIntraday: bestIntraday,
+      topDelivery: bestDelivery,
+      avgRR: calculatedAvgRR
+    };
+  }, [catalysts]);
 
   return (
     <div className="summary-cards-grid">

@@ -1,8 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Copy, Check, ShieldAlert, Zap, Rocket, AlertTriangle, ShieldCheck } from 'lucide-react';
 
 export default function CatalystModal({ catalyst, onClose }) {
   const [copied, setCopied] = useState(false);
+  const copyTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (!catalyst) return null;
 
@@ -39,7 +48,12 @@ Breaking Catalyst:
 
     navigator.clipboard.writeText(text);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current);
+    }
+    copyTimeoutRef.current = setTimeout(() => {
+      setCopied(false);
+    }, 2500);
   };
 
   return (

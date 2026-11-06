@@ -17,19 +17,60 @@ import yfinance as yf
 
 from stock_universe import INDIAN_STOCKS, US_STOCKS, get_stock_info
 
+import threading
+from collections import OrderedDict
+
 logger = logging.getLogger("DataIngestion")
 logging.basicConfig(level=logging.INFO)
 
-# In-memory quote & news caches with TTL
-_QUOTE_CACHE: Dict[str, Dict[str, Any]] = {}
-_QUOTE_TIMESTAMP: Dict[str, float] = {}
-_NEWS_CACHE: Dict[str, List[Dict[str, Any]]] = {}
-_NEWS_TIMESTAMP: Dict[str, float] = {}
+# ============================================================================
+# High-Performance Thread-Safe Bounded TTL / LRU Cache to Prevent Memory Leaks
+# ============================================================================
+class BoundedTTLCache:
+    """Thread-safe bounded LRU and TTL cache to guarantee zero memory leaks."""
+    def __init__(self, maxsize: int = 200, ttl: float = 60.0):
+        self.maxsize = maxsize
+        self.ttl = ttl
+        self._cache = OrderedDict()
+        self._lock = threading.Lock()
+
+    def get(self, key: str, default=None):
+        with self._lock:
+            if key not in self._cache:
+                return default
+            val, timestamp = self._cache[key]
+            if time.time() - timestamp > self.ttl:
+                del self._cache[key]
+                return default
+            # Refresh LRU position
+            self._cache.move_to_end(key)
+            return val
+
+    def set(self, key: str, value: Any):
+        with self._lock:
+            if key in self._cache:
+                del self._cache[key]
+            elif len(self._cache) >= self.maxsize:
+                # Evict least recently used (oldest inserted / accessed)
+                self._cache.popitem(last=False)
+            self._cache[key] = (value, time.time())
+
+    def __contains__(self, key: str) -> bool:
+        return self.get(key) is not None
+
+    def __len__(self) -> int:
+        with self._lock:
+            return len(self._cache)
+
+    def clear(self):
+        with self._lock:
+            self._cache.clear()
+
+# Thread-safe bounded caches
+_QUOTE_CACHE = BoundedTTLCache(maxsize=200, ttl=60.0)      # 1 minute quote cache, max 200 items
+_NEWS_CACHE = BoundedTTLCache(maxsize=200, ttl=300.0)      # 5 minutes news cache, max 200 items
 _SCAN_CACHE: List[Any] = []
 _SCAN_TIMESTAMP: float = 0.0
-
-QUOTE_CACHE_TTL = 60       # 1 minute quote cache
-NEWS_CACHE_TTL = 300       # 5 minutes news cache
 SCAN_CACHE_TTL = 90        # 90 seconds scan cache
 
 def fetch_live_quote(symbol: str) -> Dict[str, Any]:
@@ -37,9 +78,9 @@ def fetch_live_quote(symbol: str) -> Dict[str, Any]:
     Fetches real-time market price, day change %, day volume, and 52W range from exchanges via yfinance.
     Uses in-memory cache to maintain speed and avoid rate limits.
     """
-    now = time.time()
-    if symbol in _QUOTE_CACHE and (now - _QUOTE_TIMESTAMP.get(symbol, 0)) < QUOTE_CACHE_TTL:
-        return _QUOTE_CACHE[symbol]
+    cached = _QUOTE_CACHE.get(symbol)
+    if cached is not None:
+        return cached
 
     meta = get_stock_info(symbol)
     quote_data = {
@@ -87,8 +128,7 @@ def fetch_live_quote(symbol: str) -> Dict[str, Any]:
     except Exception as e:
         logger.warning(f"Error fetching real-time quote for {symbol} via yfinance: {e}")
 
-    _QUOTE_CACHE[symbol] = quote_data
-    _QUOTE_TIMESTAMP[symbol] = now
+    _QUOTE_CACHE.set(symbol, quote_data)
     return quote_data
 
 def fetch_live_news_feed(symbol: str, company_name: str, market: str) -> List[Dict[str, Any]]:
@@ -97,10 +137,10 @@ def fetch_live_news_feed(symbol: str, company_name: str, market: str) -> List[Di
     - US Equities: Yahoo Finance Live RSS feed (feeds.finance.yahoo.com)
     - Indian Equities: Google News Live Financial RSS for Indian markets
     """
-    now = time.time()
     cache_key = f"{symbol}:{market}"
-    if cache_key in _NEWS_CACHE and (now - _NEWS_TIMESTAMP.get(cache_key, 0)) < NEWS_CACHE_TTL:
-        return _NEWS_CACHE[cache_key]
+    cached = _NEWS_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
 
     news_items = []
     headers = {
@@ -146,8 +186,7 @@ def fetch_live_news_feed(symbol: str, company_name: str, market: str) -> List[Di
     except Exception as e:
         logger.warning(f"Error fetching live news feed for {symbol} ({market}): {e}")
 
-    _NEWS_CACHE[cache_key] = news_items
-    _NEWS_TIMESTAMP[cache_key] = now
+    _NEWS_CACHE.set(cache_key, news_items)
     return news_items
 
 def classify_live_catalyst(headline: str, quote: Dict[str, Any]) -> Dict[str, Any]:

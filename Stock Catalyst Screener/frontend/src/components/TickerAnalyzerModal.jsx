@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Search, Sparkles, AlertCircle } from 'lucide-react';
 import { analyzeCustomStockOnDemand } from '../services/catalystEngine';
 
@@ -6,6 +6,14 @@ export default function TickerAnalyzerModal({ isOpen, onClose, onAnalyzeComplete
   const [tickerInput, setTickerInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   if (!isOpen) return null;
 
@@ -19,12 +27,18 @@ export default function TickerAnalyzerModal({ isOpen, onClose, onAnalyzeComplete
 
     try {
       const data = await analyzeCustomStockOnDemand(sym);
-      onAnalyzeComplete(data);
-      onClose();
+      if (isMountedRef.current) {
+        onAnalyzeComplete(data);
+        onClose();
+      }
     } catch (err) {
-      setError(err.message || 'Error analyzing ticker. Please check the symbol and try again.');
+      if (isMountedRef.current) {
+        setError(err.message || 'Error analyzing ticker. Please check the symbol and try again.');
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
