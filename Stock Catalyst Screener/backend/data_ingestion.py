@@ -67,20 +67,21 @@ class BoundedTTLCache:
             self._cache.clear()
 
 # Thread-safe bounded caches
-_QUOTE_CACHE = BoundedTTLCache(maxsize=200, ttl=60.0)      # 1 minute quote cache, max 200 items
+_QUOTE_CACHE = BoundedTTLCache(maxsize=200, ttl=5.0)       # 5 seconds quote cache for intraday auto-scan
 _NEWS_CACHE = BoundedTTLCache(maxsize=200, ttl=300.0)      # 5 minutes news cache, max 200 items
 _SCAN_CACHE: List[Any] = []
 _SCAN_TIMESTAMP: float = 0.0
-SCAN_CACHE_TTL = 90        # 90 seconds scan cache
+SCAN_CACHE_TTL = 5         # 5 seconds scan cache
 
-def fetch_live_quote(symbol: str) -> Dict[str, Any]:
+def fetch_live_quote(symbol: str, force_refresh: bool = False) -> Dict[str, Any]:
     """
     Fetches real-time market price, day change %, day volume, and 52W range from exchanges via yfinance.
     Uses in-memory cache to maintain speed and avoid rate limits.
     """
-    cached = _QUOTE_CACHE.get(symbol)
-    if cached is not None:
-        return cached
+    if not force_refresh:
+        cached = _QUOTE_CACHE.get(symbol)
+        if cached is not None:
+            return cached
 
     meta = get_stock_info(symbol)
     quote_data = {
@@ -253,7 +254,9 @@ def scan_all_live_catalysts(force_refresh: bool = False) -> List[Any]:
     """
     global _SCAN_CACHE, _SCAN_TIMESTAMP
     now = time.time()
-    if not force_refresh and _SCAN_CACHE and (now - _SCAN_TIMESTAMP) < SCAN_CACHE_TTL:
+    if force_refresh:
+        _QUOTE_CACHE.clear()
+    elif _SCAN_CACHE and (now - _SCAN_TIMESTAMP) < SCAN_CACHE_TTL:
         return _SCAN_CACHE
 
     from ai_analyzer import evaluate_stock_catalyst
@@ -265,7 +268,7 @@ def scan_all_live_catalysts(force_refresh: bool = False) -> List[Any]:
         sym = stock["ticker"]
         try:
             # 1. Fetch live real-time quote directly from exchange
-            quote = fetch_live_quote(sym)
+            quote = fetch_live_quote(sym, force_refresh=force_refresh)
             if quote["current_price"] <= 0:
                 continue
 

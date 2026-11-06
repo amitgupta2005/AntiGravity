@@ -69,6 +69,7 @@ const btnSearchGo = document.getElementById("btn-search-go");
 const btnManualScan = document.getElementById("btn-manual-scan");
 const scanBtnLabel = document.getElementById("scan-btn-label");
 const autoRefreshSelect = document.getElementById("auto-refresh-select");
+const autoScanPulseBadge = document.getElementById("auto-scan-pulse-badge");
 const btnSoundToggle = document.getElementById("btn-sound-toggle");
 const soundIcon = document.getElementById("sound-icon");
 const soundLabel = document.getElementById("sound-label");
@@ -694,7 +695,12 @@ function updateLegend(param) {
 // ============================================================================
 // Screener & API Interactions
 // ============================================================================
+let isScanInFlight = false;
+
 async function fetchScreener(marketKey = currentMarket, isAuto = false) {
+  if (isScanInFlight) return;
+  isScanInFlight = true;
+
   if (!isAuto) {
     scanBtnLabel.textContent = "Scanning...";
     btnManualScan.disabled = true;
@@ -704,9 +710,8 @@ async function fetchScreener(marketKey = currentMarket, isAuto = false) {
   const timeoutId = setTimeout(() => controller.abort(), 15000);
 
   try {
-    const url = `/api/scan?market=${encodeURIComponent(marketKey)}`;
+    const url = `/api/scan?market=${encodeURIComponent(marketKey)}&force_refresh=${isAuto ? 'true' : 'false'}`;
     const res = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeoutId);
     const data = await res.json();
 
     if (data.status === "OK") {
@@ -740,6 +745,8 @@ async function fetchScreener(marketKey = currentMarket, isAuto = false) {
       stockCardsContainer.innerHTML = `<div class="state-container"><p style="color:#ef4444;">Failed to fetch scan results. Check internet connection.</p></div>`;
     }
   } finally {
+    clearTimeout(timeoutId);
+    isScanInFlight = false;
     if (!isAuto) {
       scanBtnLabel.textContent = "Scan";
       btnManualScan.disabled = false;
@@ -1776,6 +1783,19 @@ function setupEventListeners() {
     setupAutoRefresh();
   });
 
+  if (autoScanPulseBadge) {
+    autoScanPulseBadge.style.cursor = "pointer";
+    autoScanPulseBadge.addEventListener("click", () => {
+      const currentVal = parseInt(autoRefreshSelect.value, 10);
+      autoRefreshSelect.value = currentVal === 5 ? "0" : "5";
+      localStorage.setItem("apex_auto_refresh", autoRefreshSelect.value);
+      setupAutoRefresh();
+      if (autoRefreshSelect.value === "5") {
+        fetchScreener(currentMarket, true);
+      }
+    });
+  }
+
   // Replay Simulator Controls
   btnReplayToggle.addEventListener("click", toggleReplayMode);
   replayPlayBtn.addEventListener("click", () => {
@@ -2328,10 +2348,24 @@ function setupAutoRefresh() {
   }
 
   const secs = parseInt(autoRefreshSelect.value, 10);
+  if (autoScanPulseBadge) {
+    if (secs > 0) {
+      autoScanPulseBadge.classList.remove("paused");
+      autoScanPulseBadge.classList.add("active");
+      const beaconText = autoScanPulseBadge.querySelector(".pulse-beacon-text");
+      if (beaconText) beaconText.textContent = `${secs}s Live`;
+    } else {
+      autoScanPulseBadge.classList.remove("active");
+      autoScanPulseBadge.classList.add("paused");
+      const beaconText = autoScanPulseBadge.querySelector(".pulse-beacon-text");
+      if (beaconText) beaconText.textContent = `Auto Off`;
+    }
+  }
+
   if (secs > 0) {
     autoRefreshTimer = setInterval(() => {
-      // Pause automatic background polling when tab is hidden or during historical replay
-      if (!isReplayActive && !document.hidden) {
+      // Pause automatic background polling when tab is hidden, during historical replay, or if scan already in flight
+      if (!isReplayActive && !document.hidden && !isScanInFlight) {
         fetchScreener(currentMarket, true);
       }
     }, secs * 1000);

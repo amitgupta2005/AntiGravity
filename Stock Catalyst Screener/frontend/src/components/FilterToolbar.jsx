@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, RotateCw, Globe, Zap, Rocket, Filter } from 'lucide-react';
+import { Search, RotateCw, Globe, Zap, Rocket, Filter, Activity } from 'lucide-react';
 
 export default function FilterToolbar({
   market,
@@ -11,7 +11,10 @@ export default function FilterToolbar({
   search,
   setSearch,
   onRefresh,
-  loading
+  loading,
+  autoScan,
+  setAutoScan,
+  isAutoScanActive
 }) {
   return (
     <div className="toolbar-container">
@@ -71,7 +74,7 @@ export default function FilterToolbar({
         </div>
       </div>
 
-      {/* Bottom Controls Row: Direction, Search & Refresh */}
+      {/* Bottom Controls Row: Direction, Search, Auto-Scan & Refresh */}
       <div className="toolbar-row">
         {/* Direction Filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -111,6 +114,18 @@ export default function FilterToolbar({
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+
+        {/* Auto-Scan 5s Status / Toggle Button */}
+        <button
+          type="button"
+          className={`btn-auto-scan ${isAutoScanActive ? 'active' : 'paused'}`}
+          onClick={() => setAutoScan(prev => !prev)}
+          title={isAutoScanActive ? "Auto-Scan active: Scanning live exchange feeds every 5 seconds (Click to pause)" : "Auto-Scan paused: Click to enable 5s live exchange scanning"}
+        >
+          <span className="pulse-beacon"></span>
+          <Activity size={14} />
+          <span>{isAutoScanActive ? 'Auto-Scan: 5s' : 'Auto-Scan: Off'}</span>
+        </button>
 
         {/* Re-scan / Refresh Button */}
         <button

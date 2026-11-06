@@ -22,9 +22,12 @@ export default function App() {
   const [timeframe, setTimeframe] = useState('All');
   const [direction, setDirection] = useState('All');
   const [search, setSearch] = useState('');
+  const [autoScan, setAutoScan] = useState(true);
 
-  // Unmounted lifecycle guard
+  // Unmounted lifecycle guard & In-Flight Concurrency Guard
   const isMountedRef = useRef(true);
+  const inFlightRef = useRef(false);
+
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -32,13 +35,16 @@ export default function App() {
     };
   }, []);
 
-  // Live Exchange Scanning Routine (No hardcoding, live feeds only)
-  const runLiveScan = useCallback(async (forceRefresh = false) => {
-    if (!isMountedRef.current) return;
-    setLoading(true);
+  // Live Exchange Scanning Routine (Supports silent 5s background ticks)
+  const runLiveScan = useCallback(async (forceRefresh = false, isSilent = false) => {
+    if (!isMountedRef.current || inFlightRef.current) return;
+    inFlightRef.current = true;
+    if (!isSilent) {
+      setLoading(true);
+    }
     try {
       const results = await scanAllLiveStocks((progress) => {
-        if (isMountedRef.current) {
+        if (isMountedRef.current && !isSilent) {
           setScanProgress(`Analyzing ${progress.ticker} (${progress.current}/${progress.total})...`);
         }
       }, forceRefresh);
@@ -49,7 +55,8 @@ export default function App() {
     } catch (err) {
       console.warn('Error during live exchange scan:', err);
     } finally {
-      if (isMountedRef.current) {
+      inFlightRef.current = false;
+      if (isMountedRef.current && !isSilent) {
         setLoading(false);
         setScanProgress(null);
       }
@@ -81,6 +88,33 @@ export default function App() {
     runLiveScan(false);
     fetchMarkets();
   }, [runLiveScan, fetchMarkets]);
+
+  // Auto-scan every 5 seconds for Intraday (or when autoScan is enabled)
+  const isAutoScanActive = autoScan || timeframe === 'Intraday';
+
+  useEffect(() => {
+    if (!isAutoScanActive) return;
+
+    const intervalId = setInterval(() => {
+      // Pause automatic background polling when tab is hidden or scan already in flight
+      if (!document.hidden && !inFlightRef.current && isMountedRef.current) {
+        runLiveScan(true, true);
+      }
+    }, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [isAutoScanActive, runLiveScan]);
+
+  // Instant refresh on returning to tab if auto-scan is active
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (!document.hidden && isAutoScanActive && isMountedRef.current && !inFlightRef.current) {
+        runLiveScan(true, true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [isAutoScanActive, runLiveScan]);
 
   // Handle addition of custom ticker recommendation
   const handleCustomTickerAnalyzed = useCallback((rec) => {
@@ -134,8 +168,11 @@ export default function App() {
         setDirection={setDirection}
         search={search}
         setSearch={setSearch}
-        onRefresh={() => runLiveScan(true)}
+        onRefresh={() => runLiveScan(true, false)}
         loading={loading}
+        autoScan={autoScan}
+        setAutoScan={setAutoScan}
+        isAutoScanActive={isAutoScanActive}
       />
 
       {/* Live Scan Status Banner */}

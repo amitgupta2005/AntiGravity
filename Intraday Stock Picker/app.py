@@ -152,7 +152,8 @@ def get_market_status():
 @app.get("/api/scan")
 def scan_stocks(
     market: str = Query("NSE_MOMENTUM", description="Market key: NSE_MOMENTUM or US_MOMENTUM"),
-    custom: Optional[str] = Query(None, description="Comma-separated custom ticker symbols")
+    custom: Optional[str] = Query(None, description="Comma-separated custom ticker symbols"),
+    force_refresh: bool = Query(False, description="Bypass cache for real-time 5s auto-scan")
 ):
     """
     Scans stocks in real-time, calculates technical setups, scores momentum,
@@ -160,7 +161,7 @@ def scan_stocks(
     """
     market_str = market if isinstance(market, str) else "NSE_MOMENTUM"
     custom_list = [c.strip().upper() for c in custom.split(",") if c.strip()] if isinstance(custom, str) and custom.strip() else None
-    results = scan_watchlist(market_str, custom_tickers=custom_list)
+    results = scan_watchlist(market_str, custom_tickers=custom_list, force_refresh=force_refresh)
 
     # Timezone normalization: IST for India stocks, EST for US stocks
     is_india = ("NSE" in market_str) or ("INDIA" in market_str) or (custom_list and any((".NS" in c or ".BO" in c) for c in custom_list)) or (len(results) > 0 and results[0].get("is_india"))

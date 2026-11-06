@@ -149,14 +149,14 @@ export class BoundedTTLCache {
 }
 
 // Bounded in-memory caches (Strictly capped size + TTL to prevent unbounded growth)
-export const quoteCache = new BoundedTTLCache(200, 30000);   // 30s TTL, max 200 items
+export const quoteCache = new BoundedTTLCache(200, 5000);   // 5s TTL for intraday updates, max 200 items
 export const newsCache = new BoundedTTLCache(200, 180000);   // 3 min TTL, max 200 items
 
 let cachedScan = {
   data: [],
   timestamp: 0
 };
-const CACHE_TTL_MS = 60000; // 60s cache
+const CACHE_TTL_MS = 5000; // 5s cache for real-time auto-scans
 
 /**
  * Resolve ticker symbol into stock metadata
@@ -189,10 +189,12 @@ export function resolveStockMetadata(symbol) {
  * Fetches real-time price feed from exchanges using Yahoo Finance v8 chart API
  * Guaranteed zero timer leak with try...finally cleanup.
  */
-export async function fetchLiveStockFeed(ticker) {
-  const cached = quoteCache.get(ticker);
-  if (cached) {
-    return cached;
+export async function fetchLiveStockFeed(ticker, forceRefresh = false) {
+  if (!forceRefresh) {
+    const cached = quoteCache.get(ticker);
+    if (cached) {
+      return cached;
+    }
   }
 
   const endpoints = [
@@ -610,7 +612,9 @@ export async function fetchDynamicTrendingTickers() {
  */
 export async function runFullLiveScan(forceRefresh = false) {
   const now = Date.now();
-  if (!forceRefresh && cachedScan.data.length > 0 && (now - cachedScan.timestamp) < CACHE_TTL_MS) {
+  if (forceRefresh) {
+    quoteCache.clear();
+  } else if (cachedScan.data.length > 0 && (now - cachedScan.timestamp) < CACHE_TTL_MS) {
     return cachedScan.data;
   }
 
@@ -640,7 +644,7 @@ export async function runFullLiveScan(forceRefresh = false) {
     const chunk = allCandidates.slice(i, i + CHUNK_SIZE);
     const chunkResults = await Promise.allSettled(chunk.map(async (stock) => {
       // 1. Fetch live exchange quote
-      const quote = await fetchLiveStockFeed(stock.ticker);
+      const quote = await fetchLiveStockFeed(stock.ticker, forceRefresh);
       if (!quote || !quote.is_live_available || quote.current_price <= 0) {
         return null; // Exclude stocks whose live market feed is not available!
       }

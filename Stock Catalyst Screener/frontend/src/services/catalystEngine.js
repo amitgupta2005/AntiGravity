@@ -140,12 +140,12 @@ export class BoundedTTLCache {
 }
 
 // Bounded in-memory caches (Strictly capped size + TTL to prevent unbounded heap growth)
-export const quoteCache = new BoundedTTLCache(200, 30000);   // 30s TTL, max 200 items
+export const quoteCache = new BoundedTTLCache(200, 5000);   // 5s TTL for intraday live updates, max 200 items
 export const newsCache = new BoundedTTLCache(200, 180000);   // 3 min TTL, max 200 items
 
 let lastScanResults = [];
 let lastScanTime = 0;
-const SCAN_CACHE_TTL_MS = 60000; // 60 seconds cache
+const SCAN_CACHE_TTL_MS = 5000; // 5 seconds cache for real-time auto-scans
 
 /**
  * Normalizes user-entered ticker string into stock metadata
@@ -178,12 +178,14 @@ export function resolveStockMetadata(symbol) {
  * Fetches real-time price feed from exchanges using Yahoo Finance v8 chart API
  * Guaranteed zero timer leak with try...finally cleanup.
  */
-export async function fetchLiveStockFeed(symbol) {
+export async function fetchLiveStockFeed(symbol, forceRefresh = false) {
   const meta = resolveStockMetadata(symbol);
   
-  const cached = quoteCache.get(meta.ticker);
-  if (cached) {
-    return cached;
+  if (!forceRefresh) {
+    const cached = quoteCache.get(meta.ticker);
+    if (cached) {
+      return cached;
+    }
   }
 
   const endpoints = [
@@ -538,7 +540,9 @@ export function evaluateLiveCatalyst(quote, newsArticle, marketRegime = "BULL") 
  */
 export async function scanAllLiveStocks(onProgress, forceRefresh = false) {
   const now = Date.now();
-  if (!forceRefresh && lastScanResults.length > 0 && (now - lastScanTime) < SCAN_CACHE_TTL_MS) {
+  if (forceRefresh) {
+    quoteCache.clear();
+  } else if (lastScanResults.length > 0 && (now - lastScanTime) < SCAN_CACHE_TTL_MS) {
     return lastScanResults;
   }
 
@@ -574,7 +578,7 @@ export async function scanAllLiveStocks(onProgress, forceRefresh = false) {
 
     try {
       // 1. Fetch real-time market quote from exchange
-      const quote = await fetchLiveStockFeed(stock.ticker);
+      const quote = await fetchLiveStockFeed(stock.ticker, forceRefresh);
       if (!quote || !quote.is_live_available || quote.current_price <= 0) {
         continue; // Only include stocks whose live market feed is actively available!
       }

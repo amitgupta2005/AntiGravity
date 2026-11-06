@@ -272,7 +272,7 @@ WATCHLISTS["ALL_OPPORTUNITIES"] = {
     "stocks": _build_aggregate_stocks("ALL_INDIA", "ALL_US")
 }
 
-CACHE_TTL_SECONDS = 20  # 20 seconds cache for rapid scans
+CACHE_TTL_SECONDS = 5  # 5 seconds cache for real-time 5s auto-scans
 
 class BoundedTTLCache:
     """
@@ -696,10 +696,11 @@ def get_chart_data(ticker: str, timeframe: str = "1m", force_refresh: bool = Fal
     }
 
 
-def scan_watchlist(watchlist_key: str = "NSE_MOMENTUM", custom_tickers: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+def scan_watchlist(watchlist_key: str = "NSE_MOMENTUM", custom_tickers: Optional[List[str]] = None, force_refresh: bool = False) -> List[Dict[str, Any]]:
     """
     Scans multiple stocks in parallel and sorts by Intraday Score & Momentum.
     Utilizes Angel One SmartAPI live market feed for real-time Indian NSE quotes.
+    Supports force_refresh for sub-5s real-time market ticks.
     """
     if custom_tickers and len(custom_tickers) > 0:
         raw_targets = [{"ticker": t.strip().upper(), "name": t.strip().upper()} for t in custom_tickers if t.strip()]
@@ -739,6 +740,7 @@ def scan_watchlist(watchlist_key: str = "NSE_MOMENTUM", custom_tickers: Optional
                 item["ticker"],
                 item.get("name", ""),
                 cap=item.get("cap"),
+                force_refresh=force_refresh,
                 live_quote=l_quote
             )
         except Exception as err:
