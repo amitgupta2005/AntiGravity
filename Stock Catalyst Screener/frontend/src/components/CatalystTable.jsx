@@ -1,9 +1,87 @@
-import React, { useState, useMemo } from 'react';
-import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Zap, Rocket, TrendingUp, TrendingDown, Info } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Zap, Rocket, TrendingUp, TrendingDown, Info, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function CatalystTable({ catalysts, onSelectCatalyst }) {
   const [sortColumn, setSortColumn] = useState('catalyst_score');
   const [sortDirection, setSortDirection] = useState('desc'); // 'asc' or 'desc'
+  const tableWrapperRef = useRef(null);
+
+  const SCROLL_STEP = 200; // Column scroll shift per key press
+
+  const scrollTable = useCallback((direction) => {
+    if (!tableWrapperRef.current) return;
+    const container = tableWrapperRef.current;
+    const delta = direction === 'left' ? -SCROLL_STEP : SCROLL_STEP;
+    if (typeof container.scrollBy === 'function') {
+      container.scrollBy({ left: delta, behavior: 'smooth' });
+    } else {
+      container.scrollLeft = (container.scrollLeft || 0) + delta;
+    }
+  }, []);
+
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      scrollTable('left');
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      scrollTable('right');
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      if (tableWrapperRef.current) {
+        if (typeof tableWrapperRef.current.scrollTo === 'function') {
+          tableWrapperRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+        } else {
+          tableWrapperRef.current.scrollLeft = 0;
+        }
+      }
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      if (tableWrapperRef.current) {
+        const maxScroll = tableWrapperRef.current.scrollWidth || 0;
+        if (typeof tableWrapperRef.current.scrollTo === 'function') {
+          tableWrapperRef.current.scrollTo({ left: maxScroll, behavior: 'smooth' });
+        } else {
+          tableWrapperRef.current.scrollLeft = maxScroll;
+        }
+      }
+    }
+  }, [scrollTable]);
+
+  // Global arrow key listener for seamless table navigation
+  useEffect(() => {
+    const handleGlobalKey = (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+
+      // Do not hijack arrow keys when user is typing in search bar or form inputs
+      if (typeof document !== 'undefined' && document.activeElement) {
+        const activeTag = document.activeElement.tagName ? document.activeElement.tagName.toLowerCase() : '';
+        if (
+          document.activeElement.isContentEditable ||
+          activeTag === 'input' ||
+          activeTag === 'textarea' ||
+          activeTag === 'select'
+        ) {
+          return;
+        }
+
+        // If a modal dialog is currently open, let modal handle keyboard events
+        if (document.querySelector('.modal-overlay')) {
+          return;
+        }
+      }
+
+      if (!tableWrapperRef.current) return;
+
+      e.preventDefault();
+      scrollTable(e.key === 'ArrowLeft' ? 'left' : 'right');
+    };
+
+    window.addEventListener('keydown', handleGlobalKey);
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKey);
+    };
+  }, [scrollTable]);
 
   const handleSort = (column) => {
     if (sortColumn === column) {
@@ -61,7 +139,43 @@ export default function CatalystTable({ catalysts, onSelectCatalyst }) {
 
   return (
     <div className="table-card-container">
-      <div className="table-responsive-wrapper">
+      {/* Horizontal Scroll Toolbar & Arrow Key Hint */}
+      <div className="table-header-toolbar">
+        <div className="table-scroll-hint">
+          <span className="kbd-badge">←</span>
+          <span className="kbd-badge">→</span>
+          <span>Use Left &amp; Right arrow keys to scroll columns horizontally</span>
+        </div>
+        <div className="table-scroll-nav-buttons">
+          <button 
+            type="button" 
+            className="btn-scroll-arrow" 
+            onClick={() => scrollTable('left')}
+            title="Scroll columns left (or press ← key)"
+            aria-label="Scroll left"
+          >
+            <ChevronLeft size={15} />
+          </button>
+          <button 
+            type="button" 
+            className="btn-scroll-arrow" 
+            onClick={() => scrollTable('right')}
+            title="Scroll columns right (or press → key)"
+            aria-label="Scroll right"
+          >
+            <ChevronRight size={15} />
+          </button>
+        </div>
+      </div>
+
+      <div 
+        ref={tableWrapperRef}
+        className="table-responsive-wrapper"
+        tabIndex={0}
+        role="region"
+        aria-label="Catalyst Screener Table (use left and right arrow keys to scroll horizontally)"
+        onKeyDown={handleKeyDown}
+      >
         <table className="screener-table">
           <thead>
             <tr>

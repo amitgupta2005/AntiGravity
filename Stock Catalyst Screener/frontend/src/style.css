@@ -423,11 +423,83 @@ body::before {
   box-shadow: var(--shadow-md);
 }
 
+/* Horizontal Scroll Toolbar & Keyboard Navigation Hints */
+.table-header-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: rgba(15, 23, 42, 0.7);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.table-scroll-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+}
+
+.kbd-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: #38bdf8;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.table-scroll-nav-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-scroll-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-scroll-arrow:hover {
+  background: var(--bg-card-hover);
+  color: #38bdf8;
+  border-color: rgba(6, 182, 212, 0.4);
+}
+
 .table-responsive-wrapper {
   width: 100%;
   overflow-x: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--border-color) transparent;
+  outline: none;
+}
+
+.table-responsive-wrapper:focus {
+  outline: none;
+}
+
+.table-responsive-wrapper:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px rgba(6, 182, 212, 0.4);
 }
 
 .screener-table {
