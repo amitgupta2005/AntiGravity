@@ -46,6 +46,11 @@ export function buildExitPlan({
   premium,
   step
 }) {
+  const actualLot = Math.max(1, lotSize || 100);
+  const entryPremium = (premium !== undefined && premium !== null)
+    ? Number(Number(premium).toFixed(2))
+    : Number((netCost / actualLot).toFixed(2));
+
   let targetBooking = {};
   let stopLoss = {};
   let managedRiskReward = '1 : 2.0';
@@ -55,18 +60,24 @@ export function buildExitPlan({
 
   switch (type) {
     case 'LONG_CALL': {
-      const targetSpot = Number((S * 1.04).toFixed(2));
-      const targetProfitPerLot = Number((netCost * 0.55).toFixed(2));
+      const targetPremium = Number((entryPremium * 1.55).toFixed(2)); // +55% target premium
+      const stopLossPremium = Number(Math.max(0.05, entryPremium * 0.60).toFixed(2)); // -40% stoploss premium
+      const profitPerShare = Number((targetPremium - entryPremium).toFixed(2));
+      const lossPerShare = Number((entryPremium - stopLossPremium).toFixed(2));
 
+      const targetSpot = Number((S * 1.04).toFixed(2));
+      const targetProfitPerLot = Number((profitPerShare * actualLot).toFixed(2));
       const stopSpot = Number((S * 0.98).toFixed(2));
-      const stopLossPerLot = Number((netCost * 0.40).toFixed(2));
+      const stopLossPerLot = Number((lossPerShare * actualLot).toFixed(2));
 
       targetBooking = {
         spotPrice: targetSpot,
         spotPct: '+4.0%',
         triggerText: `Stock reaches ${curr}${targetSpot}`,
-        rule: `Book profit at +55% Premium gain (${curr}${targetProfitPerLot.toLocaleString()}) near resistance`,
-        laymanAction: `Close Call when stock touches ${curr}${targetSpot} OR your profit hits +${curr}${targetProfitPerLot.toLocaleString()}. Bank your cash.`,
+        rule: `Book profit at ${curr}${targetPremium} (+55% Premium, +${curr}${targetProfitPerLot.toLocaleString()}/lot)`,
+        laymanAction: `Target: Sell Call when option premium reaches ${curr}${targetPremium} (profit +${curr}${profitPerShare}/share, +${curr}${targetProfitPerLot.toLocaleString()}/lot) or stock touches ${curr}${targetSpot}.`,
+        targetPremium,
+        profitPerShare,
         profitPerLot: targetProfitPerLot,
         profitPct: '+55%'
       };
@@ -74,8 +85,10 @@ export function buildExitPlan({
         spotPrice: stopSpot,
         spotPct: '-2.0%',
         triggerText: `Stock falls below ${curr}${stopSpot}`,
-        rule: `Stop loss: cut if loss reaches -40% (${curr}${stopLossPerLot.toLocaleString()}) or stock drops below ${curr}${stopSpot}`,
-        laymanAction: `Exit immediately if stock falls below ${curr}${stopSpot} OR loss touches -${curr}${stopLossPerLot.toLocaleString()}. Don't hope for a bounce.`,
+        rule: `Stop loss: cut at ${curr}${stopLossPremium} (-40% Premium, -${curr}${stopLossPerLot.toLocaleString()}/lot)`,
+        laymanAction: `Stop Loss: Exit immediately if option premium drops to ${curr}${stopLossPremium} (loss -${curr}${lossPerShare}/share, -${curr}${stopLossPerLot.toLocaleString()}/lot) or stock drops below ${curr}${stopSpot}.`,
+        stopLossPremium,
+        lossPerShare,
         lossPerLot: stopLossPerLot,
         lossPct: '-40%'
       };
@@ -84,26 +97,33 @@ export function buildExitPlan({
       capitalPreservedPct = 60;
       riskProfile = RISK_PROFILES.BALANCED;
       laymanSummary = {
-        plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()} (${ratio}x your risk).`,
+        plainRule: `Buy @ ${curr}${entryPremium} ➔ Target @ ${curr}${targetPremium} (+${curr}${profitPerShare}/sh) | Stop @ ${curr}${stopLossPremium} (-${curr}${lossPerShare}/sh). Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()} (${ratio}x risk).`,
         timeExitRule: 'Exit 2–3 days before expiry to prevent time decay (theta) eating your call.',
-        actionTip: 'First trigger wins: exit as soon as either Target or Stop Loss is touched.'
+        actionTip: 'First trigger wins: exit as soon as either Target Premium or Stop Loss Premium is touched.'
       };
       break;
     }
 
     case 'BULL_CALL_SPREAD': {
-      const targetSpot = Number(upperStrike.toFixed(2));
-      const targetProfitPerLot = Number((maxProfit * 0.70).toFixed(2));
+      const maxProfitPerShare = Number((maxProfit / actualLot).toFixed(2));
+      const profitPerShare = Number((maxProfitPerShare * 0.70).toFixed(2));
+      const targetPremium = Number((entryPremium + profitPerShare).toFixed(2));
+      const lossPerShare = Number((entryPremium * 0.45).toFixed(2));
+      const stopLossPremium = Number(Math.max(0.05, entryPremium - lossPerShare).toFixed(2));
 
+      const targetSpot = Number(upperStrike.toFixed(2));
+      const targetProfitPerLot = Number((profitPerShare * actualLot).toFixed(2));
       const stopSpot = Number((lowerStrike * 0.985).toFixed(2));
-      const stopLossPerLot = Number((netCost * 0.45).toFixed(2));
+      const stopLossPerLot = Number((lossPerShare * actualLot).toFixed(2));
 
       targetBooking = {
         spotPrice: targetSpot,
         spotPct: `+${(((targetSpot - S) / S) * 100).toFixed(1)}%`,
         triggerText: `Stock reaches ${curr}${targetSpot}`,
-        rule: `Book early at 70% of max spread profit (${curr}${targetProfitPerLot.toLocaleString()})`,
-        laymanAction: `Close both spread legs when stock reaches ${curr}${targetSpot} OR profit reaches +${curr}${targetProfitPerLot.toLocaleString()}. Don't wait for the last 30%.`,
+        rule: `Book early at spread value ${curr}${targetPremium} (+70% max spread profit, +${curr}${targetProfitPerLot.toLocaleString()}/lot)`,
+        laymanAction: `Target: Close both spread legs when spread value expands to ${curr}${targetPremium} (net gain +${curr}${profitPerShare}/share, +${curr}${targetProfitPerLot.toLocaleString()}/lot) or stock touches ${curr}${targetSpot}.`,
+        targetPremium,
+        profitPerShare,
         profitPerLot: targetProfitPerLot,
         profitPct: '+70% Spread'
       };
@@ -111,8 +131,10 @@ export function buildExitPlan({
         spotPrice: stopSpot,
         spotPct: '-1.5%',
         triggerText: `Stock drops below ${curr}${stopSpot}`,
-        rule: `Stop loss: exit if debit spread loses 45% or spot breaks below ${curr}${stopSpot}`,
-        laymanAction: `Close trade if stock drops below ${curr}${stopSpot} OR loss reaches -${curr}${stopLossPerLot.toLocaleString()}. Saves 55% of your capital.`,
+        rule: `Stop loss: exit at spread value ${curr}${stopLossPremium} (-45% debit loss, -${curr}${stopLossPerLot.toLocaleString()}/lot)`,
+        laymanAction: `Stop Loss: Close spread if value drops to ${curr}${stopLossPremium} (loss -${curr}${lossPerShare}/share, -${curr}${stopLossPerLot.toLocaleString()}/lot) or stock drops below ${curr}${stopSpot}.`,
+        stopLossPremium,
+        lossPerShare,
         lossPerLot: stopLossPerLot,
         lossPct: '-45%'
       };
@@ -121,7 +143,7 @@ export function buildExitPlan({
       capitalPreservedPct = 55;
       riskProfile = RISK_PROFILES.CONSERVATIVE;
       laymanSummary = {
-        plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()} (${ratio}x your risk).`,
+        plainRule: `Net Debit @ ${curr}${entryPremium} ➔ Target Spread @ ${curr}${targetPremium} (+${curr}${profitPerShare}/sh) | Stop Spread @ ${curr}${stopLossPremium} (-${curr}${lossPerShare}/sh). Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()} (${ratio}x risk).`,
         timeExitRule: 'Book 70% profit early; avoids late reversal risk near expiration.',
         actionTip: 'Always close both Call legs together as a package.'
       };
@@ -129,18 +151,24 @@ export function buildExitPlan({
     }
 
     case 'BULL_PUT_SPREAD': {
-      const targetSpot = Number((S * 1.015).toFixed(2));
-      const targetProfitPerLot = Number((netCost * 0.50).toFixed(2)); // netCost is credit
+      const profitPerShare = Number((entryPremium * 0.50).toFixed(2));
+      const targetPremium = Number((entryPremium * 0.50).toFixed(2)); // Buyback at 50% credit
+      const lossPerShare = Number((entryPremium * 1.50).toFixed(2));
+      const stopLossPremium = Number((entryPremium * 2.50).toFixed(2)); // Buyback expands to 2.5x credit
 
+      const targetSpot = Number((S * 1.015).toFixed(2));
+      const targetProfitPerLot = Number((profitPerShare * actualLot).toFixed(2));
       const stopSpot = Number((shortStrike * 0.995).toFixed(2));
-      const stopLossPerLot = Number((netCost * 1.50).toFixed(2));
+      const stopLossPerLot = Number((lossPerShare * actualLot).toFixed(2));
 
       targetBooking = {
         spotPrice: targetSpot,
         spotPct: '+1.5%',
         triggerText: `Stock stays above ${curr}${shortStrike}`,
-        rule: 'Book early at 50% max credit to eliminate tail risk',
-        laymanAction: `Buy back spread when you make +${curr}${targetProfitPerLot.toLocaleString()} (50% of credit collected). Free up margin.`,
+        rule: `Book early: buy back spread at ${curr}${targetPremium} (50% credit captured, +${curr}${targetProfitPerLot.toLocaleString()}/lot)`,
+        laymanAction: `Target: Buy back spread when cost decays to ${curr}${targetPremium} (profit +${curr}${profitPerShare}/share, +${curr}${targetProfitPerLot.toLocaleString()}/lot). Free up margin.`,
+        targetPremium,
+        profitPerShare,
         profitPerLot: targetProfitPerLot,
         profitPct: '+50% Credit'
       };
@@ -148,8 +176,10 @@ export function buildExitPlan({
         spotPrice: stopSpot,
         spotPct: `-${(((S - stopSpot) / S) * 100).toFixed(1)}%`,
         triggerText: `Stock falls to ${curr}${stopSpot}`,
-        rule: 'Stop loss: exit if loss reaches 1.5x credit collected',
-        laymanAction: `Exit trade if stock tests ${curr}${stopSpot} OR loss reaches -${curr}${stopLossPerLot.toLocaleString()}. Prevents full max loss.`,
+        rule: `Stop loss: buy back spread at ${curr}${stopLossPremium} (1.5x credit loss, -${curr}${stopLossPerLot.toLocaleString()}/lot)`,
+        laymanAction: `Stop Loss: Exit trade if spread buyback cost expands to ${curr}${stopLossPremium} (loss -${curr}${lossPerShare}/share, -${curr}${stopLossPerLot.toLocaleString()}/lot) or stock tests ${curr}${stopSpot}.`,
+        stopLossPremium,
+        lossPerShare,
         lossPerLot: stopLossPerLot,
         lossPct: '-1.5x Credit'
       };
@@ -158,7 +188,7 @@ export function buildExitPlan({
       capitalPreservedPct = 65;
       riskProfile = RISK_PROFILES.CONSERVATIVE;
       laymanSummary = {
-        plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()}.`,
+        plainRule: `Net Credit @ ${curr}${entryPremium} ➔ Target Buyback @ ${curr}${targetPremium} (+${curr}${profitPerShare}/sh) | Stop Buyback @ ${curr}${stopLossPremium} (-${curr}${lossPerShare}/sh). Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()}.`,
         timeExitRule: '21-DTE Gamma Armor: Close or roll position when 21 DTE is reached to avoid late-stage exponential gamma spikes.',
         actionTip: 'Never hold until the final hour; close early when 50% profit is captured or at 21 DTE.'
       };
@@ -166,18 +196,24 @@ export function buildExitPlan({
     }
 
     case 'BEAR_CALL_SPREAD': {
-      const targetSpot = Number((S * 0.985).toFixed(2));
-      const targetProfitPerLot = Number((netCost * 0.50).toFixed(2)); // netCost is credit
+      const profitPerShare = Number((entryPremium * 0.50).toFixed(2));
+      const targetPremium = Number((entryPremium * 0.50).toFixed(2));
+      const lossPerShare = Number((entryPremium * 1.50).toFixed(2));
+      const stopLossPremium = Number((entryPremium * 2.50).toFixed(2));
 
+      const targetSpot = Number((S * 0.985).toFixed(2));
+      const targetProfitPerLot = Number((profitPerShare * actualLot).toFixed(2));
       const stopSpot = Number((shortStrike * 1.005).toFixed(2));
-      const stopLossPerLot = Number((netCost * 1.50).toFixed(2));
+      const stopLossPerLot = Number((lossPerShare * actualLot).toFixed(2));
 
       targetBooking = {
         spotPrice: targetSpot,
         spotPct: '-1.5%',
         triggerText: `Stock stays below ${curr}${shortStrike}`,
-        rule: 'Book early at 50% max credit to eliminate tail risk',
-        laymanAction: `Buy back call spread when you make +${curr}${targetProfitPerLot.toLocaleString()} (50% of credit collected). Free up margin.`,
+        rule: `Book early: buy back at ${curr}${targetPremium} (50% credit captured, +${curr}${targetProfitPerLot.toLocaleString()}/lot)`,
+        laymanAction: `Target: Buy back call spread when cost decays to ${curr}${targetPremium} (profit +${curr}${profitPerShare}/share, +${curr}${targetProfitPerLot.toLocaleString()}/lot). Free up margin.`,
+        targetPremium,
+        profitPerShare,
         profitPerLot: targetProfitPerLot,
         profitPct: '+50% Credit'
       };
@@ -185,8 +221,10 @@ export function buildExitPlan({
         spotPrice: stopSpot,
         spotPct: `+${(((stopSpot - S) / S) * 100).toFixed(1)}%`,
         triggerText: `Stock rallies to ${curr}${stopSpot}`,
-        rule: 'Stop loss: exit if loss reaches 1.5x credit collected',
-        laymanAction: `Exit trade if stock rallies to ${curr}${stopSpot} OR loss reaches -${curr}${stopLossPerLot.toLocaleString()}. Prevents full max loss.`,
+        rule: `Stop loss: buy back at ${curr}${stopLossPremium} (1.5x credit loss, -${curr}${stopLossPerLot.toLocaleString()}/lot)`,
+        laymanAction: `Stop Loss: Exit trade if call spread buyback cost expands to ${curr}${stopLossPremium} (loss -${curr}${lossPerShare}/share, -${curr}${stopLossPerLot.toLocaleString()}/lot) or stock rallies to ${curr}${stopSpot}.`,
+        stopLossPremium,
+        lossPerShare,
         lossPerLot: stopLossPerLot,
         lossPct: '-1.5x Credit'
       };
@@ -195,7 +233,7 @@ export function buildExitPlan({
       capitalPreservedPct = 65;
       riskProfile = RISK_PROFILES.CONSERVATIVE;
       laymanSummary = {
-        plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()}.`,
+        plainRule: `Net Credit @ ${curr}${entryPremium} ➔ Target Buyback @ ${curr}${targetPremium} (+${curr}${profitPerShare}/sh) | Stop Buyback @ ${curr}${stopLossPremium} (-${curr}${lossPerShare}/sh). Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()}.`,
         timeExitRule: '21-DTE Gamma Armor: Close or roll position when 21 DTE is reached to avoid late-stage exponential gamma spikes.',
         actionTip: 'Close at 50% profit or 21 DTE. Never hold calls short into expiration week.'
       };
@@ -203,18 +241,24 @@ export function buildExitPlan({
     }
 
     case 'LONG_PUT': {
-      const targetSpot = Number((S * 0.96).toFixed(2));
-      const targetProfitPerLot = Number((netCost * 0.55).toFixed(2));
+      const targetPremium = Number((entryPremium * 1.55).toFixed(2));
+      const stopLossPremium = Number(Math.max(0.05, entryPremium * 0.60).toFixed(2));
+      const profitPerShare = Number((targetPremium - entryPremium).toFixed(2));
+      const lossPerShare = Number((entryPremium - stopLossPremium).toFixed(2));
 
+      const targetSpot = Number((S * 0.96).toFixed(2));
+      const targetProfitPerLot = Number((profitPerShare * actualLot).toFixed(2));
       const stopSpot = Number((S * 1.02).toFixed(2));
-      const stopLossPerLot = Number((netCost * 0.40).toFixed(2));
+      const stopLossPerLot = Number((lossPerShare * actualLot).toFixed(2));
 
       targetBooking = {
         spotPrice: targetSpot,
         spotPct: '-4.0%',
         triggerText: `Stock drops to ${curr}${targetSpot}`,
-        rule: `Book profit at +55% Premium gain (${curr}${targetProfitPerLot.toLocaleString()}) on breakdown`,
-        laymanAction: `Sell Put when stock drops to ${curr}${targetSpot} OR your profit hits +${curr}${targetProfitPerLot.toLocaleString()}. Lock in bear gains.`,
+        rule: `Book profit at ${curr}${targetPremium} (+55% Premium gain, +${curr}${targetProfitPerLot.toLocaleString()}/lot)`,
+        laymanAction: `Target: Sell Put when option premium reaches ${curr}${targetPremium} (profit +${curr}${profitPerShare}/share, +${curr}${targetProfitPerLot.toLocaleString()}/lot) or stock drops to ${curr}${targetSpot}. Lock in bear gains.`,
+        targetPremium,
+        profitPerShare,
         profitPerLot: targetProfitPerLot,
         profitPct: '+55%'
       };
@@ -222,8 +266,10 @@ export function buildExitPlan({
         spotPrice: stopSpot,
         spotPct: '+2.0%',
         triggerText: `Stock rallies above ${curr}${stopSpot}`,
-        rule: `Stop loss: cut if loss reaches -40% (${curr}${stopLossPerLot.toLocaleString()}) or stock rises above ${curr}${stopSpot}`,
-        laymanAction: `Exit immediately if stock rebounds to ${curr}${stopSpot} OR loss reaches -${curr}${stopLossPerLot.toLocaleString()}. Protect your cash.`,
+        rule: `Stop loss: cut at ${curr}${stopLossPremium} (-40% Premium loss, -${curr}${stopLossPerLot.toLocaleString()}/lot)`,
+        laymanAction: `Stop Loss: Exit immediately if option premium drops to ${curr}${stopLossPremium} (loss -${curr}${lossPerShare}/share, -${curr}${stopLossPerLot.toLocaleString()}/lot) or stock rebounds to ${curr}${stopSpot}. Protect your cash.`,
+        stopLossPremium,
+        lossPerShare,
         lossPerLot: stopLossPerLot,
         lossPct: '-40%'
       };
@@ -232,7 +278,7 @@ export function buildExitPlan({
       capitalPreservedPct = 60;
       riskProfile = RISK_PROFILES.BALANCED;
       laymanSummary = {
-        plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()} (${ratio}x your risk).`,
+        plainRule: `Buy @ ${curr}${entryPremium} ➔ Target @ ${curr}${targetPremium} (+${curr}${profitPerShare}/sh) | Stop @ ${curr}${stopLossPremium} (-${curr}${lossPerShare}/sh). Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()} (${ratio}x risk).`,
         timeExitRule: 'Exit 2–3 days prior to expiration to protect gains from theta decay.',
         actionTip: 'Do not stay in a Put if the stock refuses to break down.'
       };
@@ -240,18 +286,25 @@ export function buildExitPlan({
     }
 
     case 'BEAR_PUT_SPREAD': {
-      const targetSpot = Number(lowerStrike.toFixed(2));
-      const targetProfitPerLot = Number((maxProfit * 0.70).toFixed(2));
+      const maxProfitPerShare = Number((maxProfit / actualLot).toFixed(2));
+      const profitPerShare = Number((maxProfitPerShare * 0.70).toFixed(2));
+      const targetPremium = Number((entryPremium + profitPerShare).toFixed(2));
+      const lossPerShare = Number((entryPremium * 0.45).toFixed(2));
+      const stopLossPremium = Number(Math.max(0.05, entryPremium - lossPerShare).toFixed(2));
 
+      const targetSpot = Number(lowerStrike.toFixed(2));
+      const targetProfitPerLot = Number((profitPerShare * actualLot).toFixed(2));
       const stopSpot = Number((upperStrike * 1.015).toFixed(2));
-      const stopLossPerLot = Number((netCost * 0.45).toFixed(2));
+      const stopLossPerLot = Number((lossPerShare * actualLot).toFixed(2));
 
       targetBooking = {
         spotPrice: targetSpot,
         spotPct: `-${(((S - targetSpot) / S) * 100).toFixed(1)}%`,
         triggerText: `Stock drops to ${curr}${targetSpot}`,
-        rule: `Book early at 70% of max spread profit (${curr}${targetProfitPerLot.toLocaleString()})`,
-        laymanAction: `Close both Put legs when stock drops to ${curr}${targetSpot} OR profit reaches +${curr}${targetProfitPerLot.toLocaleString()}. Bank 70% gain.`,
+        rule: `Book early at spread value ${curr}${targetPremium} (+70% max spread profit, +${curr}${targetProfitPerLot.toLocaleString()}/lot)`,
+        laymanAction: `Target: Close both Put legs when spread value expands to ${curr}${targetPremium} (net gain +${curr}${profitPerShare}/share, +${curr}${targetProfitPerLot.toLocaleString()}/lot) or stock drops to ${curr}${targetSpot}. Bank 70% gain.`,
+        targetPremium,
+        profitPerShare,
         profitPerLot: targetProfitPerLot,
         profitPct: '+70% Spread'
       };
@@ -259,8 +312,10 @@ export function buildExitPlan({
         spotPrice: stopSpot,
         spotPct: '+1.5%',
         triggerText: `Stock rises above ${curr}${stopSpot}`,
-        rule: `Stop loss: exit if spread loses 45% or spot breaks above ${curr}${stopSpot}`,
-        laymanAction: `Exit if stock rallies above ${curr}${stopSpot} OR loss reaches -${curr}${stopLossPerLot.toLocaleString()}. Preserves 55% of capital.`,
+        rule: `Stop loss: exit at spread value ${curr}${stopLossPremium} (-45% debit loss, -${curr}${stopLossPerLot.toLocaleString()}/lot)`,
+        laymanAction: `Stop Loss: Exit if spread value drops to ${curr}${stopLossPremium} (loss -${curr}${lossPerShare}/share, -${curr}${stopLossPerLot.toLocaleString()}/lot) or stock rallies above ${curr}${stopSpot}. Preserves 55% of capital.`,
+        stopLossPremium,
+        lossPerShare,
         lossPerLot: stopLossPerLot,
         lossPct: '-45%'
       };
@@ -269,7 +324,7 @@ export function buildExitPlan({
       capitalPreservedPct = 55;
       riskProfile = RISK_PROFILES.CONSERVATIVE;
       laymanSummary = {
-        plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()} (${ratio}x your risk).`,
+        plainRule: `Net Debit @ ${curr}${entryPremium} ➔ Target Spread @ ${curr}${targetPremium} (+${curr}${profitPerShare}/sh) | Stop Spread @ ${curr}${stopLossPremium} (-${curr}${lossPerShare}/sh). Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()} (${ratio}x risk).`,
         timeExitRule: 'Book 70% profit early; don\'t risk a late-week sudden market rebound.',
         actionTip: 'Close both Put legs simultaneously to avoid unhedged naked exposure.'
       };
@@ -277,15 +332,22 @@ export function buildExitPlan({
     }
 
     case 'IRON_CONDOR': {
-      const targetProfitPerLot = Number((netCost * 0.50).toFixed(2));
-      const stopLossPerLot = Number((netCost * 1.50).toFixed(2));
+      const profitPerShare = Number((entryPremium * 0.50).toFixed(2));
+      const targetPremium = Number((entryPremium * 0.50).toFixed(2));
+      const lossPerShare = Number((entryPremium * 1.50).toFixed(2));
+      const stopLossPremium = Number((entryPremium * 2.50).toFixed(2));
+
+      const targetProfitPerLot = Number((profitPerShare * actualLot).toFixed(2));
+      const stopLossPerLot = Number((lossPerShare * actualLot).toFixed(2));
 
       targetBooking = {
         spotPrice: S,
         spotPct: 'Range Pin',
         triggerText: 'Stock stays in range',
-        rule: 'Take profit at 50% max credit collected',
-        laymanAction: `Close all 4 legs as soon as profit reaches +${curr}${targetProfitPerLot.toLocaleString()} (50% of credit). Take profit and exit.`,
+        rule: `Take profit: buy back condor at ${curr}${targetPremium} (50% max credit, +${curr}${targetProfitPerLot.toLocaleString()}/lot)`,
+        laymanAction: `Target: Close all 4 legs as soon as combined buyback drops to ${curr}${targetPremium} (profit +${curr}${profitPerShare}/share, +${curr}${targetProfitPerLot.toLocaleString()}/lot). Take profit and exit.`,
+        targetPremium,
+        profitPerShare,
         profitPerLot: targetProfitPerLot,
         profitPct: '+50% Credit'
       };
@@ -293,8 +355,10 @@ export function buildExitPlan({
         spotPrice: shortStrike || Number((S * 0.97).toFixed(2)),
         spotPct: 'Wing Test',
         triggerText: `Stock breaches ${curr}${shortStrike || Number((S * 0.97).toFixed(2))}`,
-        rule: 'Stop loss: exit if either short strike is breached or loss reaches 1.5x credit',
-        laymanAction: `Close all 4 legs if either inner strike is touched OR loss hits -${curr}${stopLossPerLot.toLocaleString()}. Cuts loss cleanly.`,
+        rule: `Stop loss: close condor at ${curr}${stopLossPremium} (1.5x credit loss, -${curr}${stopLossPerLot.toLocaleString()}/lot)`,
+        laymanAction: `Stop Loss: Close all 4 legs if combined buyback expands to ${curr}${stopLossPremium} (loss -${curr}${lossPerShare}/share, -${curr}${stopLossPerLot.toLocaleString()}/lot) or either inner strike is touched. Cuts loss cleanly.`,
+        stopLossPremium,
+        lossPerShare,
         lossPerLot: stopLossPerLot,
         lossPct: '-1.5x Credit'
       };
@@ -303,7 +367,7 @@ export function buildExitPlan({
       capitalPreservedPct = 70;
       riskProfile = RISK_PROFILES.CONSERVATIVE;
       laymanSummary = {
-        plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()}.`,
+        plainRule: `Net Credit @ ${curr}${entryPremium} ➔ Target Buyback @ ${curr}${targetPremium} (+${curr}${profitPerShare}/sh) | Stop Buyback @ ${curr}${stopLossPremium} (-${curr}${lossPerShare}/sh). Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()}.`,
         timeExitRule: '21-DTE Gamma Armor: Close or roll position when 21 DTE is reached to avoid late-stage exponential gamma spikes.',
         actionTip: 'Do not hold till expiry Friday. Close all 4 legs together at 50% credit or 21 DTE.'
       };
@@ -311,8 +375,13 @@ export function buildExitPlan({
     }
 
     case 'THETA_DECAY': {
-      const targetProfitPerLot = Number((netCost * 0.50).toFixed(2));
-      const stopLossPerLot = Number((netCost * 1.50).toFixed(2));
+      const profitPerShare = Number((entryPremium * 0.50).toFixed(2));
+      const targetPremium = Number((entryPremium * 0.50).toFixed(2));
+      const lossPerShare = Number((entryPremium * 1.50).toFixed(2));
+      const stopLossPremium = Number((entryPremium * 2.50).toFixed(2));
+
+      const targetProfitPerLot = Number((profitPerShare * actualLot).toFixed(2));
+      const stopLossPerLot = Number((lossPerShare * actualLot).toFixed(2));
       const stopDistance = step * 2.5;
       const stopSpotUpper = Number(((atmStrike || S) + stopDistance).toFixed(2));
       const stopSpotLower = Number(((atmStrike || S) - stopDistance).toFixed(2));
@@ -321,8 +390,10 @@ export function buildExitPlan({
         spotPrice: atmStrike || S,
         spotPct: 'Range Plateau',
         triggerText: `Stock remains between ${curr}${stopSpotLower} — ${curr}${stopSpotUpper}`,
-        rule: `Capture Theta: Book 50% max credit (${curr}${targetProfitPerLot.toLocaleString()}) or exit at 21 DTE`,
-        laymanAction: `Exit trade when time decay gives you +${curr}${targetProfitPerLot.toLocaleString()} (50% credit collected) or when 21 DTE is reached.`,
+        rule: `Capture Theta: buy back at ${curr}${targetPremium} (50% max credit, +${curr}${targetProfitPerLot.toLocaleString()}/lot) or exit at 21 DTE`,
+        laymanAction: `Target: Exit trade when combined premium decays to ${curr}${targetPremium} (profit +${curr}${profitPerShare}/share, +${curr}${targetProfitPerLot.toLocaleString()}/lot) or when 21 DTE is reached.`,
+        targetPremium,
+        profitPerShare,
         profitPerLot: targetProfitPerLot,
         profitPct: '+50% Credit'
       };
@@ -330,8 +401,10 @@ export function buildExitPlan({
         spotPrice: stopSpotLower,
         spotPct: `±${((stopDistance / S) * 100).toFixed(1)}%`,
         triggerText: `Stock tests short wing (${curr}${stopSpotLower} or ${curr}${stopSpotUpper})`,
-        rule: `Stop loss: close if spot breaks outside range or loss reaches 1.5x credit`,
-        laymanAction: `Exit all legs if stock moves outside ${curr}${stopSpotLower} — ${curr}${stopSpotUpper} OR loss reaches -${curr}${stopLossPerLot.toLocaleString()}.`,
+        rule: `Stop loss: close if buyback reaches ${curr}${stopLossPremium} (-${curr}${stopLossPerLot.toLocaleString()}/lot) or spot breaks outside range`,
+        laymanAction: `Stop Loss: Exit all legs if buyback cost expands to ${curr}${stopLossPremium} (loss -${curr}${lossPerShare}/share, -${curr}${stopLossPerLot.toLocaleString()}/lot) or stock moves outside ${curr}${stopSpotLower} — ${curr}${stopSpotUpper}.`,
+        stopLossPremium,
+        lossPerShare,
         lossPerLot: stopLossPerLot,
         lossPct: '-1.5x Credit'
       };
@@ -340,7 +413,7 @@ export function buildExitPlan({
       capitalPreservedPct = 70;
       riskProfile = RISK_PROFILES.CONSERVATIVE;
       laymanSummary = {
-        plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()}.`,
+        plainRule: `Net Credit @ ${curr}${entryPremium} ➔ Target Buyback @ ${curr}${targetPremium} (+${curr}${profitPerShare}/sh) | Stop Buyback @ ${curr}${stopLossPremium} (-${curr}${lossPerShare}/sh). Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()}.`,
         timeExitRule: '21-DTE Gamma Armor: Capture rapid time decay, exit at 21 DTE before exponential gamma spike.',
         actionTip: 'Time decay deposits money every day. Cash out when 50% is banked or 21 DTE is reached.'
       };
@@ -349,16 +422,23 @@ export function buildExitPlan({
 
     case 'LONG_STRADDLE':
     default: {
+      const targetPremium = Number((entryPremium * 1.45).toFixed(2));
+      const stopLossPremium = Number(Math.max(0.05, entryPremium * 0.65).toFixed(2));
+      const profitPerShare = Number((targetPremium - entryPremium).toFixed(2));
+      const lossPerShare = Number((entryPremium - stopLossPremium).toFixed(2));
+
       const targetSpot = Number((S * 1.045).toFixed(2));
-      const targetProfitPerLot = Number((netCost * 0.45).toFixed(2));
-      const stopLossPerLot = Number((netCost * 0.35).toFixed(2));
+      const targetProfitPerLot = Number((profitPerShare * actualLot).toFixed(2));
+      const stopLossPerLot = Number((lossPerShare * actualLot).toFixed(2));
 
       targetBooking = {
         spotPrice: targetSpot,
         spotPct: '±4.5%',
         triggerText: 'Large breakout in either direction',
-        rule: 'Book profit when volatility surges or position reaches +45%',
-        laymanAction: `Sell both Call and Put as soon as profit hits +${curr}${targetProfitPerLot.toLocaleString()} (+45%). Take the breakout gain.`,
+        rule: `Book profit at combined premium ${curr}${targetPremium} (+45% gain, +${curr}${targetProfitPerLot.toLocaleString()}/lot)`,
+        laymanAction: `Target: Sell both Call and Put when combined premium hits ${curr}${targetPremium} (profit +${curr}${profitPerShare}/share, +${curr}${targetProfitPerLot.toLocaleString()}/lot). Take the breakout gain.`,
+        targetPremium,
+        profitPerShare,
         profitPerLot: targetProfitPerLot,
         profitPct: '+45%'
       };
@@ -366,8 +446,10 @@ export function buildExitPlan({
         spotPrice: S,
         spotPct: 'Time Stop',
         triggerText: 'Stock remains flat for 5 days',
-        rule: 'Time stop: exit if consolidation persists past 5 days or -35% loss',
-        laymanAction: `Close both legs if market stays flat for 5 days OR loss reaches -${curr}${stopLossPerLot.toLocaleString()}. Avoids theta bleed.`,
+        rule: `Time stop: exit if combined premium drops to ${curr}${stopLossPremium} (-35% loss, -${curr}${stopLossPerLot.toLocaleString()}/lot) or 5 days pass`,
+        laymanAction: `Stop Loss: Close both legs if combined premium drops to ${curr}${stopLossPremium} (loss -${curr}${lossPerShare}/share, -${curr}${stopLossPerLot.toLocaleString()}/lot) or market stays flat for 5 days. Avoids theta bleed.`,
+        stopLossPremium,
+        lossPerShare,
         lossPerLot: stopLossPerLot,
         lossPct: '-35%'
       };
@@ -376,7 +458,7 @@ export function buildExitPlan({
       capitalPreservedPct = 65;
       riskProfile = RISK_PROFILES.BALANCED;
       laymanSummary = {
-        plainRule: `Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()} (${ratio}x your risk).`,
+        plainRule: `Buy Straddle @ ${curr}${entryPremium} ➔ Target @ ${curr}${targetPremium} (+${curr}${profitPerShare}/sh) | Stop @ ${curr}${stopLossPremium} (-${curr}${lossPerShare}/sh). Risk ${curr}${stopLossPerLot.toLocaleString()} to make ${curr}${targetProfitPerLot.toLocaleString()} (${ratio}x your risk).`,
         timeExitRule: 'Time stop: If no breakout occurs in 5 trading days, close the position.',
         actionTip: 'Needs rapid movement. If quiet, get out to preserve capital.'
       };
@@ -385,6 +467,7 @@ export function buildExitPlan({
   }
 
   return {
+    entryPremium,
     targetBooking,
     stopLoss,
     managedRiskReward,
@@ -588,6 +671,11 @@ export function scanStrategiesForAsset(quote) {
       spotPrice: S,
       targetPrice: exitPlan.targetBooking.spotPrice,
       stopLossPrice: exitPlan.stopLoss.spotPrice,
+      entryPremium: exitPlan.entryPremium,
+      targetPremium: exitPlan.targetBooking.targetPremium,
+      stopLossPremium: exitPlan.stopLoss.stopLossPremium,
+      targetPremiumPrice: exitPlan.targetBooking.targetPremium,
+      stopLossPremiumPrice: exitPlan.stopLoss.stopLossPremium,
       exitPlan,
       legs,
       netCost,
@@ -648,6 +736,7 @@ export function scanStrategiesForAsset(quote) {
         curr,
         upperStrike,
         lowerStrike,
+        premium: netDebit,
         step
       });
 
@@ -675,6 +764,11 @@ export function scanStrategiesForAsset(quote) {
         spotPrice: S,
         targetPrice: exitPlan.targetBooking.spotPrice,
         stopLossPrice: exitPlan.stopLoss.spotPrice,
+        entryPremium: exitPlan.entryPremium,
+        targetPremium: exitPlan.targetBooking.targetPremium,
+        stopLossPremium: exitPlan.stopLoss.stopLossPremium,
+        targetPremiumPrice: exitPlan.targetBooking.targetPremium,
+        stopLossPremiumPrice: exitPlan.stopLoss.stopLossPremium,
         exitPlan,
         legs,
         netCost,
@@ -743,6 +837,7 @@ export function scanStrategiesForAsset(quote) {
             curr,
             shortStrike,
             longStrike,
+            premium: netCredit,
             step
           });
 
@@ -770,6 +865,11 @@ export function scanStrategiesForAsset(quote) {
             spotPrice: S,
             targetPrice: exitPlan.targetBooking.spotPrice,
             stopLossPrice: exitPlan.stopLoss.spotPrice,
+            entryPremium: exitPlan.entryPremium,
+            targetPremium: exitPlan.targetBooking.targetPremium,
+            stopLossPremium: exitPlan.stopLoss.stopLossPremium,
+            targetPremiumPrice: exitPlan.targetBooking.targetPremium,
+            stopLossPremiumPrice: exitPlan.stopLoss.stopLossPremium,
             exitPlan,
             legs,
             netCost,
@@ -839,6 +939,7 @@ export function scanStrategiesForAsset(quote) {
             curr,
             shortStrike,
             longStrike,
+            premium: netCredit,
             step
           });
 
@@ -866,6 +967,11 @@ export function scanStrategiesForAsset(quote) {
             spotPrice: S,
             targetPrice: exitPlan.targetBooking.spotPrice,
             stopLossPrice: exitPlan.stopLoss.spotPrice,
+            entryPremium: exitPlan.entryPremium,
+            targetPremium: exitPlan.targetBooking.targetPremium,
+            stopLossPremium: exitPlan.stopLoss.stopLossPremium,
+            targetPremiumPrice: exitPlan.targetBooking.targetPremium,
+            stopLossPremiumPrice: exitPlan.stopLoss.stopLossPremium,
             exitPlan,
             legs,
             netCost,
@@ -950,6 +1056,11 @@ export function scanStrategiesForAsset(quote) {
       spotPrice: S,
       targetPrice: exitPlan.targetBooking.spotPrice,
       stopLossPrice: exitPlan.stopLoss.spotPrice,
+      entryPremium: exitPlan.entryPremium,
+      targetPremium: exitPlan.targetBooking.targetPremium,
+      stopLossPremium: exitPlan.stopLoss.stopLossPremium,
+      targetPremiumPrice: exitPlan.targetBooking.targetPremium,
+      stopLossPremiumPrice: exitPlan.stopLoss.stopLossPremium,
       exitPlan,
       legs,
       netCost,
@@ -1009,6 +1120,7 @@ export function scanStrategiesForAsset(quote) {
         curr,
         upperStrike: higherStrike,
         lowerStrike,
+        premium: netDebit,
         step
       });
 
@@ -1036,6 +1148,11 @@ export function scanStrategiesForAsset(quote) {
         spotPrice: S,
         targetPrice: exitPlan.targetBooking.spotPrice,
         stopLossPrice: exitPlan.stopLoss.spotPrice,
+        entryPremium: exitPlan.entryPremium,
+        targetPremium: exitPlan.targetBooking.targetPremium,
+        stopLossPremium: exitPlan.stopLoss.stopLossPremium,
+        targetPremiumPrice: exitPlan.targetBooking.targetPremium,
+        stopLossPremiumPrice: exitPlan.stopLoss.stopLossPremium,
         exitPlan,
         legs,
         netCost,
@@ -1118,6 +1235,7 @@ export function scanStrategiesForAsset(quote) {
             curr,
             shortStrike: putShort,
             longStrike: putLong,
+            premium: totalCredit,
             step
           });
 
@@ -1145,6 +1263,11 @@ export function scanStrategiesForAsset(quote) {
             spotPrice: S,
             targetPrice: S,
             stopLossPrice: putShort,
+            entryPremium: exitPlan.entryPremium,
+            targetPremium: exitPlan.targetBooking.targetPremium,
+            stopLossPremium: exitPlan.stopLoss.stopLossPremium,
+            targetPremiumPrice: exitPlan.targetBooking.targetPremium,
+            stopLossPremiumPrice: exitPlan.stopLoss.stopLossPremium,
             exitPlan,
             legs,
             netCost,
@@ -1229,6 +1352,11 @@ export function scanStrategiesForAsset(quote) {
       spotPrice: S,
       targetPrice: exitPlan.targetBooking.spotPrice,
       stopLossPrice: S,
+      entryPremium: exitPlan.entryPremium,
+      targetPremium: exitPlan.targetBooking.targetPremium,
+      stopLossPremium: exitPlan.stopLoss.stopLossPremium,
+      targetPremiumPrice: exitPlan.targetBooking.targetPremium,
+      stopLossPremiumPrice: exitPlan.stopLoss.stopLossPremium,
       exitPlan,
       legs,
       netCost,
@@ -1311,6 +1439,7 @@ export function scanStrategiesForAsset(quote) {
             curr,
             atmStrike: S,
             shortStrike: shortPut,
+            premium: totalCredit,
             step
           });
 
@@ -1340,6 +1469,11 @@ export function scanStrategiesForAsset(quote) {
             spotPrice: S,
             targetPrice: S,
             stopLossPrice: exitPlan.stopLoss.spotPrice,
+            entryPremium: exitPlan.entryPremium,
+            targetPremium: exitPlan.targetBooking.targetPremium,
+            stopLossPremium: exitPlan.stopLoss.stopLossPremium,
+            targetPremiumPrice: exitPlan.targetBooking.targetPremium,
+            stopLossPremiumPrice: exitPlan.stopLoss.stopLossPremium,
             exitPlan,
             legs,
             netCost,

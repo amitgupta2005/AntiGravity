@@ -379,15 +379,21 @@ export function renderScannerTable(
         <td>
           <div class="td-exit-plan font-mono">
             ${strat.exitPlan ? `
+              <div class="exit-prem-header">
+                <span class="exit-prem-badge">Entry Prem: <strong>${curr}${strat.exitPlan.entryPremium}</strong></span>
+              </div>
               <div class="exit-rule-pill target-pill" title="${strat.exitPlan.targetBooking.laymanAction || strat.exitPlan.targetBooking.rule}">
-                <span class="text-emerald font-bold">🎯 Target:</span>
-                <span>${curr}${strat.exitPlan.targetBooking.spotPrice}</span>
+                <span class="text-emerald font-bold">🎯 TP:</span>
+                <span class="text-emerald font-bold">${curr}${strat.exitPlan.targetBooking.targetPremium}</span>
                 <span class="text-emerald font-bold">(+${curr}${strat.exitPlan.targetBooking.profitPerLot}/lot)</span>
               </div>
               <div class="exit-rule-pill stop-pill" title="${strat.exitPlan.stopLoss.laymanAction || strat.exitPlan.stopLoss.rule}">
-                <span class="text-rose font-bold">🛑 Stop:</span>
-                <span>${curr}${strat.exitPlan.stopLoss.spotPrice}</span>
+                <span class="text-rose font-bold">🛑 SL:</span>
+                <span class="text-rose font-bold">${curr}${strat.exitPlan.stopLoss.stopLossPremium}</span>
                 <span class="text-rose font-bold">(-${curr}${strat.exitPlan.stopLoss.lossPerLot}/lot)</span>
+              </div>
+              <div class="exit-spot-subtext text-dim">
+                Spot: 🎯${curr}${strat.exitPlan.targetBooking.spotPrice} • 🛑${curr}${strat.exitPlan.stopLoss.spotPrice}
               </div>
             ` : '<span class="text-dim">Standard Expiry</span>'}
           </div>
@@ -444,11 +450,11 @@ export function renderScannerTable(
                 </div>
                 <div class="detail-exit-rules">
                   <div class="detail-rule-card bg-emerald-soft">
-                    <span class="text-emerald font-bold">👉 Profit Target (${strat.exitPlan.targetBooking.profitPct}):</span>
+                    <span class="text-emerald font-bold">👉 Profit Target (${curr}${strat.exitPlan.targetBooking.targetPremium} Prem • ${strat.exitPlan.targetBooking.profitPct}):</span>
                     <span class="text-emerald-light">${strat.exitPlan.targetBooking.laymanAction || strat.exitPlan.targetBooking.rule}</span>
                   </div>
                   <div class="detail-rule-card bg-rose-soft">
-                    <span class="text-rose font-bold">👉 Stop Loss (${strat.exitPlan.stopLoss.lossPct}):</span>
+                    <span class="text-rose font-bold">👉 Stop Loss (${curr}${strat.exitPlan.stopLoss.stopLossPremium} Prem • ${strat.exitPlan.stopLoss.lossPct}):</span>
                     <span class="text-rose-light">${strat.exitPlan.stopLoss.laymanAction || strat.exitPlan.stopLoss.rule}</span>
                   </div>
                 </div>
@@ -696,6 +702,14 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
                   </span>
                 </div>
 
+                <div class="simple-premium-callout font-mono">
+                  <div class="premium-box target-prem-box">
+                    <span class="prem-label text-dim">Target Premium:</span>
+                    <span class="prem-val text-emerald font-bold">${curr}${strat.exitPlan.targetBooking.targetPremium}</span>
+                    <span class="prem-sub text-dim font-mono">(Entry: ${curr}${strat.exitPlan.entryPremium} ➔ Target: ${curr}${strat.exitPlan.targetBooking.targetPremium})</span>
+                  </div>
+                </div>
+
                 <div class="simple-cash-callout">
                   <span class="cash-label text-dim">Cash Profit to Bank:</span>
                   <span class="cash-val font-mono font-bold text-emerald">
@@ -719,6 +733,14 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
                   <span class="simple-spot-pill font-mono font-bold text-rose">
                     Stock Hits: ${curr}${strat.exitPlan.stopLoss.spotPrice} <span class="spot-pct">(${strat.exitPlan.stopLoss.spotPct})</span>
                   </span>
+                </div>
+
+                <div class="simple-premium-callout font-mono">
+                  <div class="premium-box stop-prem-box">
+                    <span class="prem-label text-dim">Stop Loss Premium:</span>
+                    <span class="prem-val text-rose font-bold">${curr}${strat.exitPlan.stopLoss.stopLossPremium}</span>
+                    <span class="prem-sub text-dim font-mono">(Entry: ${curr}${strat.exitPlan.entryPremium} ➔ Stop: ${curr}${strat.exitPlan.stopLoss.stopLossPremium})</span>
+                  </div>
                 </div>
 
                 <div class="simple-cash-callout">

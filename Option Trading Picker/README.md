@@ -39,10 +39,12 @@ Automatically classifies market regimes (directional momentum, high/low IV, supp
 * **Delta-Neutral & Income**: Iron Condor (Consolidation harvest), Iron Butterfly (Pinning strike), Covered Call (Buy-Write).
 * **Volatility Breakouts**: Long Straddle & Long Strangle (Compression squeeze).
 
-### 3. Disciplined Exit Plan: Stop Loss & Target Price Booking
-Designed specifically for disciplined risk managers and less risk-averse traders who prefer controlled, systematic exits rather than holding options into binary expiration or total loss:
-* **🎯 Target Price Booking**: Computes underlying spot target, required percentage move, target option exit price, and currency gain per lot (+50% to +70% target ROI for debit trades; 50% max profit capture for credit spreads and Iron Condors).
-* **🛑 Stop Loss Protection**: Explicit invalidation trigger on underlying spot, option stop-loss cut rule (e.g., cut at -40% to -45% debit loss or 1.5x credit collected), and exact currency risk per lot.
+### 3. Disciplined Exit Plan: Option Premium Entry, Target, & Stoploss Pricing
+Designed specifically for Indian Market F&O traders (NSE/BSE) and global options traders who trade directly in terms of contract Option Premium (₹ or $ per share) rather than only underlying spot price:
+* **🪙 Contract Entry Premium**: Clearly displays entry price per share (e.g. 100 shares of X @ ₹2.00 entry premium = ₹200 lot cost).
+* **🎯 Target Premium (Limit Exit)**: Computes the precise option premium target to book profit (e.g. +55% target premium = ₹3.10, banking +₹1.10/share or +₹110/lot for debit strategies; buyback at 50% credit for credit spreads and Iron Condors).
+* **🛑 Stop Loss Premium (SL-M Exit)**: Computes the exact stoploss trigger premium to place in the broker order book (e.g. -40% stoploss = ₹1.20, capping loss at -₹0.80/share or -₹80/lot; buyback at 2.5x credit for credit strategies).
+* **📍 Spot Trigger Dual Context**: Pairs the option premium levels with underlying stock spot targets and invalidation levels (e.g., Target at ₹2,450 / Stop at ₹2,350) for total tactical awareness.
 * **⚖️ Realized Managed Risk/Reward**: Recalculates risk/reward based on the active exit plan (e.g., `1 : 2.1`) rather than unrealistic theoretical expiration assumptions.
 * **🛡️ Capital Preservation**: Quantifies the percentage of capital preserved (typically 55% to 70%) versus holding unmanaged positions to 100% loss at expiration.
 * **Filter by Risk Profile**: Scanner toolbar allows instant filtering by `All Risk Disciplines`, `Low Risk (Conservative Stops & 50% Profit Booking)`, and `Balanced Risk (Disciplined Stop & 55% ROI Target)`.

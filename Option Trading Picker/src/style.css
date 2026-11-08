@@ -1136,6 +1136,28 @@ body.light-theme .view-mode-btn.active {
   color: var(--text-primary);
 }
 
+.exit-prem-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.15rem;
+}
+
+.exit-prem-badge {
+  font-size: 0.69rem;
+  color: var(--cyan-accent);
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  letter-spacing: 0.02em;
+}
+
+.exit-spot-subtext {
+  font-size: 0.65rem;
+  margin-top: 0.15rem;
+  line-height: 1.25;
+}
+
 /* Table Actions Cell */
 .table-actions-group {
   display: inline-flex;
@@ -1654,6 +1676,47 @@ body.light-theme .view-mode-btn.active {
 
 .spot-pct {
   opacity: 0.85;
+  font-size: 0.68rem;
+}
+
+.simple-premium-callout {
+  display: flex;
+  flex-direction: column;
+}
+
+.premium-box {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 4px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+}
+
+.target-prem-box {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.stop-prem-box {
+  border-color: rgba(244, 63, 94, 0.3);
+  background: rgba(244, 63, 94, 0.06);
+}
+
+.prem-label {
+  font-size: 0.70rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.prem-val {
+  font-size: 0.98rem;
+  letter-spacing: -0.01em;
+}
+
+.prem-sub {
   font-size: 0.68rem;
 }
 
