@@ -233,6 +233,177 @@ body.light-theme .app-title {
 }
 
 /* =========================================================
+   Auto Refresh Control Widget & Pulse Beacon Badge
+   ========================================================= */
+.auto-refresh-widget {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  padding: 0.2rem 0.35rem 0.2rem 0.25rem;
+  transition: all 0.2s ease;
+}
+
+.auto-refresh-widget:hover {
+  border-color: rgba(0, 242, 254, 0.4);
+  background: var(--bg-surface-elevated);
+}
+
+.auto-refresh-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: var(--emerald-bull);
+  padding: 0.28rem 0.65rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.auto-refresh-badge:hover {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: var(--emerald-bull);
+  transform: translateY(-1px);
+}
+
+.auto-refresh-badge.paused {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.28);
+  color: var(--text-dim);
+}
+
+.auto-refresh-badge.paused:hover {
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--text-primary);
+  border-color: var(--text-dim);
+}
+
+.auto-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--emerald-bull);
+  box-shadow: 0 0 6px var(--emerald-bull);
+  animation: auto-pulse-anim 1.5s infinite ease-in-out;
+  display: inline-block;
+}
+
+.auto-refresh-badge.paused .auto-pulse-dot {
+  background: var(--text-dim);
+  box-shadow: none;
+  animation: none;
+}
+
+@keyframes auto-pulse-anim {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.6;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    transform: scale(1.15);
+    opacity: 1;
+    box-shadow: 0 0 0 5px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0.6;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.auto-select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auto-refresh-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.25rem 1.35rem 0.25rem 0.45rem;
+  cursor: pointer;
+  outline: none;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s ease;
+}
+
+.auto-refresh-select:hover,
+.auto-refresh-select:focus {
+  color: var(--text-primary);
+}
+
+.auto-refresh-select option {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.auto-select-chevron {
+  position: absolute;
+  right: 0.25rem;
+  pointer-events: none;
+  width: 12px;
+  height: 12px;
+  color: var(--text-dim);
+  transition: transform 0.2s ease;
+}
+
+/* Scanner results ribbon auto-scan status pill */
+.scanner-auto-status {
+  display: flex;
+  align-items: center;
+}
+
+.auto-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: var(--emerald-bull);
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.73rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.auto-status-pill.paused {
+  background: rgba(148, 163, 184, 0.08);
+  border-color: rgba(148, 163, 184, 0.2);
+  color: var(--text-dim);
+}
+
+.auto-pulse-dot-sm {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--emerald-bull);
+  box-shadow: 0 0 5px var(--emerald-bull);
+  animation: auto-pulse-anim 1.5s infinite ease-in-out;
+  display: inline-block;
+}
+
+.auto-status-pill.paused .auto-pulse-dot-sm {
+  background: var(--text-dim);
+  box-shadow: none;
+  animation: none;
+}
+
+
+/* =========================================================
    Navigation Tabs Bar
    ========================================================= */
 .nav-tabs-bar {

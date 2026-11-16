@@ -267,9 +267,21 @@ export function renderScannerTable(
     return;
   }
 
-  // Preserve horizontal scroll position across sorting re-renders
+  // Preserve horizontal, vertical, and window scroll positions across re-renders
   const existingTableContainer = document.getElementById('scannerTableContainer');
   const previousScrollLeft = existingTableContainer ? existingTableContainer.scrollLeft : 0;
+  const previousScrollTop = existingTableContainer ? existingTableContainer.scrollTop : 0;
+  const previousWindowScrollY = (typeof window !== 'undefined') ? (window.scrollY || window.pageYOffset || 0) : 0;
+
+  // Preserve open detail drawer IDs across auto-refresh re-renders
+  const openDrawerIds = new Set();
+  if (container && typeof container.querySelectorAll === 'function') {
+    container.querySelectorAll('.strat-table-detail-row:not(.hidden)').forEach(row => {
+      if (row.id && row.id.startsWith('detail-')) {
+        openDrawerIds.add(row.id.replace('detail-', ''));
+      }
+    });
+  }
 
 
   const rowsHtml = strategies.map(strat => {
@@ -526,11 +538,27 @@ export function renderScannerTable(
     </div>
   `;
 
-  // Restore horizontal scroll position if user previously scrolled
+  // Restore scroll positions and open drawers if user was viewing details
   const newTableContainer = document.getElementById('scannerTableContainer');
-  if (newTableContainer && previousScrollLeft > 0) {
-    newTableContainer.scrollLeft = previousScrollLeft;
+  if (newTableContainer) {
+    if (previousScrollLeft > 0) newTableContainer.scrollLeft = previousScrollLeft;
+    if (previousScrollTop > 0) newTableContainer.scrollTop = previousScrollTop;
   }
+  if (typeof window !== 'undefined' && previousWindowScrollY > 0) {
+    window.scrollTo({ top: previousWindowScrollY, behavior: 'instant' });
+  }
+
+  // Restore open detail drawer rows
+  openDrawerIds.forEach(id => {
+    const detailRow = document.getElementById(`detail-${id}`);
+    const parentRow = document.querySelector(`.scanner-table-row[data-id="${id}"]`);
+    const icon = document.getElementById(`expand-icon-${id}`);
+    if (detailRow) {
+      detailRow.classList.remove('hidden');
+      parentRow?.classList.add('row-expanded');
+      if (icon) icon.style.transform = 'rotate(180deg)';
+    }
+  });
 
   attachScannerEvents(container, strategies, onSelectStrategy, onViewChain, onCustomBuild, currentSort, onSortChange);
   setupTableHorizontalScroll(container);
@@ -548,6 +576,8 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
     renderEmptyState(container);
     return;
   }
+
+  const previousWindowScrollY = (typeof window !== 'undefined') ? (window.scrollY || window.pageYOffset || 0) : 0;
 
   const cardsHtml = strategies.map(strat => {
     const curr = strat.currencySymbol;

@@ -82,6 +82,191 @@ const state = {
   }
 };
 
+// =========================================================
+// Auto Refresh Engine (Default 5s, Options: 10s, 15s, Off)
+// =========================================================
+let autoRefreshTimer = null;
+let autoRefreshIntervalSec = 5;
+let autoRefreshCountdown = 5;
+let isRefreshInFlight = false;
+let lastActiveInterval = 5;
+
+/**
+ * Retrieve saved auto-refresh interval from localStorage, defaulting to 5s
+ */
+function getSavedAutoRefreshInterval() {
+  try {
+    const saved = localStorage.getItem('opt_auto_refresh');
+    if (saved !== null) {
+      const parsed = parseInt(saved, 10);
+      if ([0, 5, 10, 15].includes(parsed)) {
+        return parsed;
+      }
+    }
+  } catch (_) {}
+  return 5; // 5s Default
+}
+
+/**
+ * Update Auto-Refresh control badge and scanner status ribbon pill
+ */
+function updateAutoRefreshUI() {
+  const badge = document.getElementById('btnToggleAutoRefresh');
+  const badgeText = document.getElementById('autoRefreshBadgeText');
+  const select = document.getElementById('autoRefreshSelect');
+  const statusContainer = document.getElementById('scannerAutoStatus');
+  const statusLabel = document.getElementById('scannerAutoRefreshLabel');
+  const statusPill = statusContainer?.querySelector('.auto-status-pill');
+
+  if (select && select.value !== String(autoRefreshIntervalSec)) {
+    select.value = String(autoRefreshIntervalSec);
+  }
+
+  if (autoRefreshIntervalSec > 0) {
+    if (badge) {
+      badge.classList.remove('paused');
+      badge.classList.add('active');
+      badge.title = `Auto Refresh: ${autoRefreshIntervalSec}s (Click to Switch Off)`;
+    }
+    if (badgeText) {
+      badgeText.textContent = `${autoRefreshCountdown}s Live`;
+    }
+    if (statusPill) {
+      statusPill.classList.remove('paused');
+      statusPill.classList.add('text-emerald');
+    }
+    if (statusLabel) {
+      statusLabel.textContent = `Auto Scan: ${autoRefreshCountdown}s (${autoRefreshIntervalSec}s interval)`;
+    }
+  } else {
+    if (badge) {
+      badge.classList.remove('active');
+      badge.classList.add('paused');
+      badge.title = 'Auto Refresh: Off (Click to Enable 5s)';
+    }
+    if (badgeText) {
+      badgeText.textContent = 'Auto Off';
+    }
+    if (statusPill) {
+      statusPill.classList.remove('text-emerald');
+      statusPill.classList.add('paused');
+    }
+    if (statusLabel) {
+      statusLabel.textContent = 'Auto Scan: Paused (Off)';
+    }
+  }
+}
+
+/**
+ * Set active auto refresh interval (5, 10, 15, or 0 for Off)
+ */
+function setAutoRefreshInterval(seconds, notify = true) {
+  const sec = parseInt(seconds, 10);
+  autoRefreshIntervalSec = [0, 5, 10, 15].includes(sec) ? sec : 5;
+  if (autoRefreshIntervalSec > 0) {
+    lastActiveInterval = autoRefreshIntervalSec;
+  }
+
+  try {
+    localStorage.setItem('opt_auto_refresh', String(autoRefreshIntervalSec));
+  } catch (_) {}
+
+  autoRefreshCountdown = autoRefreshIntervalSec > 0 ? autoRefreshIntervalSec : 0;
+
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+
+  updateAutoRefreshUI();
+
+  if (autoRefreshIntervalSec > 0) {
+    startAutoRefreshCountdown();
+    if (notify) {
+      showToast(`Auto Refresh set to ${autoRefreshIntervalSec}s`, 'info');
+    }
+  } else {
+    if (notify) {
+      showToast('Auto Refresh Switched Off', 'info');
+    }
+  }
+}
+
+/**
+ * Toggle auto refresh on/off via badge click
+ */
+function toggleAutoRefresh() {
+  if (autoRefreshIntervalSec > 0) {
+    setAutoRefreshInterval(0, true);
+  } else {
+    setAutoRefreshInterval(lastActiveInterval || 5, true);
+  }
+}
+
+/**
+ * Start the 1-second auto-refresh countdown ticker
+ */
+function startAutoRefreshCountdown() {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+
+  if (autoRefreshIntervalSec <= 0) return;
+
+  autoRefreshTimer = setInterval(async () => {
+    // Pause ticking when tab is not visible
+    if (document.hidden) return;
+
+    if (autoRefreshIntervalSec <= 0) return;
+
+    autoRefreshCountdown--;
+
+    if (autoRefreshCountdown <= 0) {
+      autoRefreshCountdown = autoRefreshIntervalSec;
+      updateAutoRefreshUI();
+
+      if (!isRefreshInFlight) {
+        isRefreshInFlight = true;
+        try {
+          await refreshMarketData(true);
+        } catch (err) {
+          console.error('Auto refresh tick error:', err);
+        } finally {
+          isRefreshInFlight = false;
+        }
+      }
+    } else {
+      updateAutoRefreshUI();
+    }
+  }, 1000);
+}
+
+/**
+ * Initialize auto-refresh widgets and restore stored preference
+ */
+function setupAutoRefresh() {
+  const initialSec = getSavedAutoRefreshInterval();
+  const select = document.getElementById('autoRefreshSelect');
+  const toggleBtn = document.getElementById('btnToggleAutoRefresh');
+
+  if (select) {
+    select.value = String(initialSec);
+    select.addEventListener('change', (e) => {
+      const val = parseInt(e.target.value, 10);
+      setAutoRefreshInterval(val, true);
+    });
+  }
+
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      toggleAutoRefresh();
+    });
+  }
+
+  setAutoRefreshInterval(initialSec, false);
+}
+
 /**
  * Initialize Application
  */
@@ -107,24 +292,34 @@ async function initApp() {
   renderActiveView();
   refreshIcons();
 
-  // 6. Asynchronously fetch live real-time quotes without blocking
+  // 6. Setup and initialize Auto-Refresh (Default 5s, with 10s, 15s, Off)
+  setupAutoRefresh();
+
+  // 7. Asynchronously fetch live real-time quotes without blocking
   refreshMarketData().catch(console.error);
 
-  // 7. Start continuous live market pulse (throttled when page is hidden)
+  // 8. Start continuous live market pulse (throttled when page is hidden)
   startMarketSimulation();
 }
 
 /**
  * Fetch and refresh all market data quotes and recalculate strategies
+ * Strictly preserves active filter state without resetting user inputs
  */
-async function refreshMarketData() {
+async function refreshMarketData(force = false) {
   const clockEl = document.getElementById('marketClock');
   if (clockEl) clockEl.textContent = 'FETCHING LIVE...';
 
   try {
-    const quotes = await fetchAllUniverseQuotes();
+    const quotes = await fetchAllUniverseQuotes(force);
     state.quotes = quotes;
     state.strategies = scanAllUniverseStrategies(quotes);
+    if (state.activeStrategy) {
+      const updatedStrat = state.strategies.find(s => s.id === state.activeStrategy.id || (s.ticker === state.activeStrategy.ticker && s.strategyName === state.activeStrategy.strategyName));
+      if (updatedStrat) {
+        state.activeStrategy = updatedStrat;
+      }
+    }
     if (clockEl) clockEl.textContent = `LIVE FEED • ${new Date().toLocaleTimeString()}`;
   } catch (err) {
     console.error('Error refreshing market data:', err);
@@ -827,7 +1022,11 @@ function setupEventListeners() {
   if (refreshBtn) {
     refreshBtn.addEventListener('click', async () => {
       showToast('Refreshing live market quotes...', 'info');
-      await refreshMarketData();
+      await refreshMarketData(true);
+      if (autoRefreshIntervalSec > 0) {
+        autoRefreshCountdown = autoRefreshIntervalSec;
+        updateAutoRefreshUI();
+      }
       showToast('Market quotes updated!', 'success');
     });
   }
@@ -859,13 +1058,18 @@ function setupEventListeners() {
 
   window.addEventListener('resize', debouncedChartResize);
 
-  // 10. Pause market simulation when tab is hidden to save CPU and prevent background leaks
+  // 10. Pause market simulation when tab is hidden to save CPU and prevent background leaks; resume on visible
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       pauseMarketSimulation();
     } else {
       startMarketSimulation();
       tickMarketSimulation();
+      if (autoRefreshIntervalSec > 0 && !isRefreshInFlight) {
+        refreshMarketData(true).catch(console.error);
+        autoRefreshCountdown = autoRefreshIntervalSec;
+        updateAutoRefreshUI();
+      }
     }
   });
 }
@@ -921,6 +1125,23 @@ function tickMarketSimulation() {
     renderMarketOverviewTab();
   }
 }
+
+// Expose state and controls for window inspection & unit testing
+if (typeof window !== 'undefined') {
+  window.__APP_STATE__ = state;
+  window.setAutoRefreshInterval = setAutoRefreshInterval;
+  window.toggleAutoRefresh = toggleAutoRefresh;
+  window.refreshMarketData = refreshMarketData;
+}
+
+export {
+  state,
+  initApp,
+  refreshMarketData,
+  setAutoRefreshInterval,
+  toggleAutoRefresh,
+  getSavedAutoRefreshInterval
+};
 
 // Bootstrap App
 document.addEventListener('DOMContentLoaded', initApp);

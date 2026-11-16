@@ -42,12 +42,29 @@
 
       <!-- Right Header Actions -->
       <div class="header-right">
+        <!-- Auto Refresh Control Widget (5s default, 10s, 15s, Off) -->
+        <div class="auto-refresh-widget" id="autoRefreshWidget">
+          <button id="btnToggleAutoRefresh" class="auto-refresh-badge active" title="Auto Refresh: 5s (Click to Switch Off)">
+            <span class="auto-pulse-dot"></span>
+            <span class="auto-badge-text font-mono" id="autoRefreshBadgeText">5s Live</span>
+          </button>
+          <div class="auto-select-wrap">
+            <select id="autoRefreshSelect" class="auto-refresh-select font-mono" aria-label="Auto Refresh Interval">
+              <option value="5" selected>5s (Default)</option>
+              <option value="10">10s</option>
+              <option value="15">15s</option>
+              <option value="0">Off</option>
+            </select>
+            <i data-lucide="chevron-down" class="auto-select-chevron"></i>
+          </div>
+        </div>
+
         <div class="feed-pulse-badge">
           <span class="status-indicator"></span>
           <span class="font-mono text-dim" style="font-size: 0.72rem;" id="marketClock">FEED ACTIVE</span>
         </div>
-        <button id="btnRefreshData" class="btn-icon" title="Refresh Live Market Data">
-          <i data-lucide="refresh-cw"></i>
+        <button id="btnRefreshData" class="btn-icon" title="Refresh Live Market Data (Manual)">
+          <i data-lucide="refresh-cw" id="manualRefreshIcon"></i>
         </button>
         <button id="btnThemeToggle" class="btn-icon" title="Toggle Dark/Light Theme">
           <i data-lucide="sun" id="themeIcon"></i>
@@ -218,6 +235,12 @@
             <span class="text-dim">Matched Strategies:</span>
             <span class="results-count-pill font-mono font-bold text-cyan" id="scannerCountBadge">0</span>
             <span class="results-view-label font-mono text-dim" id="scannerModeIndicator">• Tabular View (Default)</span>
+          </div>
+          <div class="scanner-auto-status font-mono" id="scannerAutoStatus">
+            <span class="auto-status-pill text-emerald">
+              <span class="auto-pulse-dot-sm"></span>
+              <span id="scannerAutoRefreshLabel">Auto Scan: 5s Live</span>
+            </span>
           </div>
         </div>
 

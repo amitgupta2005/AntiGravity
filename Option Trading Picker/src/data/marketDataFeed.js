@@ -384,13 +384,13 @@ export function getBaseQuote(asset) {
 /**
  * Fetch live quote for an asset via local proxy with fallback
  */
-export async function fetchLiveQuote(asset) {
+export async function fetchLiveQuote(asset, force = false) {
   if (!asset) return null;
 
-  // Check cache first
+  // Check cache first (3s max age, bypassed when force=true)
   const cached = liveQuotesCache.get(asset.ticker);
   const now = Date.now();
-  if (cached && now - cached.timestamp < 15000) {
+  if (!force && cached && now - cached.timestamp < 3000) {
     return cached.quote;
   }
 
@@ -456,7 +456,7 @@ export async function fetchLiveQuote(asset) {
     } catch (_) {}
   }
 
-  // Realistic fallback if network unavailable
+  // Realistic fallback if network unavailable: simulate live market micro-ticks
   if (!fetched) {
     const drift = (Math.random() - 0.48) * 0.008;
     price = asset.basePrice * (1 + drift);
@@ -491,8 +491,8 @@ export async function fetchLiveQuote(asset) {
 /**
  * Fetch all quotes in the universe
  */
-export async function fetchAllUniverseQuotes() {
-  const promises = OPTION_UNIVERSE.map(asset => fetchLiveQuote(asset));
+export async function fetchAllUniverseQuotes(force = false) {
+  const promises = OPTION_UNIVERSE.map(asset => fetchLiveQuote(asset, force));
   return Promise.all(promises);
 }
 
