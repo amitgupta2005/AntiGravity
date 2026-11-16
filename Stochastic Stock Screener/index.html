@@ -58,10 +58,6 @@
         </select>
       </div>
 
-      <button id="rescanUniverseBtn" class="btn btn-secondary btn-icon" title="Re-screen selected universe with latest prices">
-        <i data-lucide="refresh-cw" id="rescanIcon"></i>
-      </button>
-
       <!-- Live Dynamic Status & Auto Refresh Controls -->
       <div class="live-status-pill" id="liveStatusBadge" title="Dynamic real-time market data feed connected">
         <span class="live-indicator-dot" id="liveIndicatorDot"></span>
@@ -126,30 +122,6 @@
           </a>
         </div>
       </div>
-
-      <!-- View Mode Selector: 3-Pane Workstation (Default) vs Table View -->
-      <div class="view-mode-selector" id="viewModeSelector">
-        <button id="viewWorkstationBtn" class="btn btn-secondary theme-toggle-btn active" title="Institutional 3-Pane Workstation (Chart + Stochastic + Execution Blueprint)">
-          <i data-lucide="layout-grid"></i>
-          <span>3-Pane Workstation</span>
-        </button>
-        <button id="viewTableBtn" class="btn btn-secondary theme-toggle-btn" title="Classical Full Table View">
-          <i data-lucide="table"></i>
-          <span>Table View</span>
-        </button>
-      </div>
-
-      <!-- Live Recommendation Chart Toggle Button in Header -->
-      <button id="toggleRecChartBtn" class="btn btn-secondary theme-toggle-btn active" title="Show/Hide Real-Time Chart for Screened Recommendations">
-        <i data-lucide="line-chart"></i>
-        <span>Live Chart</span>
-      </button>
-
-      <!-- Full Screen Toggle Button in Header -->
-      <button id="headerFullscreenBtn" class="btn btn-secondary theme-toggle-btn active" title="Display Table in Full Screen (Context Window) [Press 'F']">
-        <i data-lucide="minimize-2" id="headerFsIcon"></i>
-        <span id="headerFsText">Exit Full Screen</span>
-      </button>
 
       <!-- Settings / Parameters Drawer Trigger -->
       <button id="openSettingsBtn" class="btn btn-secondary btn-icon" title="Configure Stochastic Parameters (14,3,3)">
@@ -261,14 +233,11 @@
         <!-- Top Toolbar with Ticker, Live Price, Timeframe, Indicators, Auto-Refresh -->
         <div class="chart-toolbar">
           <div class="symbol-meta">
-            <button id="btn-toggle-left" class="btn btn-secondary btn-pane-toggle" title="Toggle Left Pane">
-              <i data-lucide="panel-left"></i>
-            </button>
-            <span id="stock-active-ticker" class="active-symbol-title font-mono font-bold">RELIANCE.NS</span>
-            <span id="stock-active-name" class="active-company-name text-dim">Reliance Industries</span>
-            <span id="stock-active-price-pill" class="active-price-pill font-mono font-bold text-emerald">₹2,850.00 (+1.25%)</span>
-            <span id="stock-active-time" class="active-time-pill font-mono">03:14 PM IST</span>
-            <span id="stock-feed-pill" class="feed-source-pill">📡 Live 5s Feed</span>
+            <span id="stock-active-ticker" class="active-symbol-title font-mono font-bold">--</span>
+            <span id="stock-active-name" class="active-company-name text-dim">Select a stock</span>
+            <span id="stock-active-price-pill" class="active-price-pill font-mono font-bold text-emerald">--</span>
+            <span id="stock-active-time" class="active-time-pill font-mono">--</span>
+            <span id="stock-feed-pill" class="feed-source-pill">📡 Live Feed</span>
           </div>
 
           <div class="toolbar-controls">
@@ -289,28 +258,6 @@
                 <span class="chip-dot" style="background: #10b981;"></span> SL/TGT
               </button>
             </div>
-
-            <!-- Auto-refresh interval (5s default, 10s, 15s, pause) -->
-            <div class="rec-autorefresh-group" id="recAutoRefreshBtnGroup">
-              <button class="rec-ar-btn active" data-interval="5" title="Refresh every 5 seconds (Default)">5s</button>
-              <button class="rec-ar-btn" data-interval="10" title="Refresh every 10 seconds">10s</button>
-              <button class="rec-ar-btn" data-interval="15" title="Refresh every 15 seconds">15s</button>
-              <button class="rec-ar-btn btn-ar-pause" data-interval="0" title="Pause / Resume Live Feed">
-                <i data-lucide="pause"></i>
-              </button>
-              <div class="rec-countdown-badge">
-                <span class="countdown-pulse-ring"></span>
-                <span id="recCountdownSec" class="countdown-sec font-mono font-bold">5s</span>
-              </div>
-            </div>
-
-            <!-- Screenshot & Right Pane Toggle -->
-            <button id="btn-chart-screenshot" class="btn btn-secondary btn-pane-toggle" title="Save publication-ready chart screenshot (.png)">
-              <i data-lucide="camera"></i>
-            </button>
-            <button id="btn-toggle-right" class="btn btn-secondary btn-pane-toggle" title="Toggle Right Analysis Pane">
-              <i data-lucide="panel-right"></i>
-            </button>
           </div>
         </div>
 
@@ -342,22 +289,34 @@
 
       <!-- PANE 3: INSTITUTIONAL TRADE BLUEPRINT & REASONING (RIGHT PANE) -->
       <aside id="analysis-sidebar" class="analysis-pane">
+        <!-- Selected Stock Header Card -->
+        <div class="selected-stock-header-card" id="selected-stock-header-card" style="padding: 10px 14px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-card); display: flex; justify-content: space-between; align-items: center;">
+          <div style="min-width: 0;">
+            <div class="selected-stock-title font-mono font-bold text-cyan" id="detail-stock-ticker" style="font-size: 1.05rem; letter-spacing: 0.5px;">--</div>
+            <div class="selected-stock-name text-dim" id="detail-stock-name" style="font-size: 0.76rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Select a stock from recommendation list</div>
+          </div>
+          <div style="text-align: right; flex-shrink: 0;">
+            <div class="selected-stock-price font-mono font-bold" id="detail-stock-price" style="font-size: 1.05rem; color: #10b981;">--</div>
+            <div class="selected-stock-change font-mono font-bold" id="detail-stock-change" style="font-size: 0.72rem;">--</div>
+          </div>
+        </div>
+
         <!-- Top Signal Banner -->
         <div class="analysis-header">
           <div class="signal-banner" id="signal-banner">
             <div class="signal-banner-top">
-              <span id="detail-signal-badge" class="signal-badge-lg badge-signal buy">OVERSOLD ACCUMULATION</span>
-              <span id="detail-time-text" class="signal-time font-mono">16 Nov 2026 03:14:00 PM IST</span>
+              <span id="detail-signal-badge" class="signal-badge-lg badge-signal buy">AWAITING SELECTION</span>
+              <span id="detail-time-text" class="signal-time font-mono">--</span>
             </div>
             <div class="signal-banner-mid">
-              <div id="detail-setup-title" class="signal-action-title">Actionable Buy Reversal</div>
+              <div id="detail-setup-title" class="signal-action-title">Select a Stock</div>
               <div class="score-badge">
                 <span class="score-label">Score</span>
-                <span id="detail-score-num" class="score-val font-mono font-bold">85</span>
+                <span id="detail-score-num" class="score-val font-mono font-bold">--</span>
               </div>
             </div>
             <div id="detail-setup-desc" class="signal-desc text-dim">
-              Conviction: High (Momentum Reversal) • Strict Closing Basis Stochastic (14, 3, 3)
+              Select any stock from the recommendation list on the left to analyze its trade setup.
             </div>
           </div>
         </div>
@@ -372,15 +331,15 @@
               <!-- Rendered by workstationTerminal.js -->
             </div>
             <div class="mtf-verdict-box" style="margin-top: 6px;">
-              <div id="mtf-bias-title" class="mtf-bias-title font-bold" style="font-size: 0.76rem; color: #10b981;">MILD BULLISH BIAS</div>
-              <div id="mtf-bias-desc" class="mtf-bias-desc text-dim" style="font-size: 0.7rem;">2 of 4 Timeframes turning bullish; awaiting 15m and 30m confirmation.</div>
+              <div id="mtf-bias-title" class="mtf-bias-title font-bold" style="font-size: 0.76rem; color: #10b981;">AWAITING CONFLUENCE</div>
+              <div id="mtf-bias-desc" class="mtf-bias-desc text-dim" style="font-size: 0.7rem;">Select a stock from the left list to view multi-timeframe stochastic confluence.</div>
             </div>
           </div>
 
-          <!-- Day Stop Loss & Targets -->
+          <!-- Entry & Exit Strategy Blueprint -->
           <div class="analysis-section">
             <div class="section-title-row" style="display: flex; justify-content: space-between; align-items: center;">
-              <span class="section-title"><i data-lucide="crosshair"></i> Day Stop Loss &amp; Targets</span>
+              <span class="section-title"><i data-lucide="crosshair"></i> Entry &amp; Exit Strategy Blueprint</span>
               <button id="btn-copy-plan" class="btn btn-secondary btn-xs" title="Copy trade setup to clipboard">
                 <i data-lucide="copy"></i> Copy Setup
               </button>
@@ -388,23 +347,23 @@
             <div class="levels-grid">
               <div class="level-card">
                 <div class="level-label text-dim">ENTRY / CMP</div>
-                <div id="plan-entry" class="level-value font-mono font-bold text-cyan">₹2,850.00</div>
+                <div id="plan-entry" class="level-value font-mono font-bold text-cyan">--</div>
                 <div id="plan-action-type" class="level-sub font-mono" style="color: #10b981;">BUY ZONE</div>
               </div>
               <div class="level-card">
                 <div class="level-label text-dim">DAY STOP LOSS</div>
-                <div id="plan-sl" class="level-value font-mono font-bold text-rose">₹2,797.40</div>
-                <div id="plan-sl-diff" class="level-sub font-mono text-rose">-1.85% Risk</div>
+                <div id="plan-sl" class="level-value font-mono font-bold text-rose">--</div>
+                <div id="plan-sl-diff" class="level-sub font-mono text-rose">-- Risk</div>
               </div>
               <div class="level-card">
                 <div class="level-label text-dim">TARGET 1 (SCALP 1:1.5)</div>
-                <div id="plan-t1" class="level-value font-mono font-bold text-emerald">₹2,928.90</div>
-                <div id="plan-t1-diff" class="level-sub font-mono text-emerald">+2.77% Profit (1:1.5)</div>
+                <div id="plan-t1" class="level-value font-mono font-bold text-emerald">--</div>
+                <div id="plan-t1-diff" class="level-sub font-mono text-emerald">-- Profit (1:1.5)</div>
               </div>
               <div class="level-card">
                 <div class="level-label text-dim">TARGET 2 (MAIN 1:2.5)</div>
-                <div id="plan-t2" class="level-value font-mono font-bold text-emerald">₹2,997.30</div>
-                <div id="plan-t2-diff" class="level-sub font-mono text-emerald">+5.17% Profit (1:2.5)</div>
+                <div id="plan-t2" class="level-value font-mono font-bold text-emerald">--</div>
+                <div id="plan-t2-diff" class="level-sub font-mono text-emerald">-- Profit (1:2.5)</div>
               </div>
             </div>
             <div id="plan-exec-rule" class="plan-rule-note text-dim font-mono" style="font-size: 0.68rem; margin-top: 6px; line-height: 1.4;">
@@ -446,16 +405,6 @@
           </div>
         </div>
       </aside>
-    </section>
-
-    <!-- Real-Time Chart Terminal for Screened Recommendations (Classic Mode) -->
-    <section id="recommendation-chart-container" class="recommendation-chart-section hidden">
-      <!-- Injected by recommendationChart.js -->
-    </section>
-
-    <!-- Screener Table Section (Classic Mode) -->
-    <section id="table-container" class="screener-table-section hidden">
-      <!-- Injected by screenerTable.js -->
     </section>
   </main>
 

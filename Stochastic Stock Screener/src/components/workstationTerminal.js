@@ -42,8 +42,7 @@ import {
   subscribeRealtimeStock, 
   unsubscribeRealtimeStock 
 } from '../services/marketData.js';
-import { calculateStochasticSeries } from '../quant/stochastic.js';
-import { downloadStockChartScreenshot } from '../services/chartRenderer.js';
+import { calculateStochasticSeries, computeEntryExitStrategy } from '../quant/stochastic.js';
 import { formatISTTime, formatISTDateTime } from '../utils/dateUtils.js';
 
 export class WorkstationTerminal {
@@ -85,7 +84,6 @@ export class WorkstationTerminal {
     this.setupSortListener();
     this.setupFilterListeners();
     this.setupSearchListener();
-    this.setupPaneToggleListeners();
     this.setupToolbarListeners();
     this.setupCalculatorListeners();
     this.setupKeyboardNavigation();
@@ -103,8 +101,65 @@ export class WorkstationTerminal {
       const found = this.allResults.find(x => (x.ticker || x.symbol) === sym);
       if (found) {
         this.selectedStock = found;
-        this.renderRightPane(found);
+        const isINR = sym.endsWith('.NS') || sym.endsWith('.BO') || found.exchange === 'NSE';
+        const curr = isINR ? '₹' : '$';
+        this.updateCenterToolbar(found, curr);
+        this.renderRightPane(found, curr);
       }
+    }
+  }
+
+  updateSingleStock(stock) {
+    if (!stock) return;
+    const sym = stock.ticker || stock.symbol;
+
+    // 1. Update in allResults array
+    const idxAll = this.allResults.findIndex(x => (x.ticker || x.symbol) === sym);
+    if (idxAll >= 0) {
+      this.allResults[idxAll] = stock;
+    } else {
+      this.allResults.push(stock);
+    }
+
+    // 2. Update in filteredResults array if present
+    const idxFiltered = this.filteredResults.findIndex(x => (x.ticker || x.symbol) === sym);
+    if (idxFiltered >= 0) {
+      this.filteredResults[idxFiltered] = stock;
+    }
+
+    // 3. Update specific stock card in Left Pane without wiping all DOM nodes
+    const cardId = `card-${sym.replace(/\./g, '_')}`;
+    const cardEl = document.getElementById(cardId);
+    if (cardEl) {
+      const isINR = sym.endsWith('.NS') || sym.endsWith('.BO') || stock.exchange === 'NSE';
+      const curr = isINR ? '₹' : '$';
+      const price = stock.price ?? stock.close ?? 0;
+      const chg = stock.changePct || 0;
+      const isUp = chg >= 0;
+
+      const pEl = cardEl.querySelector('.card-price');
+      const cEl = cardEl.querySelector('.card-change');
+      if (pEl) pEl.textContent = `${curr}${price.toFixed(2)}`;
+      if (cEl) {
+        cEl.textContent = `${isUp ? '+' : ''}${chg.toFixed(2)}%`;
+        cEl.className = `card-change font-mono font-bold ${isUp ? 'up' : 'down'}`;
+      }
+      const stochEl = cardEl.querySelector('.card-stoch');
+      if (stochEl) {
+        stochEl.textContent = `%K ${(stock.slowK ?? 50).toFixed(1)} / %D ${(stock.d ?? 50).toFixed(1)}`;
+      }
+    }
+
+    // 4. If no stock is selected yet, select this first one!
+    if (!this.selectedStock) {
+      this.selectStock(stock);
+    } else if ((this.selectedStock.ticker || this.selectedStock.symbol) === sym) {
+      // It's the currently selected stock, update toolbar and right pane dynamically
+      this.selectedStock = stock;
+      const isINR = sym.endsWith('.NS') || sym.endsWith('.BO') || stock.exchange === 'NSE';
+      const curr = isINR ? '₹' : '$';
+      this.updateCenterToolbar(stock, curr);
+      this.renderRightPane(stock, curr);
     }
   }
 
@@ -290,12 +345,13 @@ export class WorkstationTerminal {
   }
 
   updateCenterToolbar(stock, curr) {
+    if (!stock) return;
     const sym = stock.ticker || stock.symbol;
-    const tickerEl = document.getElementById('active-symbol-ticker');
-    const nameEl = document.getElementById('active-symbol-name');
-    const pricePillEl = document.getElementById('active-price-pill');
-    const timeEl = document.getElementById('active-symbol-time');
-    const feedPillEl = document.getElementById('active-feed-source-pill');
+    const tickerEl = document.getElementById('stock-active-ticker') || document.getElementById('active-symbol-ticker');
+    const nameEl = document.getElementById('stock-active-name') || document.getElementById('active-symbol-name');
+    const pricePillEl = document.getElementById('stock-active-price-pill') || document.getElementById('active-price-pill');
+    const timeEl = document.getElementById('stock-active-time') || document.getElementById('active-symbol-time');
+    const feedPillEl = document.getElementById('stock-feed-pill') || document.getElementById('active-feed-source-pill');
 
     const price = stock.price ?? stock.close ?? 0;
     const chg = stock.changePct || 0;
@@ -365,6 +421,25 @@ export class WorkstationTerminal {
     const volumes = candles.map(c => c.volume || 100000);
     const slowKs = stochSeries.map(s => s.slowK != null ? s.slowK : 50);
     const ds = stochSeries.map(s => s.d != null ? s.d : 50);
+
+    // Synchronize current price with the latest chart candle close
+    if (closes.length > 0) {
+      const latestClose = closes[closes.length - 1];
+      stock.price = latestClose;
+    }
+
+    // Recompute dynamic strategy strictly anchored to the actual price & candle momentum
+    const actualPrice = stock.price ?? closes[closes.length - 1] ?? 100;
+    const dynamicStrat = computeEntryExitStrategy(sym, actualPrice, stochSeries, {
+      kPeriod: stock.kPeriod || 14,
+      kSmoothing: stock.kSmoothing || 3,
+      dPeriod: stock.dPeriod || 3,
+      oversoldThreshold: 20,
+      overboughtThreshold: 80
+    });
+    stock.strategy = dynamicStrat;
+    stock.is_sell_zone = dynamicStrat.isShort;
+    stock.is_buy_zone = !dynamicStrat.isShort;
 
     // Calculate 9 EMA, 21 EMA (VWAP proxy), 50 EMA
     const ema9 = this.calculateEMA(closes, 9);
@@ -586,6 +661,10 @@ export class WorkstationTerminal {
         }
       }
     });
+
+    // Ensure center toolbar and right pane reflect the live chart levels & strategy
+    this.updateCenterToolbar(stock, curr);
+    this.renderRightPane(stock, curr);
   }
 
   calculateEMA(values, period) {
@@ -626,9 +705,31 @@ export class WorkstationTerminal {
   }
 
   renderRightPane(stock, curr) {
+    if (!stock) return;
     const sym = stock.ticker || stock.symbol;
     const isINR = sym.endsWith('.NS') || sym.endsWith('.BO') || stock.exchange === 'NSE';
     curr = curr || (isINR ? '₹' : '$');
+
+    // 0. Selected Stock Header Banner in Right Pane
+    const detailTicker = document.getElementById('detail-stock-ticker');
+    const detailName = document.getElementById('detail-stock-name');
+    const detailPrice = document.getElementById('detail-stock-price');
+    const detailChange = document.getElementById('detail-stock-change');
+
+    const price = stock.price ?? stock.close ?? 0;
+    const chg = stock.changePct || 0;
+    const isUp = chg >= 0;
+
+    if (detailTicker) detailTicker.textContent = sym;
+    if (detailName) detailName.textContent = stock.name || sym;
+    if (detailPrice) {
+      detailPrice.textContent = `${curr}${price.toFixed(2)}`;
+      detailPrice.style.color = isUp ? '#10b981' : '#ef4444';
+    }
+    if (detailChange) {
+      detailChange.textContent = `${isUp ? '+' : ''}${chg.toFixed(2)}%`;
+      detailChange.style.color = isUp ? '#10b981' : '#ef4444';
+    }
 
     // 1. Time & Banner
     const timeText = document.getElementById('detail-time-text');
@@ -675,7 +776,31 @@ export class WorkstationTerminal {
     if (mtfBiasDesc) mtfBiasDesc.textContent = mtf.verdict || 'Awaiting multi-timeframe confluence before position entry.';
 
     // 3. Execution Levels
-    const strat = stock.strategy || {};
+    let strat = stock.strategy || {};
+    const curPrice = stock.price ?? stock.close ?? (strat.entryMid || 100);
+    const isStratDivergent = !stock.strategy || !strat.entryMid || (Math.abs(strat.entryMid - curPrice) / curPrice > 0.05);
+
+    if (isStratDivergent) {
+      const activeCandles = this.intradayCache.get(sym) || stock.history || [];
+      const stochSeries = activeCandles.length > 0 ? calculateStochasticSeries(activeCandles, {
+        kPeriod: stock.kPeriod || 14,
+        kSmoothing: stock.kSmoothing || 3,
+        dPeriod: stock.dPeriod || 3,
+        useClosingOnly: true
+      }) : [];
+
+      strat = computeEntryExitStrategy(sym, curPrice, stochSeries, {
+        kPeriod: stock.kPeriod || 14,
+        kSmoothing: stock.kSmoothing || 3,
+        dPeriod: stock.dPeriod || 3,
+        oversoldThreshold: 20,
+        overboughtThreshold: 80
+      });
+      stock.strategy = strat;
+      stock.is_sell_zone = strat.isShort;
+      stock.is_buy_zone = !strat.isShort;
+    }
+
     const planEntry = document.getElementById('plan-entry');
     const planAction = document.getElementById('plan-action-type');
     const planSl = document.getElementById('plan-sl');
@@ -686,7 +811,7 @@ export class WorkstationTerminal {
     const planT2Diff = document.getElementById('plan-t2-diff');
     const planRule = document.getElementById('plan-exec-rule');
 
-    const entryVal = strat.entryMin ? `${curr}${Number(strat.entryMin).toFixed(1)} - ${curr}${Number(strat.entryMax).toFixed(1)}` : `${curr}${Number(stock.price).toFixed(2)}`;
+    const entryVal = strat.entryMin ? `${curr}${Number(strat.entryMin).toFixed(1)} - ${curr}${Number(strat.entryMax).toFixed(1)}` : `${curr}${Number(curPrice).toFixed(2)}`;
     if (planEntry) planEntry.textContent = entryVal;
     if (planAction) {
       planAction.textContent = stock.is_sell_zone ? 'SHORT ENTRY' : 'BUY ZONE';
@@ -713,10 +838,12 @@ export class WorkstationTerminal {
     // 5. Why This Stock Was Picked (Rationale Points)
     const rationaleContainer = document.getElementById('rationale-container');
     if (rationaleContainer) {
-      const points = stock.rationale_points || [
-        `1. Trend & Stochastic Structure: Trading at ${curr}${Number(stock.price).toFixed(2)}. Stochastic %K (${(stock.slowK ?? 50).toFixed(1)}) is deeply oversold (< 20) with Golden Cross confirmation.`,
-        `2. Institutional Volume Flow: RVOL is ${stock.rvol || 1.2}x with institutional accumulation at session lows.`,
-        `3. Price Action & Risk Blueprint: Support floor established at ${curr}${Number(strat.stopLoss || stock.price * 0.98).toFixed(1)}. Two-tier target exits offer R:R ${strat.rrRatio || '1 : 2.8'}.`
+      const safeK = stock.slowK ?? 50;
+      const safeD = stock.d ?? 50;
+      const points = [
+        `1. Trend & Stochastic Structure: Trading at ${curr}${Number(curPrice).toFixed(2)}. Stochastic %K (${safeK.toFixed(1)}) is ${safeK <= 20 ? 'in deep oversold accumulation territory (< 20)' : (safeK >= 80 ? 'in extreme overbought exhaustion (> 80)' : 'oscillating near equilibrium')} with %D at ${safeD.toFixed(1)}.`,
+        `2. Institutional Volume Flow: RVOL is ${stock.rvol || 1.2}x baseline with active volume participation at session levels.`,
+        `3. Price Action & Risk Blueprint: Entry bracket ${strat.entryRangeStr || `${curr}${Number(curPrice).toFixed(2)}`}. Stop Loss floor at ${curr}${Number(strat.stopLoss).toFixed(1)} (${strat.riskPct}% risk). Target exits at ${curr}${Number(strat.target1).toFixed(1)} and ${curr}${Number(strat.target2).toFixed(1)} delivering Institutional R:R ${strat.rrRatio || '1 : 2.5'}.`
       ];
 
       rationaleContainer.innerHTML = points.map(pt => `
@@ -780,7 +907,7 @@ export class WorkstationTerminal {
       stock.lastUpdated = Date.now();
 
       // 1. Update Center Toolbar Price Pill
-      const pricePillEl = document.getElementById('active-price-pill');
+      const pricePillEl = document.getElementById('stock-active-price-pill') || document.getElementById('active-price-pill');
       if (pricePillEl) {
         const isUp = tick.changePct >= 0;
         pricePillEl.textContent = `${curr}${newPrice.toFixed(2)} (${isUp ? '+' : ''}${tick.changePct.toFixed(2)}%)`;
@@ -788,6 +915,44 @@ export class WorkstationTerminal {
         setTimeout(() => {
           if (pricePillEl) pricePillEl.className = `active-price-pill font-mono font-bold ${isUp ? 'text-emerald' : 'text-rose'}`;
         }, 900);
+      }
+
+      // 1b. Update Right Pane Selected Stock Header Price
+      const detailPrice = document.getElementById('detail-stock-price');
+      const detailChange = document.getElementById('detail-stock-change');
+      if (detailPrice) {
+        detailPrice.textContent = `${curr}${newPrice.toFixed(2)}`;
+        detailPrice.style.color = tick.changePct >= 0 ? '#10b981' : '#ef4444';
+      }
+      if (detailChange) {
+        detailChange.textContent = `${tick.changePct >= 0 ? '+' : ''}${tick.changePct.toFixed(2)}%`;
+        detailChange.style.color = tick.changePct >= 0 ? '#10b981' : '#ef4444';
+      }
+
+      // 1c. If strategy was computed on a different base or diverges from live price, resync strategy
+      if (!stock.strategy || (stock.strategy?.entryMid && Math.abs(stock.strategy.entryMid - newPrice) / newPrice > 0.05)) {
+        const sym = stock.ticker || stock.symbol;
+        const activeCandles = this.intradayCache.get(sym) || stock.history || [];
+        const stochSeries = activeCandles.length > 0 ? calculateStochasticSeries(activeCandles, {
+          kPeriod: stock.kPeriod || 14,
+          kSmoothing: stock.kSmoothing || 3,
+          dPeriod: stock.dPeriod || 3,
+          useClosingOnly: true
+        }) : [];
+
+        stock.strategy = computeEntryExitStrategy(sym, newPrice, stochSeries, {
+          kPeriod: stock.kPeriod || 14,
+          kSmoothing: stock.kSmoothing || 3,
+          dPeriod: stock.dPeriod || 3,
+          oversoldThreshold: 20,
+          overboughtThreshold: 80
+        });
+        stock.is_sell_zone = stock.strategy.isShort;
+        stock.is_buy_zone = !stock.strategy.isShort;
+        this.renderRightPane(stock, curr);
+      } else {
+        // Update Position Sizing Calculator in Real-Time
+        this.updatePositionCalculator(stock);
       }
 
       // 2. Update Left Card live price
@@ -959,6 +1124,17 @@ export class WorkstationTerminal {
     }
   }
 
+  setFilter(filterName = 'all') {
+    this.currentFilter = filterName || 'all';
+    const filterContainer = document.getElementById('radar-filter-pills');
+    if (filterContainer) {
+      filterContainer.querySelectorAll('.filter-pill').forEach(b => {
+        b.classList.toggle('active', (b.getAttribute('data-filter') || 'all') === this.currentFilter);
+      });
+    }
+    this.applyFilterAndSort();
+  }
+
   setupSearchListener() {
     const searchInput = document.getElementById('radar-search-input');
     if (searchInput) {
@@ -969,45 +1145,7 @@ export class WorkstationTerminal {
     }
   }
 
-  setupPaneToggleListeners() {
-    const btnLeft = document.getElementById('btn-toggle-left');
-    const btnRight = document.getElementById('btn-toggle-right');
-    const layout = this.layoutEl;
-
-    if (btnLeft && layout) {
-      btnLeft.addEventListener('click', () => {
-        layout.classList.toggle('collapsed-left');
-        setTimeout(() => {
-          this.priceChart?.resize();
-          this.stochChart?.resize();
-        }, 260);
-      });
-    }
-
-    if (btnRight && layout) {
-      btnRight.addEventListener('click', () => {
-        layout.classList.toggle('collapsed-right');
-        setTimeout(() => {
-          this.priceChart?.resize();
-          this.stochChart?.resize();
-        }, 260);
-      });
-    }
-  }
-
   setupToolbarListeners() {
-    // Auto-refresh buttons
-    const btnGroup = document.getElementById('recAutoRefreshBtnGroup');
-    if (btnGroup) {
-      btnGroup.querySelectorAll('.rec-ar-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          const val = parseInt(btn.getAttribute('data-interval'), 10);
-          this.setRefreshInterval(val);
-        });
-      });
-    }
-
     // Timeframe switcher
     document.querySelectorAll('.rec-timeframe-group .rec-tf-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -1045,16 +1183,6 @@ export class WorkstationTerminal {
         if (this.selectedStock) {
           const isINR = (this.selectedStock.ticker || '').endsWith('.NS') || (this.selectedStock.ticker || '').endsWith('.BO');
           this.renderDualCharts(this.selectedStock, isINR ? '₹' : '$');
-        }
-      });
-    }
-
-    // Save PNG Screenshot
-    const btnScreenshot = document.getElementById('btn-chart-screenshot');
-    if (btnScreenshot) {
-      btnScreenshot.addEventListener('click', () => {
-        if (this.selectedStock) {
-          downloadStockChartScreenshot(this.selectedStock);
         }
       });
     }

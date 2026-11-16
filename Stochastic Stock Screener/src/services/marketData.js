@@ -95,57 +95,121 @@ export async function fetchStockCandles(symbol, range = '3mo', interval = '1d', 
 }
 
 /**
+ * Reference base prices for preset stocks to ensure realistic prices
+ * across universes even before live quotes arrive.
+ */
+export function getReferenceBasePrice(symbol, isINR = false) {
+  const sym = symbol.toUpperCase();
+  const PRICE_MAP = {
+    'BRITANNIA.NS': 4754,
+    'MARUTI.NS': 12450,
+    'ULTRACEMCO.NS': 11200,
+    'TITAN.NS': 3420,
+    'NESTLEIND.NS': 2280,
+    'BAJFINANCE.NS': 6850,
+    'BAJAJFINSV.NS': 1640,
+    'EICHERMOT.NS': 4920,
+    'HEROMOTOCO.NS': 4850,
+    'TRENT.NS': 7200,
+    'DIXON.NS': 12450,
+    'POLYCAB.NS': 6820,
+    'PERSISTENT.NS': 5320,
+    'COFORGE.NS': 7850,
+    'HAL.NS': 4350,
+    'APOLLOHOSP.NS': 6980,
+    'DIVISLAB.NS': 5850,
+    'DRREDDY.NS': 6450,
+    'RELIANCE.NS': 2850,
+    'TCS.NS': 3850,
+    'HDFCBANK.NS': 1680,
+    'ICICIBANK.NS': 1250,
+    'INFY.NS': 1850,
+    'SBIN.NS': 820,
+    'BHARTIARTL.NS': 1580,
+    'ITC.NS': 470,
+    'LT.NS': 3650,
+    'AXISBANK.NS': 1180,
+    'KOTAKBANK.NS': 1780,
+    'SUNPHARMA.NS': 1780,
+    'M&M.NS': 2850,
+    'NTPC.NS': 380,
+    'POWERGRID.NS': 320,
+    'ADANIENT.NS': 3100,
+    'ADANIPORTS.NS': 1350,
+    'ASIANPAINT.NS': 2850,
+    'COALINDIA.NS': 420,
+    'TATASTEEL.NS': 150,
+    'ONGC.NS': 260,
+    'HCLTECH.NS': 1820,
+    'WIPRO.NS': 560,
+    'CIPLA.NS': 1520,
+    'GRASIM.NS': 2650,
+    'JSWSTEEL.NS': 950,
+    'INDUSINDBK.NS': 980,
+    'HINDALCO.NS': 680,
+    'TECHM.NS': 1680,
+    'BEL.NS': 290,
+    'BPCL.NS': 310,
+    'TATACONSUM.NS': 980,
+    'SHRIRAMFIN.NS': 3200,
+    'SBILIFE.NS': 1550,
+    'HDFCLIFE.NS': 680,
+    'VBL.NS': 620,
+    'ZOMATO.NS': 260,
+    'JIOFIN.NS': 320,
+    'SUZLON.NS': 64,
+    'RVNL.NS': 410,
+    'CDSL.NS': 1520,
+    'BSE.NS': 4750,
+    'ANGELONE.NS': 2840,
+    'HUDCO.NS': 210,
+    'NIFTYBEES.NS': 276,
+    'BANKBEES.NS': 542,
+    'MID150BEES.NS': 195,
+    'GOLDBEES.NS': 68,
+    'SILVERBEES.NS': 92,
+    'ITBEES.NS': 42,
+    'NVDA': 140,
+    'AAPL': 228,
+    'MSFT': 425,
+    'GOOGL': 165,
+    'AMZN': 188,
+    'META': 580,
+    'TSLA': 215,
+    'AVGO': 170,
+    'AMD': 140,
+    'QCOM': 165,
+    'NFLX': 820,
+    'COST': 920,
+    'ORCL': 180,
+    'PLTR': 44,
+    'COIN': 215,
+    'SMCI': 48,
+    'CRWD': 315,
+    'SPY': 585,
+    'QQQ': 492,
+    'IWM': 222
+  };
+
+  for (const [key, val] of Object.entries(PRICE_MAP)) {
+    if (sym === key || sym.startsWith(key.replace('.NS', '')) || sym.includes(key)) {
+      return val;
+    }
+  }
+
+  // Deterministic fallback based on symbol characters so prices vary realistically instead of all being identical
+  let hash = 0;
+  for (let i = 0; i < sym.length; i++) hash = (hash * 31 + sym.charCodeAt(i)) & 0xffffffff;
+  const absHash = Math.abs(hash);
+  return isINR ? (200 + (absHash % 3300)) : (25 + (absHash % 325));
+}
+
+/**
  * Generate realistic synthetic candles if offline or network fails
  */
 export function generateSyntheticCandles(symbol, isINR = false) {
-  let basePrice = isINR ? 1250 : 125;
+  let basePrice = getReferenceBasePrice(symbol, isINR);
   const sym = symbol.toUpperCase();
-  if (sym.includes('RELIANCE')) basePrice = 2950;
-  else if (sym.includes('TCS')) basePrice = 3850;
-  else if (sym.includes('HDFCBANK')) basePrice = 1680;
-  else if (sym.includes('NVDA')) basePrice = 135;
-  else if (sym.includes('AAPL')) basePrice = 228;
-  else if (sym.includes('MSFT')) basePrice = 425;
-  else if (sym.includes('GOOGL')) basePrice = 165;
-  else if (sym.includes('AMZN')) basePrice = 188;
-  else if (sym.includes('META')) basePrice = 580;
-  else if (sym.includes('TSLA')) basePrice = 215;
-  else if (sym.includes('SPY')) basePrice = 585;
-  else if (sym.includes('QQQ')) basePrice = 492;
-  else if (sym.includes('IWM')) basePrice = 222;
-  else if (sym.includes('DIA')) basePrice = 425;
-  else if (sym.includes('SMH')) basePrice = 245;
-  else if (sym.includes('ACWI')) basePrice = 118;
-  else if (sym.includes('INDA')) basePrice = 56;
-  else if (sym.includes('EEM')) basePrice = 45;
-  else if (sym.includes('ARKK')) basePrice = 52;
-  else if (sym.includes('NIFTYBEES')) basePrice = 276;
-  else if (sym.includes('BANKBEES')) basePrice = 542;
-  else if (sym.includes('MID150BEES')) basePrice = 195;
-  else if (sym.includes('GOLDBEES')) basePrice = 68;
-  else if (sym.includes('SILVERBEES')) basePrice = 92;
-  else if (sym.includes('ITBEES')) basePrice = 42;
-  else if (sym.includes('NIFTY') && sym.startsWith('^')) basePrice = 24850;
-  else if (sym.includes('BANK') && sym.startsWith('^')) basePrice = 51200;
-  else if (sym.includes('DIXON')) basePrice = 12450;
-  else if (sym.includes('POLYCAB')) basePrice = 6820;
-  else if (sym.includes('TRENT')) basePrice = 7200;
-  else if (sym.includes('PERSISTENT')) basePrice = 5320;
-  else if (sym.includes('COFORGE')) basePrice = 7850;
-  else if (sym.includes('SUZLON')) basePrice = 64;
-  else if (sym.includes('RVNL')) basePrice = 410;
-  else if (sym.includes('CDSL')) basePrice = 1520;
-  else if (sym.includes('BSE')) basePrice = 4750;
-  else if (sym.includes('ANGELONE')) basePrice = 2840;
-  else if (sym.includes('HUDCO')) basePrice = 210;
-  else if (sym.includes('PLTR')) basePrice = 44;
-  else if (sym.includes('COIN')) basePrice = 215;
-  else if (sym.includes('SMCI')) basePrice = 48;
-  else if (sym.includes('CRWD')) basePrice = 315;
-  else if (sym.includes('IREN')) basePrice = 9.8;
-  else if (sym.includes('IONQ')) basePrice = 16.2;
-  else if (sym.includes('ASTS')) basePrice = 26.5;
-  else if (sym.includes('RKLB')) basePrice = 12.8;
 
   const candles = [];
   const now = new Date();
@@ -190,15 +254,7 @@ export function generateSyntheticCandles(symbol, isINR = false) {
 export function generateTodayIntradayCandles(symbol, isINR = false, currentPrice = null, dayChangePct = null) {
   let basePrice = currentPrice;
   if (!basePrice || isNaN(basePrice)) {
-    basePrice = isINR ? 1250 : 125;
-    const sym = symbol.toUpperCase();
-    if (sym.includes('RELIANCE')) basePrice = 2850;
-    else if (sym.includes('TCS')) basePrice = 3850;
-    else if (sym.includes('HDFCBANK')) basePrice = 1680;
-    else if (sym.includes('NVDA')) basePrice = 135;
-    else if (sym.includes('AAPL')) basePrice = 228;
-    else if (sym.includes('MSFT')) basePrice = 425;
-    else if (sym.includes('SPY')) basePrice = 585;
+    basePrice = getReferenceBasePrice(symbol, isINR);
   }
 
   const chgPct = dayChangePct != null ? dayChangePct : 0.45;

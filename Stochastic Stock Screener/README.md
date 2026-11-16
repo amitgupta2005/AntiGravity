@@ -128,7 +128,7 @@ Stochastic Stock Screener/
     ├── style.css               # Modern dark/light fintech theme & design system
     ├── components/
     │   ├── kpiBar.js           # Quantitative summary metric cards
-    │   ├── screenerTable.js    # Filterable & sortable table with visual gauges & strategy cards
+    │   ├── workstationTerminal.js # 3-Pane institutional workstation with dual charts & radar
     │   ├── chartModal.js       # Price chart + Stochastic sub-chart + Strategy Blueprint + breakdown
     │   └── uploadModal.js      # Drag-and-drop XLSX/CSV parser with preview
     ├── data/

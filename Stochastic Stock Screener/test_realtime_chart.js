@@ -31,19 +31,22 @@ assert(htmlContent.includes('id="terminal-layout"'), 'Missing #terminal-layout i
 assert(htmlContent.includes('id="screener-pane"'), 'Missing #screener-pane in index.html');
 assert(htmlContent.includes('id="chart-pane"'), 'Missing #chart-pane in index.html');
 assert(htmlContent.includes('id="analysis-sidebar"'), 'Missing #analysis-sidebar in index.html');
+assert(htmlContent.includes('id="selected-stock-header-card"'), 'Missing #selected-stock-header-card in index.html');
+assert(htmlContent.includes('id="detail-stock-ticker"'), 'Missing #detail-stock-ticker in index.html');
+assert(htmlContent.includes('id="detail-stock-name"'), 'Missing #detail-stock-name in index.html');
+assert(htmlContent.includes('id="detail-stock-price"'), 'Missing #detail-stock-price in index.html');
+assert(htmlContent.includes('id="detail-stock-change"'), 'Missing #detail-stock-change in index.html');
+assert(htmlContent.includes('id="stock-active-ticker"'), 'Missing #stock-active-ticker in index.html');
+assert(htmlContent.includes('id="stock-active-name"'), 'Missing #stock-active-name in index.html');
+assert(htmlContent.includes('id="stock-active-price-pill"'), 'Missing #stock-active-price-pill in index.html');
+assert(htmlContent.includes('Entry &amp; Exit Strategy Blueprint'), 'Missing Entry & Exit Strategy Blueprint title in index.html');
 assert(htmlContent.includes('id="main-candlestick-chart"'), 'Missing #main-candlestick-chart in index.html');
 assert(htmlContent.includes('id="stoch-sub-chart"'), 'Missing #stoch-sub-chart in index.html');
-assert(htmlContent.includes('id="viewModeSelector"'), 'Missing #viewModeSelector in index.html');
-assert(htmlContent.includes('id="viewWorkstationBtn"'), 'Missing #viewWorkstationBtn in index.html');
-assert(htmlContent.includes('id="viewTableBtn"'), 'Missing #viewTableBtn in index.html');
-assert(htmlContent.includes('id="recommendation-chart-container"'), 'Missing #recommendation-chart-container in index.html');
-assert(htmlContent.includes('id="toggleRecChartBtn"'), 'Missing #toggleRecChartBtn in index.html');
-assert(htmlContent.includes('recommendation-chart-section'), 'Missing recommendation-chart-section class');
 assert(htmlContent.includes('class="header-ar-selector"'), 'Missing .header-ar-selector in index.html');
 assert(htmlContent.includes('data-sec="5"'), 'Missing 5s header auto-refresh option');
 assert(htmlContent.includes('data-sec="10"'), 'Missing 10s header auto-refresh option');
 assert(htmlContent.includes('data-sec="15"'), 'Missing 15s header auto-refresh option');
-console.log('  ✅ Test 1 Passed: index.html contains #terminal-layout (3 Panes), View Mode switcher, and dual chart canvases.');
+console.log('  ✅ Test 1 Passed: index.html contains #terminal-layout (3 Panes), selected stock strategy header, dynamic toolbar, dual chart canvases, and header auto-refresh controls.');
 
 // TEST 2: Validate CSS Rules
 console.log('\n▶ Test 2: Validating CSS Rules in src/style.css...');
@@ -423,5 +426,49 @@ assert.strictEqual(workstation.refreshIntervalSec, 5, 'Workstation interval rese
 
 console.log('  ✅ Test 8 Passed: WorkstationTerminal filtering, sorting, 9/21/50 EMA calculations, and 5s/10s/15s cadence verified.');
 
-console.log('\n🎉 ALL REAL-TIME RECOMMENDATION CHART & TRADINGVIEW FRAMEWORK TESTS PASSED! (8/8 Checks)\n');
+// TEST 9: Center Toolbar & Entry/Exit Strategy Blueprint Pane Synchronization
+console.log('\n▶ Test 9: Verifying Center Toolbar & Strategy Pane Stock Selection Sync...');
+const domElements = {};
+globalThis.document = {
+  getElementById: (id) => {
+    if (!domElements[id]) {
+      domElements[id] = {
+        textContent: '',
+        className: '',
+        style: {},
+        innerHTML: '',
+        querySelector: () => null,
+        querySelectorAll: () => [],
+        addEventListener: () => {}
+      };
+    }
+    return domElements[id];
+  }
+};
+
+// Select HDFCBANK from mockStocks
+workstation.selectedStock = null;
+workstation.updateSingleStock(mockStocks[0]);
+assert.strictEqual(workstation.selectedStock.ticker, 'HDFCBANK.NS', 'Selected stock must be set to HDFCBANK.NS');
+
+// Verify updateCenterToolbar correctly populates the toolbar elements
+workstation.updateCenterToolbar(mockStocks[0], '₹');
+assert.strictEqual(domElements['stock-active-ticker'].textContent, 'HDFCBANK.NS', 'Toolbar ticker must match selected stock');
+assert.strictEqual(domElements['stock-active-name'].textContent, 'HDFC Bank Ltd', 'Toolbar name must match selected stock');
+assert(domElements['stock-active-price-pill'].textContent.includes('813.05'), 'Toolbar price pill must display selected stock price');
+
+// Verify renderRightPane correctly populates the Entry & Exit Strategy Blueprint elements
+workstation.renderRightPane(mockStocks[0], '₹');
+assert.strictEqual(domElements['detail-stock-ticker'].textContent, 'HDFCBANK.NS', 'Strategy pane ticker must match selected stock');
+assert.strictEqual(domElements['detail-stock-name'].textContent, 'HDFC Bank Ltd', 'Strategy pane company name must match');
+assert.strictEqual(domElements['detail-stock-price'].textContent, '₹813.05', 'Strategy pane price must match');
+const expectedPrice = Math.round(mockStocks[0].price);
+assert(domElements['plan-entry'].textContent.includes(String(expectedPrice)), `Strategy pane entry must reflect stock price (${expectedPrice})`);
+assert(domElements['plan-sl'].textContent.length > 2, 'Strategy pane Stop Loss must be populated');
+assert(domElements['plan-t1'].textContent.length > 2, 'Strategy pane Target 1 must be populated');
+assert(domElements['plan-t2'].textContent.length > 2, 'Strategy pane Target 2 must be populated');
+
+console.log('  ✅ Test 9 Passed: Toolbar and Entry/Exit Strategy Blueprint pane dynamically synchronize with selected stock.');
+
+console.log('\n🎉 ALL REAL-TIME RECOMMENDATION CHART & TRADINGVIEW FRAMEWORK TESTS PASSED! (9/9 Checks)\n');
 process.exit(0);
