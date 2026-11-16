@@ -664,7 +664,8 @@ def get_chart_data(ticker: str, timeframe: str = "15m", force_refresh: bool = Fa
             "open": round(o, 2),
             "high": round(h, 2),
             "low": round(l, 2),
-            "close": round(c, 2)
+            "close": round(c, 2),
+            "volume": int(v)
         })
 
         if has_vwap:

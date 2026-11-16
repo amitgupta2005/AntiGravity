@@ -325,11 +325,14 @@
           <div class="legend-item"><span>H:</span> <span class="legend-val" id="leg-high">--</span></div>
           <div class="legend-item"><span>L:</span> <span class="legend-val" id="leg-low">--</span></div>
           <div class="legend-item"><span>C:</span> <span class="legend-val" id="leg-close">--</span></div>
-          <div class="legend-item"><span>Vol:</span> <span class="legend-val" id="leg-vol">--</span></div>
+          <div class="legend-item"><span style="color:#38bdf8; font-weight:700;">Vol:</span> <span class="legend-val" id="leg-vol" style="color:#38bdf8;">--</span></div>
           <div class="legend-item"><span style="color:#eab308;">VWAP:</span> <span class="legend-val" id="leg-vwap">--</span></div>
           <div class="legend-item"><span style="color:#a78bfa;">RSI:</span> <span class="legend-val" id="leg-rsi">--</span></div>
           <div class="legend-item" id="device-res-pill" style="margin-left: auto; color: var(--accent-blue); font-size: 0.65rem;" title="Calculated Device Screen Resolution & Pixel Ratio"></div>
         </div>
+
+        <!-- Floating Interactive Crosshair Tooltip for Hovered Price & Volume -->
+        <div class="chart-hover-tooltip" id="chart-hover-tooltip" style="display: none;"></div>
 
         <div id="main-candlestick-chart"></div>
         <div id="rsi-sub-chart"></div>

@@ -202,6 +202,9 @@ const legClose = document.getElementById("leg-close");
 const legVol = document.getElementById("leg-vol");
 const legVwap = document.getElementById("leg-vwap");
 const legRsi = document.getElementById("leg-rsi");
+const chartHoverTooltip = document.getElementById("chart-hover-tooltip");
+const chartVolumeMap = new Map();
+const chartVwapMap = new Map();
 
 // Detail panel elements
 const signalBanner = document.getElementById("signal-banner");
@@ -423,33 +426,15 @@ function initLightweightCharts() {
       autoScale: true,
       scaleMargins: {
         top: 0.08,
-        bottom: 0.22 // Leaves room for volume histogram
+        bottom: 0.08 // Volume histogram removed from chart to avoid price candle overlap
       }
     }
   });
 
-  // Volume Series on bottom of main chart (Background layer 0)
-  volumeSeries = mainChart.addHistogramSeries({
-    color: "#3b82f6",
-    priceFormat: { type: "volume" },
-    priceScaleId: "",
-    scaleMargins: {
-      top: 0.78,
-      bottom: 0.0
-    }
-  });
-
-  volMaSeries = mainChart.addLineSeries({
-    color: "rgba(148, 163, 184, 0.4)",
-    lineWidth: 1,
-    priceScaleId: "",
-    priceLineVisible: false,
-    lastValueVisible: false,
-    scaleMargins: {
-      top: 0.78,
-      bottom: 0.0
-    }
-  });
+  // Volume series removed from chart overlay so it never overlaps intraday price candles.
+  // Volume is displayed on hover via interactive crosshair tooltip and the floating legend.
+  volumeSeries = null;
+  volMaSeries = null;
 
   // EMA Ribbon (Background layer 1: rendered beneath candlesticks)
   ema50Series = mainChart.addLineSeries({
@@ -550,6 +535,13 @@ function initLightweightCharts() {
 
   // Crosshair listener
   mainChart.subscribeCrosshairMove(updateLegend);
+
+  if (mainChartContainer) {
+    mainChartContainer.addEventListener("mouseleave", () => {
+      const tooltip = chartHoverTooltip || document.getElementById("chart-hover-tooltip");
+      if (tooltip) tooltip.style.display = "none";
+    });
+  }
 }
 
 function setupResizeObserver() {
@@ -672,23 +664,101 @@ function toggleMaximizeChart() {
 }
 
 function updateLegend(param) {
-  if (!param || !param.time || !param.seriesData) return;
+  const tooltip = chartHoverTooltip || document.getElementById("chart-hover-tooltip");
+
+  if (!param || !param.time || !param.seriesData) {
+    if (tooltip) tooltip.style.display = "none";
+    return;
+  }
 
   const candle = param.seriesData.get(candleSeries);
   if (candle) {
-    legOpen.textContent = candle.open.toFixed(2);
-    legHigh.textContent = candle.high.toFixed(2);
-    legLow.textContent = candle.low.toFixed(2);
-    legClose.textContent = candle.close.toFixed(2);
+    if (legOpen) legOpen.textContent = candle.open.toFixed(2);
+    if (legHigh) legHigh.textContent = candle.high.toFixed(2);
+    if (legLow) legLow.textContent = candle.low.toFixed(2);
+    if (legClose) legClose.textContent = candle.close.toFixed(2);
   }
-  const vol = param.seriesData.get(volumeSeries);
-  if (vol) legVol.textContent = vol.value.toLocaleString();
+
+  // Lookup volume for the hovered bar from chartVolumeMap or candle object
+  const volData = chartVolumeMap.get(param.time);
+  const volVal = volData ? volData.value : (candle && candle.volume != null ? candle.volume : 0);
+  if (legVol) legVol.textContent = volVal ? volVal.toLocaleString() : "--";
 
   const vwap = param.seriesData.get(vwapSeries);
-  if (vwap) legVwap.textContent = vwap.value.toFixed(2);
+  if (vwap && legVwap) legVwap.textContent = vwap.value.toFixed(2);
 
   const rsi = param.seriesData.get(rsiSeries);
-  if (rsi) legRsi.textContent = rsi.value.toFixed(1);
+  if (rsi && legRsi) legRsi.textContent = rsi.value.toFixed(1);
+
+  // Render Interactive Floating Hover Tooltip attached to cursor position
+  if (tooltip && param.point && candle && param.point.x >= 0 && param.point.y >= 0) {
+    const isIndia = isIndianStock(activeStockAnalysis || currentTicker);
+    const sym = (activeStockAnalysis && activeStockAnalysis.currency_symbol) || (isIndia ? "₹" : "$");
+    const formattedTime = formatStockTime(param.time, isIndia, true);
+    const isUp = candle.close >= candle.open;
+    const changePct = candle.open > 0 ? (((candle.close - candle.open) / candle.open) * 100).toFixed(2) : "0.00";
+    const changeColor = isUp ? "#10b981" : "#ef4444";
+    const changeSign = isUp ? "+" : "";
+
+    // Hover cursor price level
+    let cursorPriceHtml = "";
+    if (candleSeries && candleSeries.coordinateToPrice && param.point.y != null) {
+      const hoverP = candleSeries.coordinateToPrice(param.point.y);
+      if (hoverP != null && !isNaN(hoverP)) {
+        cursorPriceHtml = `<span style="color:#94a3b8; font-size:0.65rem;" title="Crosshair Cursor Price Level">Level: ${sym}${hoverP.toFixed(2)}</span>`;
+      }
+    }
+
+    const volColor = isUp ? "#10b981" : "#ef4444";
+    const volText = volVal ? `${volVal.toLocaleString()} shares` : "N/A";
+    const vwapText = vwap ? `${sym}${vwap.value.toFixed(2)}` : "--";
+
+    tooltip.innerHTML = `
+      <div class="tooltip-header">
+        <span>🕒 ${formattedTime}</span>
+        ${cursorPriceHtml}
+      </div>
+      <div class="tooltip-price-row">
+        <span class="tooltip-price-val" style="color: ${changeColor};">${sym}${candle.close.toFixed(2)}</span>
+        <span style="color: ${changeColor}; font-weight:700;">${changeSign}${changePct}%</span>
+      </div>
+      <div class="tooltip-ohlc-grid">
+        <span>O: <strong style="color:var(--text-main);">${sym}${candle.open.toFixed(2)}</strong></span>
+        <span>H: <strong style="color:var(--text-main);">${sym}${candle.high.toFixed(2)}</strong></span>
+        <span>L: <strong style="color:var(--text-main);">${sym}${candle.low.toFixed(2)}</strong></span>
+        <span>C: <strong style="color:var(--text-main);">${sym}${candle.close.toFixed(2)}</strong></span>
+      </div>
+      <div class="tooltip-vol-row">
+        <span>📊 Volume:</span>
+        <span style="color: ${volColor}; font-size:0.75rem;">${volText}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-top:4px; font-size:0.66rem; color:#eab308;">
+        <span>VWAP:</span>
+        <strong style="color:var(--text-main);">${vwapText}</strong>
+      </div>
+    `;
+
+    tooltip.style.display = "block";
+    const containerW = mainChartContainer ? mainChartContainer.clientWidth : 600;
+    const containerH = mainChartContainer ? mainChartContainer.clientHeight : 400;
+    const tooltipW = 210;
+    const tooltipH = 140;
+
+    let left = param.point.x + 16;
+    let top = param.point.y - 12;
+
+    if (left + tooltipW > containerW - 65) {
+      left = Math.max(10, param.point.x - tooltipW - 16);
+    }
+    if (top + tooltipH > containerH - 20) {
+      top = Math.max(10, param.point.y - tooltipH - 10);
+    }
+
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+  } else if (tooltip) {
+    tooltip.style.display = "none";
+  }
 }
 
 
@@ -1145,9 +1215,38 @@ function updateChartSeries(chartData) {
   ema9Series.setData(indicators.ema9 || []);
   ema21Series.setData(indicators.ema21 || []);
   ema50Series.setData(indicators.ema50 || []);
-  volumeSeries.setData(indicators.volume || []);
-  volMaSeries.setData(indicators.vol_ma || []);
+  if (volumeSeries) volumeSeries.setData(indicators.volume || []);
+  if (volMaSeries) volMaSeries.setData(indicators.vol_ma || []);
   rsiSeries.setData(indicators.rsi || []);
+
+  // Populate volume and VWAP lookup maps for instant O(1) hover display
+  chartVolumeMap.clear();
+  if (indicators.volume && Array.isArray(indicators.volume)) {
+    indicators.volume.forEach(v => chartVolumeMap.set(v.time, v));
+  } else if (candles && Array.isArray(candles)) {
+    candles.forEach(c => {
+      if (c.volume != null) chartVolumeMap.set(c.time, { time: c.time, value: c.volume });
+    });
+  }
+
+  chartVwapMap.clear();
+  if (indicators.vwap && Array.isArray(indicators.vwap)) {
+    indicators.vwap.forEach(v => chartVwapMap.set(v.time, v));
+  }
+
+  // Populate floating legend with latest candle's values
+  if (candles.length > 0) {
+    const last = candles[candles.length - 1];
+    if (legOpen) legOpen.textContent = last.open.toFixed(2);
+    if (legHigh) legHigh.textContent = last.high.toFixed(2);
+    if (legLow) legLow.textContent = last.low.toFixed(2);
+    if (legClose) legClose.textContent = last.close.toFixed(2);
+    const lastVol = chartVolumeMap.get(last.time);
+    const vVal = lastVol ? lastVol.value : (last.volume || 0);
+    if (legVol) legVol.textContent = vVal ? vVal.toLocaleString() : "--";
+    const lastVwap = chartVwapMap.get(last.time);
+    if (lastVwap && legVwap) legVwap.textContent = lastVwap.value.toFixed(2);
+  }
 
   // Update Pattern & Signal Markers
   if (showMarkers && markers.length > 0) {
@@ -1464,8 +1563,8 @@ function applyReplayStep() {
   ema9Series.setData(rawChartData.indicators.ema9.filter(d => d.time <= lastTime));
   ema21Series.setData(rawChartData.indicators.ema21.filter(d => d.time <= lastTime));
   ema50Series.setData(rawChartData.indicators.ema50.filter(d => d.time <= lastTime));
-  volumeSeries.setData(rawChartData.indicators.volume.filter(d => d.time <= lastTime));
-  volMaSeries.setData(rawChartData.indicators.vol_ma.filter(d => d.time <= lastTime));
+  if (volumeSeries && rawChartData.indicators.volume) volumeSeries.setData(rawChartData.indicators.volume.filter(d => d.time <= lastTime));
+  if (volMaSeries && rawChartData.indicators.vol_ma) volMaSeries.setData(rawChartData.indicators.vol_ma.filter(d => d.time <= lastTime));
   rsiSeries.setData(rawChartData.indicators.rsi.filter(d => d.time <= lastTime));
 
   if (showMarkers) {
@@ -1476,6 +1575,11 @@ function applyReplayStep() {
   const isIndia = isIndianStock(activeStockAnalysis || currentTicker);
   const sym = (activeStockAnalysis && activeStockAnalysis.currency_symbol) || (isIndia ? "₹" : "$");
   activePricePill.textContent = `${sym}${curr.close.toFixed(2)}`;
+
+  // Update floating legend volume during replay
+  const replayVol = chartVolumeMap.get(lastTime);
+  const rVal = replayVol ? replayVol.value : (curr.volume || 0);
+  if (legVol) legVol.textContent = rVal ? rVal.toLocaleString() : "--";
 
   const formattedReplayTime = formatStockTime(lastTime, isIndia, true);
   replayTimeLabel.textContent = `Bar ${replayIndex} / ${total} (${formattedReplayTime})`;
