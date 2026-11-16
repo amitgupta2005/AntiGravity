@@ -10,6 +10,7 @@ import { createIcons, icons } from 'lucide';
 import { renderKpiBar } from './components/kpiBar.js';
 import { ScreenerTable } from './components/screenerTable.js';
 import { setupChartModal, openStockChartModal } from './components/chartModal.js';
+import { RecommendationChartTerminal } from './components/recommendationChart.js';
 import { 
   exportToExcel, 
   exportToXLS, 
@@ -43,6 +44,7 @@ const state = {
   stochasticParams: { ...DEFAULT_STOCHASTIC_PARAMS },
   activeAbortController: null,
   screenerTable: null,
+  recChartTerminal: null,
   isScanning: false,
   autoRefreshEnabled: typeof localStorage !== 'undefined' ? localStorage.getItem('antigravity_auto_refresh') !== 'off' : true,
   autoRefreshIntervalSec: typeof localStorage !== 'undefined' ? (parseInt(localStorage.getItem('antigravity_auto_refresh_interval'), 10) || 30) : 30,
@@ -58,10 +60,22 @@ function initApp() {
     window.lucide.createIcons();
   }
 
-  // Initialize Screener Table with export oversold handler
+  // Initialize Screener Table with export oversold handler & selection handler
   state.screenerTable = new ScreenerTable('table-container', {
     onExportOversold: (oversoldList) => {
       exportOversoldWithCharts(oversoldList);
+    },
+    onSelectStock: (stock) => {
+      if (state.recChartTerminal) {
+        state.recChartTerminal.selectStock(stock);
+      }
+    }
+  });
+
+  // Initialize Real-Time Recommendation Chart Terminal
+  state.recChartTerminal = new RecommendationChartTerminal('recommendation-chart-container', {
+    onStockSelect: (stock) => {
+      // Keep table in sync if needed
     }
   });
 
@@ -71,6 +85,7 @@ function initApp() {
   setupExportDropdown();
   setupThemeToggle();
   setupHeaderFullscreen();
+  setupRecChartToggle();
   setupUniverseSelector();
   setupOversoldQuickFilter();
   setupAutoRefresh();
@@ -120,6 +135,9 @@ async function startScreening(stocks, universeLabel = '', isBackgroundRefresh = 
     const instantBaseline = getInstantBaselineResults(stocks, state.stochasticParams);
     state.screenedResults = instantBaseline;
     state.screenerTable.setResults(state.screenedResults);
+    if (state.recChartTerminal) {
+      state.recChartTerminal.setResults(state.screenedResults);
+    }
     renderKpiBar(state.screenedResults);
     setupKpiCardClickFilters();
   }
@@ -152,6 +170,12 @@ async function startScreening(stocks, universeLabel = '', isBackgroundRefresh = 
         if (currentResult && state.screenerTable) {
           state.screenerTable.updateSingleStock(currentResult, true);
           renderKpiBar(state.screenedResults);
+          if (state.recChartTerminal && state.recChartTerminal.selectedStock) {
+            const curSym = state.recChartTerminal.selectedStock.ticker || state.recChartTerminal.selectedStock.symbol;
+            if (curSym === (currentResult.ticker || currentResult.symbol)) {
+              state.recChartTerminal.selectedStock = currentResult;
+            }
+          }
         }
       },
       state.activeAbortController.signal
@@ -159,6 +183,9 @@ async function startScreening(stocks, universeLabel = '', isBackgroundRefresh = 
 
     state.screenedResults = results;
     state.isScanning = false;
+    if (state.recChartTerminal) {
+      state.recChartTerminal.setResults(results);
+    }
 
     // Refresh KPI card click filters
     setupKpiCardClickFilters();
@@ -639,6 +666,9 @@ function setupThemeToggle() {
 
     localStorage.setItem('antigravity_stoch_theme', isNowLight ? 'light' : 'dark');
     updateThemeButtonUI(isNowLight);
+    if (state.recChartTerminal) {
+      state.recChartTerminal.render();
+    }
   });
 }
 
@@ -659,4 +689,25 @@ function setupHeaderFullscreen() {
   if (state.screenerTable) {
     state.screenerTable.updateFullscreenUI();
   }
+}
+
+/**
+ * Setup Live Recommendation Chart Terminal Toggle
+ */
+function setupRecChartToggle() {
+  const btn = document.getElementById('toggleRecChartBtn');
+  const container = document.getElementById('recommendation-chart-container');
+  if (!btn || !container) return;
+
+  const isVisible = localStorage.getItem('antigravity_rec_chart_visible') !== 'off';
+  container.style.display = isVisible ? 'block' : 'none';
+  btn.classList.toggle('active', isVisible);
+
+  btn.addEventListener('click', () => {
+    const currentlyVisible = container.style.display !== 'none';
+    const nextState = !currentlyVisible;
+    container.style.display = nextState ? 'block' : 'none';
+    btn.classList.toggle('active', nextState);
+    localStorage.setItem('antigravity_rec_chart_visible', nextState ? 'on' : 'off');
+  });
 }

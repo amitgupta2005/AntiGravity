@@ -122,6 +122,12 @@
         </div>
       </div>
 
+      <!-- Live Recommendation Chart Toggle Button in Header -->
+      <button id="toggleRecChartBtn" class="btn btn-secondary theme-toggle-btn active" title="Show/Hide Real-Time Chart for Screened Recommendations">
+        <i data-lucide="line-chart"></i>
+        <span>Live Chart</span>
+      </button>
+
       <!-- Full Screen Toggle Button in Header -->
       <button id="headerFullscreenBtn" class="btn btn-secondary theme-toggle-btn active" title="Display Table in Full Screen (Context Window) [Press 'F']">
         <i data-lucide="minimize-2" id="headerFsIcon"></i>
@@ -188,6 +194,11 @@
     <!-- Quantitative Summary KPI Cards -->
     <section id="kpi-container" class="kpi-section">
       <!-- Injected by kpiBar.js -->
+    </section>
+
+    <!-- Real-Time Chart Terminal for Screened Recommendations -->
+    <section id="recommendation-chart-container" class="recommendation-chart-section">
+      <!-- Injected by recommendationChart.js -->
     </section>
 
     <!-- Screener Table Section -->

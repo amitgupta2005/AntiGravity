@@ -276,3 +276,130 @@ export async function runBatchScreening(stockList, stochasticOptions, onProgress
 
   return results;
 }
+
+/**
+ * Fetch a single live real-time quote for a stock
+ */
+export async function fetchLiveQuote(symbol) {
+  let cleanSym = symbol.trim().toUpperCase();
+  if (cleanSym === 'TATAMOTORS.NS') cleanSym = 'TMCV.NS';
+
+  try {
+    const url = `${getBaseUrl()}/api/yahoo/quote?symbol=${encodeURIComponent(cleanSym)}`;
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && (data.regularMarketPrice != null || data.price != null)) {
+        const price = data.regularMarketPrice ?? data.price;
+        const change = data.regularMarketChange ?? 0;
+        const changePct = data.regularMarketChangePercent ?? 0;
+        const dayHigh = data.regularMarketDayHigh ?? price;
+        const dayLow = data.regularMarketDayLow ?? price;
+        const volume = data.regularMarketVolume ?? 0;
+        return {
+          symbol: cleanSym,
+          price: Number(price.toFixed(2)),
+          change: Number(change.toFixed(2)),
+          changePct: Number(changePct.toFixed(2)),
+          dayHigh: Number(dayHigh.toFixed(2)),
+          dayLow: Number(dayLow.toFixed(2)),
+          volume,
+          timestamp: Date.now()
+        };
+      }
+    }
+  } catch (err) {
+    // network fallback handled below
+  }
+  return null;
+}
+
+// Active subscription timer for the live real-time chart feed
+let activeRealtimeSubscription = null;
+
+/**
+ * Subscribe to real-time market feed ticks for an active stock
+ * Polling cadence defaults to 3000ms with smooth simulated micro-tick variations
+ * to keep chart and stochastic oscillator alive during after-hours/weekends.
+ *
+ * @param {Object} stock - Active stock object
+ * @param {Function} onTick - Callback receiving ({ symbol, price, change, changePct, timestamp, isLive })
+ * @param {number} intervalMs - Polling interval in ms (default 3000ms)
+ * @returns {Function} Unsubscribe function
+ */
+export function subscribeRealtimeStock(stock, onTick, intervalMs = 3000) {
+  if (activeRealtimeSubscription) {
+    clearInterval(activeRealtimeSubscription);
+    activeRealtimeSubscription = null;
+  }
+
+  if (!stock) return () => {};
+
+  const sym = stock.ticker || stock.symbol;
+  let currentPrice = stock.price || stock.close || 100;
+  let previousClose = stock.previousClose || (currentPrice - (stock.change || 0)) || currentPrice;
+
+  // Immediately send initial tick
+  if (typeof onTick === 'function') {
+    onTick({
+      symbol: sym,
+      price: currentPrice,
+      change: stock.change || 0,
+      changePct: stock.changePct || 0,
+      timestamp: Date.now(),
+      isInitial: true
+    });
+  }
+
+  activeRealtimeSubscription = setInterval(async () => {
+    // If tab is hidden, pause polling
+    if (typeof document !== 'undefined' && document.hidden) return;
+
+    try {
+      const live = await fetchLiveQuote(sym);
+      if (live && live.price > 0) {
+        currentPrice = live.price;
+        if (typeof onTick === 'function') {
+          onTick({ ...live, isLive: true });
+        }
+        return;
+      }
+    } catch (_) {}
+
+    // Simulated market movement micro-tick (0.05% - 0.15% fluctuation) for continuous live feed
+    const pctDelta = (Math.random() - 0.49) * 0.0018;
+    const delta = currentPrice * pctDelta;
+    currentPrice = Number((currentPrice + delta).toFixed(2));
+    const chg = Number((currentPrice - previousClose).toFixed(2));
+    const chgPct = Number(((chg / previousClose) * 100).toFixed(2));
+
+    if (typeof onTick === 'function') {
+      onTick({
+        symbol: sym,
+        price: currentPrice,
+        change: chg,
+        changePct: chgPct,
+        timestamp: Date.now(),
+        isSimulated: true
+      });
+    }
+  }, intervalMs);
+
+  return () => {
+    if (activeRealtimeSubscription) {
+      clearInterval(activeRealtimeSubscription);
+      activeRealtimeSubscription = null;
+    }
+  };
+}
+
+/**
+ * Unsubscribe active real-time market feed
+ */
+export function unsubscribeRealtimeStock() {
+  if (activeRealtimeSubscription) {
+    clearInterval(activeRealtimeSubscription);
+    activeRealtimeSubscription = null;
+  }
+}
+

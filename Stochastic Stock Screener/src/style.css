@@ -2763,4 +2763,484 @@ body.light-theme .btn-secondary:hover {
   border-color: #0284c7;
 }
 
+/* ==========================================================================
+   Real-Time Recommendation Chart Terminal & Live Market Feed System
+   ========================================================================== */
+
+.recommendation-chart-section {
+  margin-bottom: 1.5rem;
+  transition: all var(--transition-normal);
+}
+
+.rec-chart-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 1.25rem 1.5rem;
+  transition: all var(--transition-normal);
+}
+
+.rec-chart-card.is-collapsed {
+  padding-bottom: 1rem;
+}
+
+/* Header & Toolbar */
+.rec-header-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.rec-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.rec-terminal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(0, 242, 254, 0.12);
+  border: 1px solid rgba(0, 242, 254, 0.35);
+  color: var(--accent-cyan);
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.live-pulse-radar {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  box-shadow: 0 0 8px var(--accent-cyan);
+  animation: radar-live-anim 1.5s infinite ease-in-out;
+}
+
+@keyframes radar-live-anim {
+  0% { transform: scale(0.9); opacity: 0.6; box-shadow: 0 0 0 0 rgba(0, 242, 254, 0.7); }
+  70% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 0 6px rgba(0, 242, 254, 0); }
+  100% { transform: scale(0.9); opacity: 0.6; box-shadow: 0 0 0 0 rgba(0, 242, 254, 0); }
+}
+
+.rec-heading-text {
+  font-size: 1.05rem;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+}
+
+.rec-count-pill {
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: var(--accent-emerald);
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+}
+
+.rec-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.rec-timeframe-group {
+  display: flex;
+  align-items: center;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 2px;
+}
+
+.rec-tf-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.rec-tf-btn:hover {
+  color: var(--text-main);
+}
+
+.rec-tf-btn.active {
+  background: var(--accent-cyan);
+  color: #0a0d14;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
+}
+
+.btn-rec-action {
+  font-size: 0.75rem;
+  padding: 0.35rem 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.btn-collapse-rec {
+  padding: 0.35rem 0.5rem;
+  color: var(--text-muted);
+}
+
+.btn-collapse-rec:hover {
+  color: var(--text-main);
+}
+
+/* Recommendations Chips Ribbon */
+.rec-chips-ribbon {
+  padding: 0.75rem 0 0.85rem;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.rec-chips-scroll {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: min-content;
+}
+
+.rec-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 0.3rem 0.75rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.rec-chip:hover {
+  background: var(--bg-tertiary);
+  border-color: rgba(0, 242, 254, 0.4);
+  color: var(--text-main);
+  transform: translateY(-1px);
+}
+
+.rec-chip.active {
+  background: rgba(0, 242, 254, 0.12);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  box-shadow: 0 0 12px rgba(0, 242, 254, 0.25);
+}
+
+.rec-chip-flag {
+  font-size: 0.85rem;
+}
+
+.rec-chip-ticker {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.rec-chip-badge {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+}
+
+.rec-chip-k {
+  font-size: 0.74rem;
+}
+
+/* Active Stock Strip */
+.rec-stock-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  padding: 1rem 0;
+}
+
+.rec-stock-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.rec-stock-primary {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.rec-country-flag {
+  font-size: 1.15rem;
+}
+
+.rec-stock-symbol {
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+  color: var(--text-main);
+}
+
+.rec-stock-name {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.rec-price-live-box {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.rec-live-price {
+  font-size: 1.55rem;
+  color: var(--text-main);
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-sm);
+  transition: all 0.3s ease;
+}
+
+.rec-live-change {
+  font-size: 0.95rem;
+}
+
+.rec-feed-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(16, 185, 129, 0.10);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--accent-emerald);
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.rec-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-emerald);
+  box-shadow: 0 0 6px var(--accent-emerald);
+}
+
+.rec-live-dot.pulse-tick {
+  animation: radar-live-anim 0.6s ease-out;
+}
+
+/* Live Price Flash Animations */
+.live-flash-green {
+  background: rgba(16, 185, 129, 0.28) !important;
+  color: var(--accent-emerald) !important;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.6);
+}
+
+.live-flash-red {
+  background: rgba(244, 63, 94, 0.28) !important;
+  color: var(--accent-rose) !important;
+  box-shadow: 0 0 14px rgba(244, 63, 94, 0.6);
+}
+
+/* Strategy Level KPI Grid */
+.rec-strategy-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.6rem;
+  flex: 1;
+  max-width: 680px;
+}
+
+.rec-kpi-box {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.45rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.rec-kpi-lbl {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.rec-kpi-val {
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.rec-kpi-sub {
+  font-size: 0.72rem;
+}
+
+.rec-kpi-box.box-entry {
+  border-color: rgba(0, 242, 254, 0.25);
+  background: rgba(0, 242, 254, 0.04);
+}
+
+.rec-kpi-box.box-sl {
+  border-color: rgba(244, 63, 94, 0.25);
+  background: rgba(244, 63, 94, 0.04);
+}
+
+.rec-kpi-box.box-t1,
+.rec-kpi-box.box-t2 {
+  border-color: rgba(16, 185, 129, 0.25);
+  background: rgba(16, 185, 129, 0.04);
+}
+
+/* Dual Charts Wrapper */
+.rec-charts-wrapper {
+  margin-top: 0.5rem;
+}
+
+.rec-chart-canvas-box {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+}
+
+.rec-canvas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.rec-canvas-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.rec-canvas-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+}
+
+.legend-pill {
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+}
+
+.pill-sl { color: var(--accent-rose); background: rgba(244, 63, 94, 0.12); }
+.pill-t1 { color: var(--accent-emerald); background: rgba(16, 185, 129, 0.12); }
+.pill-t2 { color: #059669; background: rgba(5, 150, 105, 0.12); }
+.pill-cmp { color: var(--accent-cyan); background: rgba(0, 242, 254, 0.12); }
+
+/* Table Live Chart Action Button */
+.btn-live-chart {
+  background: rgba(0, 242, 254, 0.12) !important;
+  border: 1px solid rgba(0, 242, 254, 0.35) !important;
+  color: var(--accent-cyan) !important;
+}
+
+.btn-live-chart:hover {
+  background: rgba(0, 242, 254, 0.24) !important;
+  border-color: var(--accent-cyan) !important;
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
+}
+
+/* Empty State */
+.rec-chart-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+}
+
+.empty-rec-icon {
+  font-size: 2.2rem;
+  color: var(--accent-cyan);
+  margin-bottom: 0.75rem;
+}
+
+.empty-rec-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.35rem;
+}
+
+.empty-rec-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  max-width: 480px;
+}
+
+/* Light Mode Overrides */
+body.light-theme .rec-chart-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06);
+}
+
+body.light-theme .rec-chip {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
+  color: #475569;
+}
+
+body.light-theme .rec-chip:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+body.light-theme .rec-chip.active {
+  background: rgba(2, 132, 199, 0.1);
+  border-color: #0284c7;
+  color: #0284c7;
+}
+
+body.light-theme .rec-chart-canvas-box {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+body.light-theme .rec-kpi-box {
+  background: #f8fafc;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+body.light-theme .btn-live-chart {
+  background: rgba(2, 132, 199, 0.1) !important;
+  border-color: rgba(2, 132, 199, 0.35) !important;
+  color: #0284c7 !important;
+}
+
+
 

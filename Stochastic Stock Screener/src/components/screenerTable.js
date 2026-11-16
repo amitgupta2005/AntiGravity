@@ -18,6 +18,7 @@ export class ScreenerTable {
     const savedFs = typeof localStorage !== 'undefined' ? localStorage.getItem('antigravity_table_fullscreen') : null;
     this.isFullscreen = savedFs !== null ? savedFs === 'on' : true;
     this.onExportOversold = options.onExportOversold || null;
+    this.onSelectStock = options.onSelectStock || null;
     this.setupKeyboardNavigation();
   }
 
@@ -341,11 +342,14 @@ export class ScreenerTable {
         </td>
         <td class="text-center">
           <div class="row-actions-group">
-            <button class="btn-inspect" data-action="inspect" data-ticker="${sym}" title="Open Full Stochastic 14,3,3 Dual Chart & Breakdown">
-              <i data-lucide="line-chart"></i> Chart
+            <button class="btn-inspect btn-live-chart" data-action="live-chart" data-ticker="${sym}" title="Show Real-Time Chart Terminal with Live Market Feed for ${sym}">
+              <i data-lucide="activity"></i> Live Chart
             </button>
             <button class="btn-screenshot-action" data-action="screenshot" data-ticker="${sym}" title="Download High-Res Chart Screenshot PNG for ${sym}">
               <i data-lucide="camera"></i>
+            </button>
+            <button class="btn-inspect" data-action="inspect" data-ticker="${sym}" title="Open Full 10-Bar Mathematical Breakdown Modal">
+              <i data-lucide="maximize-2"></i>
             </button>
           </div>
         </td>
@@ -627,6 +631,19 @@ export class ScreenerTable {
   attachRowEvents(row) {
     if (!row) return;
 
+    // Live Chart button
+    const liveChartBtn = row.querySelector('button[data-action="live-chart"]');
+    if (liveChartBtn) {
+      liveChartBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const sym = liveChartBtn.getAttribute('data-ticker');
+        const item = this.allResults.find(x => (x.ticker || x.symbol) === sym);
+        if (item && this.onSelectStock) {
+          this.onSelectStock(item);
+        }
+      });
+    }
+
     // Inspect button
     const inspectBtn = row.querySelector('button[data-action="inspect"]');
     if (inspectBtn) {
@@ -635,6 +652,9 @@ export class ScreenerTable {
         const sym = inspectBtn.getAttribute('data-ticker');
         const item = this.allResults.find(x => (x.ticker || x.symbol) === sym);
         if (item) {
+          if (this.onSelectStock) {
+            this.onSelectStock(item);
+          }
           const isDark = document.body.classList.contains('dark-theme') || !document.body.classList.contains('light-theme');
           openStockChartModal(item, isDark);
         }
@@ -658,9 +678,8 @@ export class ScreenerTable {
     row.addEventListener('click', () => {
       const sym = row.getAttribute('data-ticker');
       const item = this.allResults.find(x => (x.ticker || x.symbol) === sym);
-      if (item) {
-        const isDark = document.body.classList.contains('dark-theme') || !document.body.classList.contains('light-theme');
-        openStockChartModal(item, isDark);
+      if (item && this.onSelectStock) {
+        this.onSelectStock(item);
       }
     });
   }

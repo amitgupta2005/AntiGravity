@@ -33,10 +33,14 @@ Chart.register(
 );
 
 import { downloadStockChartScreenshot } from '../services/chartRenderer.js';
+import { strategyOverlayPlugin } from '../services/strategyChartPlugin.js';
+import { subscribeRealtimeStock } from '../services/marketData.js';
+import { calculateStochasticSeries } from '../quant/stochastic.js';
 
 let priceChartInstance = null;
 let stochChartInstance = null;
 let activeModalStock = null;
+let unsubscribeModalFeed = null;
 
 export function setupChartModal() {
   const modal = document.getElementById('chartModal');
@@ -48,6 +52,10 @@ export function setupChartModal() {
   const closeModal = () => {
     modal.classList.remove('active');
     document.body.style.overflow = '';
+    if (unsubscribeModalFeed) {
+      unsubscribeModalFeed();
+      unsubscribeModalFeed = null;
+    }
     if (priceChartInstance) {
       priceChartInstance.destroy();
       priceChartInstance = null;
@@ -123,18 +131,21 @@ export function openStockChartModal(stock, isDarkMode = true) {
 
   // 2. Render Charts
   const history = stock.history || [];
-  renderPriceChart(history, isDarkMode, curr);
+  renderPriceChart(history, isDarkMode, curr, stock.strategy);
   renderStochasticSubChart(history, isDarkMode, stock);
 
   // 3. Render Breakdown Table
   renderBreakdownTable(history, curr, stock);
+
+  // 4. Start Real-Time Live Feed Subscription
+  startModalRealtimeFeed(stock, curr);
 
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
     window.lucide.createIcons();
   }
 }
 
-function renderPriceChart(history, isDarkMode, curr) {
+function renderPriceChart(history, isDarkMode, curr, strategy = null) {
   const canvas = document.getElementById('modalPriceChartCanvas');
   if (!canvas) return;
 
@@ -167,11 +178,19 @@ function renderPriceChart(history, isDarkMode, curr) {
         }
       ]
     },
+    plugins: [strategyOverlayPlugin],
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
+        strategyOverlay: {
+          strategy: strategy ? {
+            ...strategy,
+            currentPrice: closes.length > 0 ? closes[closes.length - 1] : null
+          } : null,
+          currencySymbol: curr
+        },
         tooltip: {
           callbacks: {
             label: (ctx) => ` Close: ${curr}${ctx.parsed.y.toFixed(2)}`
@@ -194,6 +213,82 @@ function renderPriceChart(history, isDarkMode, curr) {
       }
     }
   });
+}
+
+function startModalRealtimeFeed(stock, curr) {
+  if (unsubscribeModalFeed) {
+    unsubscribeModalFeed();
+    unsubscribeModalFeed = null;
+  }
+
+  const modalPrice = document.getElementById('modalStockPrice');
+  const modalChange = document.getElementById('modalStockChange');
+  const modalSlowK = document.getElementById('modalSlowK');
+  const modalD = document.getElementById('modalD');
+  const modalSpread = document.getElementById('modalSpread');
+
+  unsubscribeModalFeed = subscribeRealtimeStock(stock, (tick) => {
+    if (!tick || !modalPrice) return;
+
+    const newPrice = tick.price;
+    const isUp = tick.changePct >= 0;
+
+    modalPrice.textContent = `${curr}${newPrice.toFixed(2)}`;
+    modalPrice.classList.add(isUp ? 'live-flash-green' : 'live-flash-red');
+    setTimeout(() => {
+      modalPrice?.classList.remove('live-flash-green', 'live-flash-red');
+    }, 700);
+
+    if (modalChange) {
+      modalChange.textContent = `${isUp ? '+' : ''}${tick.change.toFixed(2)} (${isUp ? '+' : ''}${tick.changePct}%)`;
+      modalChange.className = `modal-metric-sub ${isUp ? 'text-emerald' : 'text-rose'}`;
+    }
+
+    // Update Price Chart
+    if (priceChartInstance && priceChartInstance.data?.datasets?.[0]?.data) {
+      const data = priceChartInstance.data.datasets[0].data;
+      const lastIdx = data.length - 1;
+      if (lastIdx >= 0) {
+        data[lastIdx] = newPrice;
+        if (priceChartInstance.options.plugins?.strategyOverlay?.strategy) {
+          priceChartInstance.options.plugins.strategyOverlay.strategy.currentPrice = newPrice;
+        }
+        priceChartInstance.update('none');
+      }
+    }
+
+    // Recalculate Stochastic
+    if (stock.history && stock.history.length > 0) {
+      const lastH = stock.history[stock.history.length - 1];
+      lastH.close = newPrice;
+      const updatedSeries = calculateStochasticSeries(stock.history, {
+        kPeriod: stock.kPeriod || 14,
+        kSmoothing: stock.kSmoothing || 3,
+        dPeriod: stock.dPeriod || 3,
+        useClosingOnly: true
+      });
+      const latest = updatedSeries[updatedSeries.length - 1];
+      if (latest && latest.slowK != null) {
+        if (modalSlowK) modalSlowK.textContent = latest.slowK.toFixed(2);
+        if (modalD) modalD.textContent = latest.d.toFixed(2);
+        if (modalSpread) {
+          const sp = latest.spread ?? 0;
+          modalSpread.textContent = `${sp >= 0 ? '+' : ''}${sp.toFixed(2)}`;
+          modalSpread.className = `modal-metric-val font-mono ${sp >= 0 ? 'text-cyan' : 'text-amber'}`;
+        }
+        if (stochChartInstance && stochChartInstance.data?.datasets) {
+          const kData = stochChartInstance.data.datasets[0].data;
+          const dData = stochChartInstance.data.datasets[1].data;
+          const lastIdx = kData.length - 1;
+          if (lastIdx >= 0) {
+            kData[lastIdx] = latest.slowK;
+            dData[lastIdx] = latest.d;
+            stochChartInstance.update('none');
+          }
+        }
+      }
+    }
+  }, 3000);
 }
 
 function renderStochasticSubChart(history, isDarkMode, stock) {
