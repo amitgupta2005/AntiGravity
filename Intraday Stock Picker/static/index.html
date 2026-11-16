@@ -95,11 +95,7 @@
         <span id="market-status-text">Checking market...</span>
       </div>
 
-      <!-- Angel One SmartAPI Live Feed Button & Status -->
-      <button class="btn-feed-status" id="btn-feed-status" title="Angel One SmartAPI Live Market Feed (https://apiconnect.angelone.in) - Click to configure or view live connection">
-        <span class="feed-indicator-dot" id="feed-status-dot"></span>
-        <span id="feed-status-label">Angel One Feed</span>
-      </button>
+
 
       <!-- Theme Switcher (Dark / Light Mode) -->
       <button class="btn-secondary" id="btn-theme-toggle" title="Toggle Dark / Light Theme" style="padding: 5px 9px;">
@@ -474,86 +470,8 @@
 
   </main>
 
-  <!-- Modal: Angel One SmartAPI Live Feed Settings -->
-  <div class="modal-overlay" id="modal-angel-config" style="display: none;">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title-wrap">
-          <span class="modal-badge-live">LIVE FEED</span>
-          <h3>Angel One SmartAPI (https://apiconnect.angelone.in)</h3>
-        </div>
-        <button class="modal-close-btn" id="btn-close-angel-modal" aria-label="Close modal">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="feed-status-banner" id="modal-feed-status-banner">
-          <div class="status-banner-icon" id="modal-feed-status-icon">📡</div>
-          <div class="status-banner-text">
-            <div class="status-banner-title" id="modal-feed-status-title">Yahoo Finance Active (Real-Time Fallback)</div>
-            <div class="status-banner-desc" id="modal-feed-status-desc">Connect your Angel One SmartAPI account for direct sub-second NSE live market feed.</div>
-          </div>
-        </div>
 
-        <form id="form-angel-config" class="config-form">
-          <div class="form-group">
-            <label for="input-angel-api-key">SmartAPI Key <span class="required">*</span></label>
-            <input type="password" id="input-angel-api-key" placeholder="Enter API Key from smartapi.angelone.in" autocomplete="off" />
-            <span class="field-hint">Created in the Angel One Developer Portal (SmartAPI Dashboard).</span>
-          </div>
 
-          <div class="form-row">
-            <div class="form-group flex-1">
-              <label for="input-angel-client-code">Client ID / Code <span class="required">*</span></label>
-              <input type="text" id="input-angel-client-code" placeholder="e.g. A123456" />
-            </div>
-            <div class="form-group flex-1">
-              <label for="input-angel-pin">Trading PIN / MPIN <span class="required">*</span></label>
-              <input type="password" id="input-angel-pin" placeholder="e.g. 1234" autocomplete="off" />
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="input-angel-totp">Authenticator TOTP Secret Key <span class="required">*</span></label>
-            <input type="password" id="input-angel-totp" placeholder="Base32 TOTP Secret Key (from Angel One 2FA setup)" autocomplete="off" />
-            <span class="field-hint">Found when setting up 2FA in Google Authenticator or Angel One profile. Automatically generates real-time login tokens.</span>
-          </div>
-
-          <div class="form-toggle-row">
-            <label class="toggle-switch">
-              <input type="checkbox" id="check-angel-enabled" checked />
-              <span class="toggle-slider"></span>
-            </label>
-            <div class="toggle-label-wrap">
-              <span class="toggle-title">Enable Angel One SmartAPI Feed</span>
-              <span class="toggle-subtitle">Hybrid mode: Uses Angel One for live NSE ticks & quotes, with Yahoo Finance fallback.</span>
-            </div>
-          </div>
-
-          <div class="modal-actions">
-            <button type="button" class="btn-secondary" id="btn-disconnect-angel" style="color: #ef4444;">Disconnect</button>
-            <button type="submit" class="btn-action" id="btn-save-connect-angel">
-              <span>⚡ Connect & Save</span>
-            </button>
-          </div>
-        </form>
-
-        <div class="modal-footer-stats">
-          <div class="stat-item">
-            <span class="stat-label">API Gateway:</span>
-            <span class="stat-val">apiconnect.angelone.in</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">NSE Instruments:</span>
-            <span class="stat-val" id="stat-scrip-count">54 Mapped</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Session Status:</span>
-            <span class="stat-val" id="stat-session-status">Disconnected</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script src="/static/app.js?v=20261030-smartapi1"></script>
+  <script src="/static/app.js?v=20261116"></script>
 </body>
 </html>

@@ -15,7 +15,6 @@ import yfinance as yf
 from concurrent.futures import ThreadPoolExecutor
 
 from analysis_engine import calculate_intraday_indicators, analyze_stock_setup
-from angel_one_client import angel_client, BUILTIN_NSE_TOKENS
 
 logger = logging.getLogger(__name__)
 
@@ -390,59 +389,36 @@ def get_ticker_cap(ticker: str) -> str:
 
 def get_stock_raw_intraday(ticker: str, interval: str = "1m", live_quote: Optional[Dict[str, Any]] = None) -> Tuple[pd.DataFrame, str]:
     """
-    Fetches raw 1m intraday data using Angel One SmartAPI live feed for Indian NSE stocks,
-    combined with Yahoo Finance for full historical bars.
+    Fetches raw 1m intraday data using Yahoo Finance for full historical bars.
     Returns: (df, feed_source)
     """
     clean_ticker = ticker.strip().upper()
     feed_source = "YAHOO_FINANCE"
 
-    is_nse = (".NS" in clean_ticker or ".BO" in clean_ticker or clean_ticker in BUILTIN_NSE_TOKENS)
-
-    # 1. If Indian stock and no live quote was passed, attempt to fetch live quote from Angel One
-    if is_nse and live_quote is None and angel_client.is_configured():
-        try:
-            live_quote = angel_client.get_live_quote(clean_ticker)
-        except Exception as e:
-            logger.debug(f"Angel One quote fetch skipped for {clean_ticker}: {e}")
-
     df = pd.DataFrame()
-
-    # 2. If Angel One session is authenticated, try fetching official exchange 1m candles
-    if is_nse and angel_client.is_authenticated():
-        try:
-            df_angel = angel_client.get_historical_candles(clean_ticker, interval="ONE_MINUTE", days=2)
-            if df_angel is not None and len(df_angel) >= 15:
-                df = df_angel
-                feed_source = "ANGEL_ONE_SMART_API"
-        except Exception as e:
-            logger.debug(f"Angel One candle fetch fallback to Yahoo Finance for {ticker}: {e}")
-
-    # 3. Yahoo Finance fetch (as primary historical provider or backup)
-    if df.empty:
-        try:
-            t = yf.Ticker(clean_ticker)
-            # First try 1d
-            df = t.history(period="1d", interval=interval)
-            
-            # If today is just starting or weekend, get last 5 days and slice to latest trading day
-            if df.empty or len(df) < 15:
-                df_5d = t.history(period="5d", interval=interval)
-                if not df_5d.empty:
-                    # Find the most recent date in the index
-                    latest_date = df_5d.index.date[-1]
-                    df_latest = df_5d[df_5d.index.date == latest_date].copy()
-                    if len(df_latest) >= 15:
-                        df = df_latest
-                    else:
-                        # Session just started (e.g. first 15 mins of market):
-                        # Keep recent bars (up to 240) so EMAs & MTF have enough data to calculate
-                        df = df_5d.iloc[-240:].copy()
-        except Exception as e:
-            logger.error(f"Error fetching Yahoo Finance data for {ticker}: {e}")
-            df = pd.DataFrame()
-        finally:
-            _cleanup_thread_db()
+    try:
+        t = yf.Ticker(clean_ticker)
+        # First try 1d
+        df = t.history(period="1d", interval=interval)
+        
+        # If today is just starting or weekend, get last 5 days and slice to latest trading day
+        if df.empty or len(df) < 15:
+            df_5d = t.history(period="5d", interval=interval)
+            if not df_5d.empty:
+                # Find the most recent date in the index
+                latest_date = df_5d.index.date[-1]
+                df_latest = df_5d[df_5d.index.date == latest_date].copy()
+                if len(df_latest) >= 15:
+                    df = df_latest
+                else:
+                    # Session just started (e.g. first 15 mins of market):
+                    # Keep recent bars (up to 240) so EMAs & MTF have enough data to calculate
+                    df = df_5d.iloc[-240:].copy()
+    except Exception as e:
+        logger.error(f"Error fetching Yahoo Finance data for {ticker}: {e}")
+        df = pd.DataFrame()
+    finally:
+        _cleanup_thread_db()
 
     if df.empty:
         return pd.DataFrame(), feed_source
@@ -463,25 +439,6 @@ def get_stock_raw_intraday(ticker: str, interval: str = "1m", live_quote: Option
     else:
         df.index = df.index.tz_convert(target_tz)
 
-    # 4. Synthesize latest bar with live tick from Angel One SmartAPI if available
-    if live_quote and live_quote.get("price", 0) > 0:
-        feed_source = "ANGEL_ONE_SMART_API"
-        ltp = float(live_quote["price"])
-        q_high = float(live_quote.get("high") or ltp)
-        q_low = float(live_quote.get("low") or ltp)
-
-        # Update last bar's Close, High, Low with Angel One live exchange prices
-        try:
-            last_c = float(df.iloc[-1]['Close'])
-            last_h = max(float(df.iloc[-1]['High']), ltp, q_high if q_high > 0 else ltp)
-            last_l = min(float(df.iloc[-1]['Low']), ltp) if q_low <= 0 else min(float(df.iloc[-1]['Low']), ltp, q_low)
-
-            df.iloc[-1, df.columns.get_loc('Close')] = ltp
-            df.iloc[-1, df.columns.get_loc('High')] = last_h
-            df.iloc[-1, df.columns.get_loc('Low')] = last_l
-        except Exception as e:
-            logger.debug(f"Could not merge Angel One live tick: {e}")
-
     return df, feed_source
 
 
@@ -494,7 +451,7 @@ def fetch_and_analyze_ticker(
     timeframe: str = "15m"
 ) -> Dict[str, Any]:
     """
-    Fetches real-time intraday data (hybrid Angel One SmartAPI + Yahoo Finance),
+    Fetches real-time intraday data (Yahoo Finance),
     calculates indicators based on selected ORB timeframe (1m, 5m, 10m, 15m; default 15m),
     and analyzes technical setup.
     Utilizes short TTL caching for fast UI interactions.
@@ -583,7 +540,7 @@ def get_chart_data(ticker: str, timeframe: str = "15m", force_refresh: bool = Fa
     - Volume: [{time, value, color}]
     - RSI: [{time, value}]
     - Overlay Price Lines: SL, T1, T2, Entry, Day High, Day Low, ORB High, ORB Low
-    - Live Feed Source indicator (Angel One SmartAPI / Yahoo Finance)
+    - Live Feed Source indicator (Yahoo Finance)
     """
     ticker = ticker.strip().upper()
     tf_clean = str(timeframe).lower().strip()
@@ -740,7 +697,7 @@ def scan_watchlist(
 ) -> List[Dict[str, Any]]:
     """
     Scans multiple stocks in parallel and sorts by Intraday Score & Momentum.
-    Utilizes Angel One SmartAPI live market feed for real-time Indian NSE quotes.
+    Utilizes Yahoo Finance live market data for intraday quotes.
     Supports force_refresh for sub-5s real-time market ticks and timeframe-specific ORB logic.
     """
     tf_clean = str(timeframe).lower().strip()
@@ -763,30 +720,15 @@ def scan_watchlist(
             seen_tickers.add(sym)
             targets.append(item)
 
-    # Batch-fetch live Angel One quotes for Indian stocks up-front if configured
-    angel_quotes: Dict[str, Dict[str, Any]] = {}
-    is_indian_universe = any((".NS" in t["ticker"] or ".BO" in t["ticker"] or "NSE" in watchlist_key) for t in targets)
-    
-    if is_indian_universe and angel_client.is_configured():
-        try:
-            target_symbols = [t["ticker"] for t in targets]
-            angel_quotes = angel_client.get_live_quotes(target_symbols)
-            if angel_quotes:
-                logger.info(f"Retrieved {len(angel_quotes)} live quotes from Angel One SmartAPI (https://apiconnect.angelone.in)")
-        except Exception as e:
-            logger.warning(f"Angel One batch quote error; fallback to Yahoo Finance: {e}")
-
     results = []
 
     def _worker(item):
         try:
-            l_quote = angel_quotes.get(item["ticker"])
             return fetch_and_analyze_ticker(
                 item["ticker"],
                 item.get("name", ""),
                 cap=item.get("cap"),
                 force_refresh=force_refresh,
-                live_quote=l_quote,
                 timeframe=tf_clean
             )
         except Exception as err:

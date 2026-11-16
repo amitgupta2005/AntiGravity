@@ -1,6 +1,6 @@
 # Intraday Stock Picker 📈⚡
 
-An institutional-grade **Intraday Technical Screener & Stock Picker Terminal** powered by real-time 1-minute data from Yahoo Finance and Angel One SmartAPI.
+An institutional-grade **Intraday Technical Screener & Stock Picker Terminal** powered by real-time 1-minute data from Yahoo Finance.
 
 Built specifically for active intraday traders to automatically identify high-probability long and short momentum setups, enforce strict 4-timeframe institutional confluence, calculate dynamic volatility-adjusted Stop Loss & Target prices, and guard against intraday chop and traps with algorithmic execution gates.
 
@@ -84,12 +84,11 @@ Evaluates trend confluence across **1-Minute (Trigger)**, **5-Minute (Tactical)*
 
 ---
 
-### 5. ⚡ Angel One SmartAPI Live NSE Integration
-- Native integration with Angel One SmartAPI (`angel_one_client.py`) for live Indian market feeds:
-  - Real-time tick & 1-minute candle streaming with automated TOTP login.
-  - Bounded connection pooling and automatic fallback to Yahoo Finance.
-  - Ingestion of live **Upper & Lower Circuit Limits** and **5-level Market Depth**.
-  - Strict timezone enforcement: Indian stocks strictly display and calculate in **Indian Standard Time (IST • UTC+05:30)**.
+### 5. ⚡ Real-Time Market Data Engine & Multi-Exchange Timing
+- High-throughput asynchronous feed architecture powered by Yahoo Finance:
+  - Real-time 1-minute candle streaming across Indian NSE and US equity universes.
+  - Bounded connection pooling with 15s TTL memory cache to prevent rate-limiting and redundant downloads.
+  - Strict dual timezone enforcement: Indian stocks strictly display and calculate in **Indian Standard Time (IST • UTC+05:30)** and US equities in **EST (UTC-05:00)**.
 
 ---
 
@@ -186,7 +185,6 @@ flowchart TD
 
     subgraph Quant["Quantitative & Data Processing Engine"]
         DataFetcher["Parallel Data Fetcher<br/>(ThreadPoolExecutor & 15s TTL Cache)"]
-        AngelClient["Angel One SmartAPI Client<br/>(Live NSE Feed & Circuit Limits)"]
         IndicatorPipeline["Indicator Math Pipeline<br/>(VWAP, EMA Ribbon, RSI, ATR, RVOL, ADX 14)"]
         PatternRecognizer["Pattern & Volume Detector<br/>(Engulfing, Hammers, Shooting Stars, RVOL Spikes)"]
         TimingGate["Intraday U-Curve Timing Gate<br/>(Midday Chop & Late Session Guards)"]
@@ -198,7 +196,6 @@ flowchart TD
 
     subgraph Provider["External Market Data Infrastructure"]
         YahooFinance["Yahoo Finance API<br/>(Real-Time 1m, 5m, 10m, 15m OHLCV Feeds)"]
-        AngelAPI["Angel One SmartAPI<br/>(Live NSE Equities & Market Depth)"]
     end
 
     UI -->|Async HTTP Fetch or 10s Polling| Router
@@ -209,9 +206,7 @@ flowchart TD
     Router -->|Dispatch Batch Screener| DataFetcher
     Router -->|Request Ticker Analysis| DataFetcher
     
-    DataFetcher -->|Live NSE Requests| AngelClient
-    AngelClient -->|Session Auth| AngelAPI
-    DataFetcher -->|Historical / Global Requests| YahooFinance
+    DataFetcher -->|Historical & Real-Time Requests| YahooFinance
     
     DataFetcher -->|Clean DataFrames| IndicatorPipeline
     IndicatorPipeline -->|Indicators & Overlays| PatternRecognizer
@@ -238,7 +233,6 @@ Intraday Stock Picker/
 ├── app.py                         # FastAPI backend with REST endpoints & session monitors
 ├── analysis_engine.py             # Quantitative indicators (VWAP, EMA, RSI, ATR, RVOL, ADX, SL & Targets)
 ├── data_fetcher.py                # Parallel data downloader with 15s TTL in-memory cache
-├── angel_one_client.py            # Angel One SmartAPI live NSE feed & circuit limit client
 ├── backtest_engine.py             # Historical 1-minute intraday backtesting engine
 ├── test_recommendations_rules.py  # Unit tests for ADX regime, timing gates, trap shields, & +0.5R lock-in
 ├── test_memory_and_performance.py # Memory leak & execution performance benchmarks

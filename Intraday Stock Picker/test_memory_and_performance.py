@@ -4,7 +4,6 @@ Validates:
 1. BoundedTTLCache size limits, LRU eviction, and thread safety.
 2. Vectorized chart formatting performance and memory efficiency.
 3. Light-mode MTF indicator acceleration.
-4. Angel One pooled session and login cooldown anti-flooding.
 """
 
 import time
@@ -15,7 +14,6 @@ import numpy as np
 
 from data_fetcher import BoundedTTLCache, get_chart_data, _CACHE
 from analysis_engine import calculate_intraday_indicators, compute_mtf_alignment
-from angel_one_client import angel_client
 
 
 class TestMemoryAndPerformance(unittest.TestCase):
@@ -115,18 +113,6 @@ class TestMemoryAndPerformance(unittest.TestCase):
 
         # VWAP values should be identical
         np.testing.assert_allclose(df_full["VWAP"].values, df_light["VWAP"].values, rtol=1e-5)
-
-    def test_angel_one_session_and_cooldown(self):
-        """Verify Angel One client has pooled session and login cooldown protection."""
-        self.assertIsNotNone(angel_client.session)
-        self.assertEqual(angel_client.login_cooldown_seconds, 45.0)
-
-        # First login attempt
-        angel_client.last_login_attempt = time.time()
-        # Immediate consecutive login attempt should be blocked by cooldown
-        success, msg = angel_client.login(force=False)
-        self.assertFalse(success)
-        self.assertIn("cooldown", msg.lower())
 
     def test_single_session_orb_fast_path(self):
         """Verify that vectorized single-session ORB calculation matches multi-session logic."""

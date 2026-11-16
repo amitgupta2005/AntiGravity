@@ -1075,7 +1075,7 @@ def analyze_stock_setup(
         "setup_name": setup_name,
         "setup_desc": setup_desc,
         "feed_source": feed_source,
-        "feed_source_label": "⚡ Angel One Smart API (Live NSE)" if "ANGEL" in feed_source.upper() else "📡 Yahoo Finance (Real-Time)",
+        "feed_source_label": "📡 Yahoo Finance (Real-Time)",
         "circuit_limits": {
             "upper": live_quote.get("upper_circuit") if live_quote else None,
             "lower": live_quote.get("lower_circuit") if live_quote else None

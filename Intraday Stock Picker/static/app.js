@@ -236,28 +236,7 @@ const calcCurrSymbol = document.getElementById("calc-curr-symbol");
 const rationaleContainer = document.getElementById("rationale-container");
 const checklistContainer = document.getElementById("checklist-container");
 
-// Angel One SmartAPI Feed & Modal Controls
-const btnFeedStatus = document.getElementById("btn-feed-status");
-const feedStatusDot = document.getElementById("feed-status-dot");
-const feedStatusLabel = document.getElementById("feed-status-label");
 const activeFeedSourcePill = document.getElementById("active-feed-source-pill");
-
-const modalAngelConfig = document.getElementById("modal-angel-config");
-const btnCloseAngelModal = document.getElementById("btn-close-angel-modal");
-const formAngelConfig = document.getElementById("form-angel-config");
-const inputAngelApiKey = document.getElementById("input-angel-api-key");
-const inputAngelClientCode = document.getElementById("input-angel-client-code");
-const inputAngelPin = document.getElementById("input-angel-pin");
-const inputAngelTotp = document.getElementById("input-angel-totp");
-const checkAngelEnabled = document.getElementById("check-angel-enabled");
-const btnDisconnectAngel = document.getElementById("btn-disconnect-angel");
-const btnSaveConnectAngel = document.getElementById("btn-save-connect-angel");
-const modalFeedStatusBanner = document.getElementById("modal-feed-status-banner");
-const modalFeedStatusIcon = document.getElementById("modal-feed-status-icon");
-const modalFeedStatusTitle = document.getElementById("modal-feed-status-title");
-const modalFeedStatusDesc = document.getElementById("modal-feed-status-desc");
-const statScripCount = document.getElementById("stat-scrip-count");
-const statSessionStatus = document.getElementById("stat-session-status");
 
 
 // ============================================================================
@@ -270,7 +249,6 @@ window.addEventListener("DOMContentLoaded", () => {
   setupResizeObserver();
   setupEventListeners();
   updateMarketStatus();
-  checkAngelFeedStatus();
   fetchScreener(currentMarket);
   setupAutoRefresh();
 });
@@ -965,8 +943,6 @@ function renderStockCards() {
     const mtfColor = stock.mtf_alignment?.badge_color || "#3b82f6";
     const mtfVerdict = stock.mtf_alignment?.verdict || "";
     const mtfBadge = mtfScore ? `<span class="badge-mtf" title="${mtfVerdict}" style="border: 1px solid ${mtfColor}; color: ${mtfColor}; background: ${stock.mtf_alignment?.all_aligned ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.1)'};">⚡ MTF: ${mtfScore}</span>` : "";
-    const isAngelFeed = stock.feed_source === 'ANGEL_ONE_SMART_API';
-    const feedBadge = isAngelFeed ? `<span class="badge-feed-angel" title="Live Angel One SmartAPI Feed (apiconnect.angelone.in)">⚡ ANGEL</span>` : "";
 
     // Timezone & Pick Time: IST strictly for Indian stock picks, EST for US stock picks
     const isIndia = isIndianStock(stock);
@@ -1004,7 +980,6 @@ function renderStockCards() {
         ${orbBadge}
         <span class="badge-cap cap-${(stock.cap || 'large').toLowerCase()}">${stock.cap || 'LARGE'}</span>
         ${tzBadge}
-        ${feedBadge}
         ${mtfBadge}
         <span class="badge-time ${isIndia ? 'time-ist' : 'time-est'}" title="Pick Time (${isIndia ? 'Indian Standard Time' : 'US Eastern Time'})">🕒 ${pickTimeStr}</span>
         <span class="badge-roi" title="Projected Target 2 ROI (Realistic 0-3%)">🎯 ROI: +${stockRoi.toFixed(1)}%</span>
@@ -1102,12 +1077,8 @@ async function loadChartData(ticker, tf = currentTimeframe, silent = false) {
 
     // Update active feed source pill
     if (activeFeedSourcePill) {
-      const isAngel = data.feed_source === "ANGEL_ONE_SMART_API" || (data.analysis && data.analysis.feed_source === "ANGEL_ONE_SMART_API");
-      activeFeedSourcePill.textContent = isAngel ? "⚡ Angel One Live" : "📡 Yahoo Finance";
-      activeFeedSourcePill.classList.toggle("angel", isAngel);
-      activeFeedSourcePill.title = isAngel
-        ? "Live Real-Time Market Feed from Angel One SmartAPI (https://apiconnect.angelone.in)"
-        : "Real-Time Market Data via Yahoo Finance (Fallback)";
+      activeFeedSourcePill.textContent = "📡 Yahoo Finance (Real-Time)";
+      activeFeedSourcePill.title = "Real-Time Market Data via Yahoo Finance";
     }
 
   } catch (err) {
@@ -1991,183 +1962,8 @@ function setupEventListeners() {
   });
   replayExitBtn.addEventListener("click", exitReplayMode);
 
-  // Angel One SmartAPI Modal & Controls
-  if (btnFeedStatus) {
-    btnFeedStatus.addEventListener("click", openAngelModal);
-  }
-  if (btnCloseAngelModal) {
-    btnCloseAngelModal.addEventListener("click", closeAngelModal);
-  }
-  if (modalAngelConfig) {
-    modalAngelConfig.addEventListener("click", (e) => {
-      if (e.target === modalAngelConfig) closeAngelModal();
-    });
-  }
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && modalAngelConfig && modalAngelConfig.style.display !== "none") {
-      closeAngelModal();
-    }
-  });
-
-  if (formAngelConfig) {
-    formAngelConfig.addEventListener("submit", handleAngelConfigSubmit);
-  }
-
-  if (btnDisconnectAngel) {
-    btnDisconnectAngel.addEventListener("click", handleAngelDisconnect);
-  }
-
   // Global Keyboard Navigation (Arrow Keys for browsing & scrolling)
   window.addEventListener("keydown", handleGlobalKeyDown);
-}
-
-// ============================================================================
-// Angel One SmartAPI Feed State & Modal Operations
-// ============================================================================
-async function checkAngelFeedStatus() {
-  try {
-    const res = await fetch("/api/feed/status");
-    const data = await res.json();
-    if (data.status !== "OK") return;
-
-    const isConnected = Boolean(data.connected);
-    const isConfigured = Boolean(data.configured);
-    const isEnabled = data.enabled !== false;
-    const clientCode = (data.client_code_masked && data.client_code_masked !== "Not set") ? data.client_code_masked : "";
-    const apiKeyMasked = (data.api_key_masked && data.api_key_masked !== "Not set") ? data.api_key_masked : "";
-    const tokenCount = data.token_count || 54;
-
-    // Header Feed button state
-    if (btnFeedStatus) {
-      btnFeedStatus.classList.toggle("connected", isConnected);
-      btnFeedStatus.title = isConnected
-        ? `Angel One SmartAPI Live Feed Active (${clientCode || "Connected"}) - Click to configure`
-        : "Angel One SmartAPI: Disconnected (Fallback to Yahoo Finance) - Click to configure";
-    }
-    if (feedStatusDot) {
-      feedStatusDot.className = "feed-indicator-dot" + (isConnected ? " live" : "");
-    }
-    if (feedStatusLabel) {
-      feedStatusLabel.textContent = isConnected ? "⚡ Angel One Live" : "Angel One Feed";
-    }
-
-    // Modal state
-    if (modalFeedStatusBanner) {
-      modalFeedStatusBanner.className = "feed-status-banner" + (isConnected ? " connected" : "");
-    }
-    if (modalFeedStatusIcon) {
-      modalFeedStatusIcon.textContent = isConnected ? "⚡" : "📡";
-    }
-    if (modalFeedStatusTitle) {
-      modalFeedStatusTitle.textContent = isConnected
-        ? `Angel One SmartAPI Live (Connected: ${clientCode || "Active"})`
-        : (isConfigured ? "Angel One Configured (Disconnected)" : "Yahoo Finance Active (Real-Time Fallback)");
-    }
-    if (modalFeedStatusDesc) {
-      modalFeedStatusDesc.textContent = isConnected
-        ? "Sub-second NSE live market feed streaming from https://apiconnect.angelone.in"
-        : (isConfigured ? (data.last_error ? `Error: ${data.last_error}. Click 'Connect & Save' to re-authenticate.` : "Session idle or expired. Click 'Connect & Save' to re-authenticate.") : "Connect your Angel One SmartAPI account for direct sub-second NSE live market feed.");
-    }
-
-    if (inputAngelClientCode && clientCode && !inputAngelClientCode.value) {
-      inputAngelClientCode.value = clientCode;
-    }
-    if (inputAngelApiKey && apiKeyMasked && !inputAngelApiKey.value) {
-      inputAngelApiKey.placeholder = apiKeyMasked;
-    }
-    if (checkAngelEnabled) {
-      checkAngelEnabled.checked = isEnabled;
-    }
-    if (statScripCount) {
-      statScripCount.textContent = `${tokenCount} Mapped`;
-    }
-    if (statSessionStatus) {
-      statSessionStatus.textContent = isConnected ? "Active (Connected)" : (isConfigured ? "Idle / Expired" : "Disconnected");
-      statSessionStatus.style.color = isConnected ? "#10b981" : "#94a3b8";
-    }
-
-    return data;
-  } catch (err) {
-    console.error("Failed to check Angel One feed status:", err);
-  }
-}
-
-function openAngelModal() {
-  if (!modalAngelConfig) return;
-  modalAngelConfig.style.display = "flex";
-  checkAngelFeedStatus();
-}
-
-function closeAngelModal() {
-  if (!modalAngelConfig) return;
-  modalAngelConfig.style.display = "none";
-}
-
-async function handleAngelConfigSubmit(e) {
-  e.preventDefault();
-  if (!btnSaveConnectAngel) return;
-
-  const origHtml = btnSaveConnectAngel.innerHTML;
-  btnSaveConnectAngel.innerHTML = `<span>⏳ Authenticating...</span>`;
-  btnSaveConnectAngel.disabled = true;
-
-  try {
-    const payload = {
-      api_key: inputAngelApiKey.value.trim() || null,
-      client_code: inputAngelClientCode.value.trim() || null,
-      pin: inputAngelPin.value.trim() || null,
-      totp_secret: inputAngelTotp.value.trim() || null,
-      enabled: checkAngelEnabled.checked
-    };
-
-    const res = await fetch("/api/feed/config", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-
-    if (data.status === "OK") {
-      if (data.connected) {
-        showToast("⚡ Angel One SmartAPI connected! Live feeds enabled.");
-        setTimeout(closeAngelModal, 800);
-      } else {
-        showToast(`Settings saved. Fallback: ${data.active_feed}`);
-      }
-      await checkAngelFeedStatus();
-      // Trigger fresh scan & chart refresh
-      fetchScreener(currentMarket);
-      if (currentTicker) {
-        loadChartData(currentTicker, currentTimeframe, true);
-      }
-    } else {
-      alert(`Connection Failed: ${data.detail || data.message || "Invalid credentials or TOTP"}`);
-    }
-  } catch (err) {
-    console.error("Error saving Angel One config:", err);
-    alert("Error contacting server. Please check your connection.");
-  } finally {
-    btnSaveConnectAngel.innerHTML = origHtml;
-    btnSaveConnectAngel.disabled = false;
-  }
-}
-
-async function handleAngelDisconnect() {
-  if (!confirm("Disconnect Angel One SmartAPI live feed and return to Yahoo Finance?")) return;
-  try {
-    const res = await fetch("/api/feed/disconnect", { method: "POST" });
-    const data = await res.json();
-    if (data.status === "OK") {
-      showToast("Angel One disconnected. Using Yahoo Finance.");
-      await checkAngelFeedStatus();
-      fetchScreener(currentMarket);
-      if (currentTicker) {
-        loadChartData(currentTicker, currentTimeframe, true);
-      }
-    }
-  } catch (err) {
-    console.error("Error disconnecting Angel One:", err);
-  }
 }
 
 function toggleSortDirection() {

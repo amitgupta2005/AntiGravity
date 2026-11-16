@@ -23,8 +23,6 @@ from data_fetcher import (
     fetch_and_analyze_ticker,
     shutdown_data_fetcher
 )
-from angel_one_client import angel_client
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("intraday_stock_picker")
 
@@ -38,10 +36,6 @@ async def lifespan(app: FastAPI):
         shutdown_data_fetcher(wait=False)
     except Exception as e:
         logger.debug(f"Error shutting down data fetcher: {e}")
-    try:
-        angel_client.session.close()
-    except Exception as e:
-        logger.debug(f"Error closing Angel One session: {e}")
 
 
 app = FastAPI(
@@ -247,90 +241,35 @@ def get_single_stock_analysis(
     return data
 
 
-class AngelFeedConfigRequest(BaseModel):
-    api_key: Optional[str] = ""
-    client_code: Optional[str] = ""
-    pin: Optional[str] = ""
-    totp_secret: Optional[str] = ""
-    enabled: Optional[bool] = True
-    auto_connect: Optional[bool] = True
-
-
 @app.get("/api/feed/status")
 def get_feed_status():
-    """Returns Angel One SmartAPI live feed status and statistics."""
-    return angel_client.get_status()
-
-
-@app.post("/api/feed/config")
-def update_feed_config(payload: AngelFeedConfigRequest):
-    """
-    Saves Angel One SmartAPI credentials and attempts live connection.
-    Endpoint: https://apiconnect.angelone.in/rest/auth/angelbroking/user/v1/loginByPassword
-    """
-    saved = angel_client.save_config(
-        api_key=payload.api_key or "",
-        client_code=payload.client_code or "",
-        pin=payload.pin or "",
-        totp_secret=payload.totp_secret or "",
-        enabled=payload.enabled if payload.enabled is not None else True
-    )
-    if not saved:
-        raise HTTPException(status_code=500, detail="Failed to save credentials to .env file.")
-
-    msg = "Credentials saved."
-    if payload.auto_connect and angel_client.is_configured():
-        _, msg = angel_client.login(force=True)
-
-    status = angel_client.get_status()
-    status["message"] = msg
-    return status
-
-
-@app.post("/api/feed/connect")
-def connect_feed():
-    """Triggers login to https://apiconnect.angelone.in and verifies session."""
-    success, msg = angel_client.login(force=True)
-    status = angel_client.get_status()
-    status["message"] = msg
-    return status
-
-
-@app.post("/api/feed/disconnect")
-def disconnect_feed():
-    """Clears active session tokens."""
-    angel_client.jwt_token = None
-    angel_client.refresh_token = None
-    angel_client.token_expiry = 0.0
-    angel_client.last_error = None
-    status = angel_client.get_status()
-    status["message"] = "Disconnected from Angel One SmartAPI."
-    return status
+    """Returns market data feed status."""
+    return {
+        "status": "OK",
+        "feed_source": "YAHOO_FINANCE",
+        "label": "Yahoo Finance Real-Time Market Data",
+        "connected": True
+    }
 
 
 @app.get("/api/feed/quote/{ticker}")
 def get_live_quote(ticker: str):
-    """Returns live market quote from Angel One SmartAPI (or Yahoo Finance fallback)."""
+    """Returns live market quote via Yahoo Finance."""
     clean_ticker = ticker.strip().upper()
-    quote = None
-    if clean_ticker.endswith(".NS") and angel_client.is_authenticated():
-        quote = angel_client.get_live_quote(clean_ticker)
-    
-    if not quote:
-        analysis = fetch_and_analyze_ticker(clean_ticker)
-        if analysis.get("status") == "OK":
-            quote = {
-                "ticker": clean_ticker,
-                "price": analysis.get("price"),
-                "change_pct": analysis.get("change_pct"),
-                "high": analysis.get("day_high"),
-                "low": analysis.get("day_low"),
-                "feed_source": "YAHOO_FINANCE",
-                "feed_label": "Yahoo Finance (Fallback)",
-                "timestamp": analysis.get("timestamp")
-            }
-        else:
-            raise HTTPException(status_code=404, detail="Quote unavailable.")
+    analysis = fetch_and_analyze_ticker(clean_ticker)
+    if analysis.get("status") == "OK":
+        quote = {
+            "ticker": clean_ticker,
+            "price": analysis.get("price"),
+            "change_pct": analysis.get("change_pct"),
+            "high": analysis.get("day_high"),
+            "low": analysis.get("day_low"),
+            "feed_source": "YAHOO_FINANCE",
+            "feed_label": "Yahoo Finance (Real-Time)",
+            "timestamp": analysis.get("timestamp")
+        }
+    else:
+        raise HTTPException(status_code=404, detail="Quote unavailable.")
 
     return {
         "status": "OK",
