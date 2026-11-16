@@ -77,6 +77,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 class CustomScanRequest(BaseModel):
     tickers: List[str]
+    timeframe: Optional[str] = "15m"
 
 
 @app.get("/")
@@ -153,15 +154,16 @@ def get_market_status():
 def scan_stocks(
     market: str = Query("NSE_MOMENTUM", description="Market key: NSE_MOMENTUM or US_MOMENTUM"),
     custom: Optional[str] = Query(None, description="Comma-separated custom ticker symbols"),
-    force_refresh: bool = Query(False, description="Bypass cache for real-time 5s auto-scan")
+    force_refresh: bool = Query(False, description="Bypass cache for real-time 5s auto-scan"),
+    timeframe: str = Query("15m", pattern="^(1m|5m|10m|15m)$", description="ORB timeframe (1m, 5m, 10m, 15m)")
 ):
     """
     Scans stocks in real-time, calculates technical setups, scores momentum,
-    and returns ranked opportunities with Stop Loss and Targets.
+    and returns ranked opportunities with Stop Loss and Targets based on selected ORB.
     """
     market_str = market if isinstance(market, str) else "NSE_MOMENTUM"
     custom_list = [c.strip().upper() for c in custom.split(",") if c.strip()] if isinstance(custom, str) and custom.strip() else None
-    results = scan_watchlist(market_str, custom_tickers=custom_list, force_refresh=force_refresh)
+    results = scan_watchlist(market_str, custom_tickers=custom_list, force_refresh=force_refresh, timeframe=timeframe)
 
     # Timezone normalization: IST for India stocks, EST for US stocks
     is_india = ("NSE" in market_str) or ("INDIA" in market_str) or (custom_list and any((".NS" in c or ".BO" in c) for c in custom_list)) or (len(results) > 0 and results[0].get("is_india"))
@@ -176,6 +178,7 @@ def scan_stocks(
     return {
         "status": "OK",
         "market": market,
+        "timeframe": timeframe,
         "is_india": bool(is_india),
         "market_tz": "Asia/Kolkata" if is_india else "America/New_York",
         "tz_label": scan_tz,
@@ -191,7 +194,8 @@ def custom_scan(payload: CustomScanRequest):
     tickers = [t.strip().upper() for t in payload.tickers if t.strip()]
     if not tickers:
         raise HTTPException(status_code=400, detail="No tickers provided.")
-    results = scan_watchlist("CUSTOM", custom_tickers=tickers)
+    tf = payload.timeframe or "15m"
+    results = scan_watchlist("CUSTOM", custom_tickers=tickers, timeframe=tf)
 
     is_india = any((".NS" in t or ".BO" in t) for t in tickers)
     now_utc = datetime.now(timezone.utc)
@@ -204,6 +208,7 @@ def custom_scan(payload: CustomScanRequest):
 
     return {
         "status": "OK",
+        "timeframe": tf,
         "is_india": bool(is_india),
         "market_tz": "Asia/Kolkata" if is_india else "America/New_York",
         "tz_label": scan_tz,
@@ -216,12 +221,12 @@ def custom_scan(payload: CustomScanRequest):
 @app.get("/api/chart/{ticker}")
 def get_chart(
     ticker: str,
-    timeframe: str = Query("1m", pattern="^(1m|5m|10m|15m)$"),
+    timeframe: str = Query("15m", pattern="^(1m|5m|10m|15m)$"),
     force: bool = Query(False)
 ):
     """
-    Returns 1-minute candlestick data, indicators (VWAP, EMA, Vol, RSI),
-    and expert technical analysis rationale.
+    Returns candlestick data, indicators (VWAP, EMA, Vol, RSI),
+    and expert technical analysis rationale for the specified timeframe.
     """
     data = get_chart_data(ticker, timeframe=timeframe, force_refresh=force)
     if data.get("status") != "OK":
@@ -230,9 +235,13 @@ def get_chart(
 
 
 @app.get("/api/stock/{ticker}")
-def get_single_stock_analysis(ticker: str, force: bool = Query(False)):
+def get_single_stock_analysis(
+    ticker: str,
+    timeframe: str = Query("15m", pattern="^(1m|5m|10m|15m)$"),
+    force: bool = Query(False)
+):
     """Returns detailed technical analysis for a single ticker."""
-    data = fetch_and_analyze_ticker(ticker, force_refresh=force)
+    data = fetch_and_analyze_ticker(ticker, force_refresh=force, timeframe=timeframe)
     if data.get("status") != "OK":
         raise HTTPException(status_code=404, detail=data.get("message", "Analysis failed."))
     return data

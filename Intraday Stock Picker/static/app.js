@@ -8,7 +8,7 @@
 
 let currentMarket = "NSE_MOMENTUM";
 let currentTicker = null;
-let currentTimeframe = "1m";
+let currentTimeframe = "15m";
 let currentFilter = "all";
 let currentSort = localStorage.getItem("apex_sort") || "roi-rec";
 if (currentSort === "roi") currentSort = "roi-desc";
@@ -710,7 +710,7 @@ async function fetchScreener(marketKey = currentMarket, isAuto = false) {
   const timeoutId = setTimeout(() => controller.abort(), 15000);
 
   try {
-    const url = `/api/scan?market=${encodeURIComponent(marketKey)}&force_refresh=${isAuto ? 'true' : 'false'}`;
+    const url = `/api/scan?market=${encodeURIComponent(marketKey)}&force_refresh=${isAuto ? 'true' : 'false'}&timeframe=${encodeURIComponent(currentTimeframe || '15m')}`;
     const res = await fetch(url, { signal: controller.signal });
     const data = await res.json();
 
@@ -905,6 +905,15 @@ function renderStockCards() {
       ? `<span class="badge-tz badge-tz-ist" title="Indian Standard Time (IST • UTC+05:30)">🇮🇳 IST</span>`
       : `<span class="badge-tz badge-tz-est" title="US Eastern Time (EST / EDT)">🇺🇸 EST</span>`;
 
+    const isOrbBreakout = Boolean(stock.is_orb_breakout || (stock.setup_name && stock.setup_name.includes("Breakout (ORB")));
+    const isOrbBreakdown = Boolean(stock.is_orb_breakdown || (stock.setup_name && stock.setup_name.includes("Breakdown (ORB")));
+    const orbMins = stock.orb_minutes || (currentTimeframe ? parseInt(currentTimeframe) : 15);
+    const orbBadge = isOrbBreakout
+      ? `<span class="badge-orb" title="${orbMins}-Min Opening Range Breakout" style="background:rgba(56,189,248,0.18);color:#38bdf8;border:1px solid rgba(56,189,248,0.4);padding:2px 6px;border-radius:4px;font-size:0.68rem;font-weight:700;">🚀 ${orbMins}m ORB HIGH</span>`
+      : (isOrbBreakdown
+        ? `<span class="badge-orb" title="${orbMins}-Min Opening Range Breakdown" style="background:rgba(244,63,94,0.18);color:#f43f5e;border:1px solid rgba(244,63,94,0.4);padding:2px 6px;border-radius:4px;font-size:0.68rem;font-weight:700;">🔻 ${orbMins}m ORB LOW</span>`
+        : "");
+
     card.innerHTML = `
       <div class="card-top">
         <div>
@@ -922,6 +931,7 @@ function renderStockCards() {
         <span class="badge-signal ${sigClass}">${stock.signal}</span>
         ${zoneBadge}
         ${recBadge}
+        ${orbBadge}
         <span class="badge-cap cap-${(stock.cap || 'large').toLowerCase()}">${stock.cap || 'LARGE'}</span>
         ${tzBadge}
         ${feedBadge}
@@ -1035,53 +1045,84 @@ async function loadChartData(ticker, tf = currentTimeframe, silent = false) {
   }
 }
 
-function addPriceLevels(plan, sym) {
-  if (!candleSeries || !plan) return;
+function addPriceLevels(plan, sym, analysis = null) {
+  if (!candleSeries) return;
   clearPriceLevels();
 
-  // Stop Loss Line (Red dashed)
-  const slLine = candleSeries.createPriceLine({
-    price: plan.stop_loss,
-    color: "#ef4444",
-    lineWidth: 2,
-    lineStyle: LightweightCharts.LineStyle.Dashed,
-    axisLabelVisible: true,
-    title: `SL: ${sym}${plan.stop_loss} (${plan.stop_loss_pct}%)`
-  });
-  activePriceLines.push(slLine);
+  if (plan) {
+    // Stop Loss Line (Red dashed)
+    const slLine = candleSeries.createPriceLine({
+      price: plan.stop_loss,
+      color: "#ef4444",
+      lineWidth: 2,
+      lineStyle: LightweightCharts.LineStyle.Dashed,
+      axisLabelVisible: true,
+      title: `SL: ${sym}${plan.stop_loss} (${plan.stop_loss_pct}%)`
+    });
+    activePriceLines.push(slLine);
 
-  // Target 1 Line (Green dashed)
-  const t1Line = candleSeries.createPriceLine({
-    price: plan.target_1,
-    color: "#10b981",
-    lineWidth: 2,
-    lineStyle: LightweightCharts.LineStyle.Dashed,
-    axisLabelVisible: true,
-    title: `TGT 1: ${sym}${plan.target_1} (+${plan.target_1_pct}%)`
-  });
-  activePriceLines.push(t1Line);
+    // Target 1 Line (Green dashed)
+    const t1Line = candleSeries.createPriceLine({
+      price: plan.target_1,
+      color: "#10b981",
+      lineWidth: 2,
+      lineStyle: LightweightCharts.LineStyle.Dashed,
+      axisLabelVisible: true,
+      title: `TGT 1: ${sym}${plan.target_1} (+${plan.target_1_pct}%)`
+    });
+    activePriceLines.push(t1Line);
 
-  // Target 2 Line (Cyan dashed)
-  const t2Line = candleSeries.createPriceLine({
-    price: plan.target_2,
-    color: "#06b6d4",
-    lineWidth: 2,
-    lineStyle: LightweightCharts.LineStyle.Dashed,
-    axisLabelVisible: true,
-    title: `TGT 2: ${sym}${plan.target_2} (+${plan.target_2_pct}%)`
-  });
-  activePriceLines.push(t2Line);
+    // Target 2 Line (Cyan dashed)
+    const t2Line = candleSeries.createPriceLine({
+      price: plan.target_2,
+      color: "#06b6d4",
+      lineWidth: 2,
+      lineStyle: LightweightCharts.LineStyle.Dashed,
+      axisLabelVisible: true,
+      title: `TGT 2: ${sym}${plan.target_2} (+${plan.target_2_pct}%)`
+    });
+    activePriceLines.push(t2Line);
 
-  // Entry Price Line (Amber dotted)
-  const entryLine = candleSeries.createPriceLine({
-    price: plan.entry_price,
-    color: "#f59e0b",
-    lineWidth: 1,
-    lineStyle: LightweightCharts.LineStyle.Dotted,
-    axisLabelVisible: true,
-    title: `ENTRY: ${sym}${plan.entry_price}`
-  });
-  activePriceLines.push(entryLine);
+    // Entry Price Line (Amber dotted)
+    const entryLine = candleSeries.createPriceLine({
+      price: plan.entry_price,
+      color: "#f59e0b",
+      lineWidth: 1,
+      lineStyle: LightweightCharts.LineStyle.Dotted,
+      axisLabelVisible: true,
+      title: `ENTRY: ${sym}${plan.entry_price}`
+    });
+    activePriceLines.push(entryLine);
+  }
+
+  // Opening Range Breakout (ORB) High & Low overlay levels
+  if (analysis) {
+    const orbHigh = analysis.orb_high;
+    const orbLow = analysis.orb_low;
+    const orbMins = analysis.orb_minutes || 15;
+    if (orbHigh && orbHigh > 0) {
+      const orbHLine = candleSeries.createPriceLine({
+        price: orbHigh,
+        color: "#38bdf8",
+        lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: `${orbMins}m ORB High: ${sym}${orbHigh}`
+      });
+      activePriceLines.push(orbHLine);
+    }
+    if (orbLow && orbLow > 0) {
+      const orbLLine = candleSeries.createPriceLine({
+        price: orbLow,
+        color: "#fb7185",
+        lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: `${orbMins}m ORB Low: ${sym}${orbLow}`
+      });
+      activePriceLines.push(orbLLine);
+    }
+  }
 }
 
 function clearPriceLevels() {
@@ -1116,8 +1157,8 @@ function updateChartSeries(chartData) {
   }
 
   // Update Price Lines
-  if (showLevels && chartData.analysis && chartData.analysis.trade_plan) {
-    addPriceLevels(chartData.analysis.trade_plan, chartData.analysis.currency_symbol);
+  if (showLevels && chartData.analysis) {
+    addPriceLevels(chartData.analysis.trade_plan, chartData.analysis.currency_symbol, chartData.analysis);
   } else {
     clearPriceLevels();
   }
@@ -1654,7 +1695,7 @@ function setupEventListeners() {
     });
   });
 
-  // Timeframe Buttons (1m, 5m, 15m)
+  // Timeframe Buttons (1m, 5m, 10m, 15m)
   document.querySelectorAll(".tf-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".tf-btn").forEach(b => b.classList.remove("active"));
@@ -1663,6 +1704,8 @@ function setupEventListeners() {
       if (currentTicker) {
         loadChartData(currentTicker, currentTimeframe);
       }
+      // Re-scan screener with newly chosen ORB timeframe
+      fetchScreener(currentMarket, false);
     });
   });
 

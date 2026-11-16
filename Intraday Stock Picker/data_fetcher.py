@@ -490,11 +490,13 @@ def fetch_and_analyze_ticker(
     company_name: str = "",
     force_refresh: bool = False,
     cap: Optional[str] = None,
-    live_quote: Optional[Dict[str, Any]] = None
+    live_quote: Optional[Dict[str, Any]] = None,
+    timeframe: str = "15m"
 ) -> Dict[str, Any]:
     """
-    Fetches real-time 1m data (hybrid Angel One SmartAPI + Yahoo Finance),
-    calculates indicators, and analyzes technical setup.
+    Fetches real-time intraday data (hybrid Angel One SmartAPI + Yahoo Finance),
+    calculates indicators based on selected ORB timeframe (1m, 5m, 10m, 15m; default 15m),
+    and analyzes technical setup.
     Utilizes short TTL caching for fast UI interactions.
     """
     ticker = ticker.strip().upper()
@@ -502,8 +504,28 @@ def fetch_and_analyze_ticker(
         cap = get_ticker_cap(ticker)
     now = time.time()
 
+    tf_clean = str(timeframe).lower().strip()
+    if tf_clean == "1m":
+        orb_minutes = 1
+        tf_clean = "1m"
+    elif tf_clean == "5m":
+        orb_minutes = 5
+        tf_clean = "5m"
+    elif tf_clean == "10m":
+        orb_minutes = 10
+        tf_clean = "10m"
+    else:
+        orb_minutes = 15
+        tf_clean = "15m"
+
+    cache_key = f"{ticker}_{tf_clean}"
+
     if not force_refresh:
-        cached_entry = _CACHE.get(ticker)
+        cached_entry = _CACHE.get(cache_key)
+        if not cached_entry:
+            cached_entry = _CACHE.get(ticker)
+            if cached_entry and cached_entry.get("timeframe") != tf_clean:
+                cached_entry = None
         if cached_entry and (now - cached_entry.get("timestamp", 0) < CACHE_TTL_SECONDS):
             return cached_entry["analysis"]
 
@@ -519,8 +541,8 @@ def fetch_and_analyze_ticker(
             "message": f"Unable to fetch intraday data for '{ticker}'. Verify the symbol."
         }
 
-    # Compute technical indicators
-    df_indicators = calculate_intraday_indicators(df)
+    # Compute technical indicators with selected orb_minutes
+    df_indicators = calculate_intraday_indicators(df, orb_minutes=orb_minutes)
 
     # Perform expert intraday analysis
     analysis = analyze_stock_setup(
@@ -529,25 +551,30 @@ def fetch_and_analyze_ticker(
         company_name,
         cap=cap,
         feed_source=feed_source,
-        live_quote=live_quote
+        live_quote=live_quote,
+        orb_minutes=orb_minutes
     )
     if "status" not in analysis:
         analysis["status"] = "OK"
     if "cap" not in analysis:
         analysis["cap"] = cap
 
-    # Save to cache
-    _CACHE[ticker] = {
+    # Save to cache with timeframe key and general ticker key
+    cache_payload = {
         "timestamp": now,
         "df": df_indicators,
         "analysis": analysis,
-        "feed_source": feed_source
+        "feed_source": feed_source,
+        "timeframe": tf_clean,
+        "orb_minutes": orb_minutes
     }
+    _CACHE[cache_key] = cache_payload
+    _CACHE[ticker] = cache_payload
 
     return analysis
 
 
-def get_chart_data(ticker: str, timeframe: str = "1m", force_refresh: bool = False) -> Dict[str, Any]:
+def get_chart_data(ticker: str, timeframe: str = "15m", force_refresh: bool = False) -> Dict[str, Any]:
     """
     Returns structured data specifically formatted for Lightweight Charts:
     - Candles: [{time, open, high, low, close}]
@@ -555,16 +582,21 @@ def get_chart_data(ticker: str, timeframe: str = "1m", force_refresh: bool = Fal
     - EMA9, EMA21, EMA50: [{time, value}]
     - Volume: [{time, value, color}]
     - RSI: [{time, value}]
-    - Overlay Price Lines: SL, T1, T2, Entry, Day High, Day Low
+    - Overlay Price Lines: SL, T1, T2, Entry, Day High, Day Low, ORB High, ORB Low
     - Live Feed Source indicator (Angel One SmartAPI / Yahoo Finance)
     """
     ticker = ticker.strip().upper()
-    analysis = fetch_and_analyze_ticker(ticker, force_refresh=force_refresh)
+    tf_clean = str(timeframe).lower().strip()
+    if tf_clean not in ["1m", "5m", "10m", "15m"]:
+        tf_clean = "15m"
+    orb_minutes = int(tf_clean.replace("m", ""))
+
+    analysis = fetch_and_analyze_ticker(ticker, force_refresh=force_refresh, timeframe=tf_clean)
     
     if analysis.get("status") != "OK":
         return analysis
 
-    cached = _CACHE.get(ticker)
+    cached = _CACHE.get(f"{ticker}_{tf_clean}") or _CACHE.get(ticker)
     if not cached:
         return {"status": "ERROR", "message": "Failed to retrieve processed data."}
 
@@ -578,15 +610,15 @@ def get_chart_data(ticker: str, timeframe: str = "1m", force_refresh: bool = Fal
         'Close': 'last',
         'Volume': 'sum'
     }
-    if timeframe == "5m" and len(df) >= 10:
+    if tf_clean == "5m" and len(df) >= 10:
         df_resampled = df.resample('5min').agg(agg_rules).dropna()
-        df_chart = calculate_intraday_indicators(df_resampled)
-    elif timeframe == "10m" and len(df) >= 15:
+        df_chart = calculate_intraday_indicators(df_resampled, orb_minutes=orb_minutes)
+    elif tf_clean == "10m" and len(df) >= 15:
         df_resampled = df.resample('10min').agg(agg_rules).dropna()
-        df_chart = calculate_intraday_indicators(df_resampled)
-    elif timeframe == "15m" and len(df) >= 20:
+        df_chart = calculate_intraday_indicators(df_resampled, orb_minutes=orb_minutes)
+    elif tf_clean == "15m" and len(df) >= 20:
         df_resampled = df.resample('15min').agg(agg_rules).dropna()
-        df_chart = calculate_intraday_indicators(df_resampled)
+        df_chart = calculate_intraday_indicators(df_resampled, orb_minutes=orb_minutes)
     else:
         df_chart = df
 
@@ -676,7 +708,10 @@ def get_chart_data(ticker: str, timeframe: str = "1m", force_refresh: bool = Fal
     return {
         "status": "OK",
         "ticker": ticker,
-        "timeframe": timeframe,
+        "timeframe": tf_clean,
+        "orb_minutes": orb_minutes,
+        "orb_high": analysis.get("orb_high"),
+        "orb_low": analysis.get("orb_low"),
         "feed_source": analysis.get("feed_source", "YAHOO_FINANCE"),
         "feed_source_label": analysis.get("feed_source_label", "Yahoo Finance"),
         "circuit_limits": analysis.get("circuit_limits"),
@@ -696,12 +731,21 @@ def get_chart_data(ticker: str, timeframe: str = "1m", force_refresh: bool = Fal
     }
 
 
-def scan_watchlist(watchlist_key: str = "NSE_MOMENTUM", custom_tickers: Optional[List[str]] = None, force_refresh: bool = False) -> List[Dict[str, Any]]:
+def scan_watchlist(
+    watchlist_key: str = "NSE_MOMENTUM",
+    custom_tickers: Optional[List[str]] = None,
+    force_refresh: bool = False,
+    timeframe: str = "15m"
+) -> List[Dict[str, Any]]:
     """
     Scans multiple stocks in parallel and sorts by Intraday Score & Momentum.
     Utilizes Angel One SmartAPI live market feed for real-time Indian NSE quotes.
-    Supports force_refresh for sub-5s real-time market ticks.
+    Supports force_refresh for sub-5s real-time market ticks and timeframe-specific ORB logic.
     """
+    tf_clean = str(timeframe).lower().strip()
+    if tf_clean not in ["1m", "5m", "10m", "15m"]:
+        tf_clean = "15m"
+
     if custom_tickers and len(custom_tickers) > 0:
         raw_targets = [{"ticker": t.strip().upper(), "name": t.strip().upper()} for t in custom_tickers if t.strip()]
     elif watchlist_key in WATCHLISTS:
@@ -741,7 +785,8 @@ def scan_watchlist(watchlist_key: str = "NSE_MOMENTUM", custom_tickers: Optional
                 item.get("name", ""),
                 cap=item.get("cap"),
                 force_refresh=force_refresh,
-                live_quote=l_quote
+                live_quote=l_quote,
+                timeframe=tf_clean
             )
         except Exception as err:
             logger.error(f"Scan worker failed for {item['ticker']}: {err}")
@@ -761,10 +806,11 @@ def scan_watchlist(watchlist_key: str = "NSE_MOMENTUM", custom_tickers: Optional
         # 1 for actionable recommendations (STRONG BUY, BUY, STRONG SELL, SELL)
         sig = str(x.get("signal", "")).upper()
         is_rec = 1 if (x.get("is_recommended") or (any(w in sig for w in ["BUY", "SELL", "SHORT"]) and "NEUTRAL" not in sig)) else 0
+        is_orb = 1 if (x.get("is_orb_breakout") or x.get("is_orb_breakdown") or "ORB" in str(x.get("setup", "")).upper()) else 0
         roi = float(x.get("roi_pct") or x.get("trade_plan", {}).get("roi_pct", 0.0))
         score = abs(x.get("score", 0))
         rvol = float(x.get("rvol", 0.0))
-        return (is_rec, roi, score, rvol)
+        return (is_rec, is_orb, roi, score, rvol)
 
     # Sort descending: recommended stocks with highest ROI first, followed by score & volume
     results.sort(key=_rank_key, reverse=True)

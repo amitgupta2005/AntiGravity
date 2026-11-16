@@ -23,12 +23,13 @@ DEFAULT_MIN_LIQUIDITY_VOL_MA = 15000.0  # Min 1-minute volume MA (shares)
 DEFAULT_MAX_ATR_PCT = 1.5               # Max 1-minute ATR as % of price
 
 
-def calculate_intraday_indicators(df: pd.DataFrame, light: bool = False) -> pd.DataFrame:
+def calculate_intraday_indicators(df: pd.DataFrame, light: bool = False, orb_minutes: int = 15) -> pd.DataFrame:
     """
     Computes intraday technical indicators on an OHLCV DataFrame.
     When light=True (used during multi-timeframe resampled checks), calculates only
     essential directional indicators (VWAP, EMA9, EMA21, RSI) for 3-5x faster processing
     and minimal memory allocation.
+    orb_minutes specifies the Opening Range window (1m, 5m, 10m, or 15m; default 15).
     """
     if df.empty:
         return df
@@ -110,21 +111,22 @@ def calculate_intraday_indicators(df: pd.DataFrame, light: bool = False) -> pd.D
         dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di).replace(0, np.nan)
         df['ADX14'] = dx.ewm(alpha=1/14, min_periods=1).mean().fillna(20.0)
 
-        # 8. Opening Range (First 15 bars of session) - Fast path for single session
+        # 8. Opening Range (First N minutes of session based on orb_minutes) - Fast path for single session
+        orb_bars = max(1, min(len(df), int(orb_minutes)))
         session_dates = df.index.date
         unique_dates = np.unique(session_dates)
         if len(unique_dates) == 1:
-            first_15 = df.iloc[:15]
-            df['ORB_High'] = float(first_15['High'].max())
-            df['ORB_Low'] = float(first_15['Low'].min())
+            first_orb = df.iloc[:orb_bars]
+            df['ORB_High'] = float(first_orb['High'].max())
+            df['ORB_Low'] = float(first_orb['Low'].min())
         else:
             df['SessionDate'] = session_dates
             orb_highs = {}
             orb_lows = {}
             for dt, group in df.groupby('SessionDate'):
-                first_15 = group.iloc[:15]
-                orb_highs[dt] = float(first_15['High'].max())
-                orb_lows[dt] = float(first_15['Low'].min())
+                first_orb = group.iloc[:max(1, min(len(group), int(orb_minutes)))]
+                orb_highs[dt] = float(first_orb['High'].max())
+                orb_lows[dt] = float(first_orb['Low'].min())
             
             df['ORB_High'] = df['SessionDate'].map(orb_highs)
             df['ORB_Low'] = df['SessionDate'].map(orb_lows)
@@ -141,7 +143,8 @@ def analyze_stock_setup(
     min_liquidity_vol_ma: float = DEFAULT_MIN_LIQUIDITY_VOL_MA,
     max_atr_pct: float = DEFAULT_MAX_ATR_PCT,
     feed_source: str = "YAHOO_FINANCE",
-    live_quote: Optional[Dict[str, Any]] = None
+    live_quote: Optional[Dict[str, Any]] = None,
+    orb_minutes: int = 15
 ) -> Dict[str, Any]:
     """
     Evaluates intraday technical setup, generates trade rationale,
@@ -411,7 +414,16 @@ def analyze_stock_setup(
     is_bear_trap_risk = (close <= orb_low * 1.001) and (close >= open_price or day_change_pct > 0)
     is_bull_trap_risk = (close >= orb_high * 0.999) and (close <= open_price or day_change_pct < -0.5)
 
-    if near_day_high:
+    orb_label = f"{orb_minutes}-Min"
+    if is_orb_breakout:
+        score += 15
+        checks.append({
+            "factor": f"{orb_label} Opening Range High",
+            "status": "ORB Breakout Confirmed",
+            "score": "+15",
+            "detail": f"Trading decisively above {orb_label} ORB High ({curr_sym}{orb_high:,.2f}) with RVOL {rvol:.2f}x >= 1.3x and green day alignment."
+        })
+    elif near_day_high:
         score += 15
         checks.append({
             "factor": "Breakout / Range",
@@ -419,13 +431,13 @@ def analyze_stock_setup(
             "score": "+15",
             "detail": f"Trading within 0.15% of High of the Day (Day High {curr_sym}{day_high:,.2f}) with volume expansion (RVOL {rvol:.2f}x)."
         })
-    elif is_orb_breakout:
-        score += 15
+    elif is_orb_breakdown:
+        score -= 15
         checks.append({
-            "factor": "Breakout / Range",
-            "status": "ORB Breakout Confirmed",
-            "score": "+15",
-            "detail": f"Trading decisively above 15-Min ORB High ({curr_sym}{orb_high:,.2f}) with RVOL {rvol:.2f}x >= 1.3x and green day alignment."
+            "factor": f"{orb_label} Opening Range Low",
+            "status": "ORB Breakdown Confirmed",
+            "score": "-15",
+            "detail": f"Trading decisively below {orb_label} ORB Low ({curr_sym}{orb_low:,.2f}) with RVOL {rvol:.2f}x >= 1.3x and red day alignment."
         })
     elif near_day_low:
         score -= 15
@@ -435,34 +447,26 @@ def analyze_stock_setup(
             "score": "-15",
             "detail": f"Trading within 0.15% of Low of the Day (Day Low {curr_sym}{day_low:,.2f}) with heavy volume selling (RVOL {rvol:.2f}x)."
         })
-    elif is_orb_breakdown:
-        score -= 15
-        checks.append({
-            "factor": "Breakout / Range",
-            "status": "ORB Breakdown Confirmed",
-            "score": "-15",
-            "detail": f"Trading decisively below 15-Min ORB Low ({curr_sym}{orb_low:,.2f}) with RVOL {rvol:.2f}x >= 1.3x and red day alignment."
-        })
     elif is_bear_trap_risk:
         checks.append({
             "factor": "Breakout / Range",
             "status": "Bear Trap Warning",
             "score": "+5",
-            "detail": f"Price testing ORB Low ({curr_sym}{orb_low:,.2f}) but stock is positive on the day (+{day_change_pct:.2f}%). Dip-buying absorption likely; shorting blocked."
+            "detail": f"Price testing {orb_label} ORB Low ({curr_sym}{orb_low:,.2f}) but stock is positive on the day (+{day_change_pct:.2f}%). Dip-buying absorption likely; shorting blocked."
         })
     elif is_bull_trap_risk:
         checks.append({
             "factor": "Breakout / Range",
             "status": "Bull Trap Warning",
             "score": "-5",
-            "detail": f"Price testing ORB High ({curr_sym}{orb_high:,.2f}) but stock is down on the day ({day_change_pct:.2f}%). Overhead supply resistance active; buying blocked."
+            "detail": f"Price testing {orb_label} ORB High ({curr_sym}{orb_high:,.2f}) but stock is down on the day ({day_change_pct:.2f}%). Overhead supply resistance active; buying blocked."
         })
     else:
         checks.append({
             "factor": "Breakout / Range",
             "status": "Within Range",
             "score": "0",
-            "detail": f"Trading inside Opening Range (ORB Low {curr_sym}{orb_low:,.2f} - ORB High {curr_sym}{orb_high:,.2f})."
+            "detail": f"Trading inside Opening Range ({orb_label} ORB Low {curr_sym}{orb_low:,.2f} - {orb_label} ORB High {curr_sym}{orb_high:,.2f})."
         })
 
     # 6. Time-of-Day Execution Window
@@ -766,12 +770,12 @@ def analyze_stock_setup(
 
     # --- SETUP IDENTIFICATION ---
     if action == "LONG":
-        if near_day_high and rvol >= 1.5:
+        if is_orb_breakout:
+            setup_name = f"{orb_label} Opening Range Breakout (ORB High)"
+            setup_desc = f"Clean expansion above the initial {orb_label.lower()} high with trend continuation."
+        elif near_day_high and rvol >= 1.5:
             setup_name = "Day-High Momentum Breakout"
             setup_desc = "Stock is attacking Day High with heavy institutional volume surge."
-        elif is_orb_breakout:
-            setup_name = "15-Min Opening Range Breakout (ORB High)"
-            setup_desc = "Clean expansion above the initial 15-minute high with trend continuation."
         elif close > vwap and prev['Close'] <= prev['VWAP']:
             setup_name = "Bullish VWAP Reclaim"
             setup_desc = "Price successfully recovered above VWAP from below with aggressive buyer absorbsion."
@@ -782,12 +786,12 @@ def analyze_stock_setup(
             setup_name = "Intraday Trend Continuation (Long)"
             setup_desc = "Price maintains consistent higher-high / higher-low structure above VWAP."
     elif action == "SHORT":
-        if near_day_low and rvol >= 1.5:
+        if is_orb_breakdown:
+            setup_name = f"{orb_label} Opening Range Breakdown (ORB Low)"
+            setup_desc = f"Price slipped below the initial {orb_label.lower()} low indicating strong supply."
+        elif near_day_low and rvol >= 1.5:
             setup_name = "Day-Low Breakdown"
             setup_desc = "Stock breaking fresh Day Lows with volume selling pressure."
-        elif is_orb_breakdown:
-            setup_name = "15-Min Opening Range Breakdown (ORB Low)"
-            setup_desc = "Price slipped below the initial 15-minute low indicating strong supply."
         elif close < vwap and prev['Close'] >= prev['VWAP']:
             setup_name = "Bearish VWAP Breakdown"
             setup_desc = "Failed VWAP defense; buyers trapped as price sinks under VWAP."
@@ -909,7 +913,7 @@ def analyze_stock_setup(
     rationale_points = [
         f"**1. Trend & VWAP Structure**: Trading at {currency_symbol}{close:,.2f} ({vwap_diff_pct:+.2f}% vs VWAP {currency_symbol}{vwap:,.2f}). EMA 9 ({currency_symbol}{ema9:,.2f}) and EMA 21 ({currency_symbol}{ema21:,.2f}) indicate {'strong upward momentum' if ema9 > ema21 else 'downward pressure'}.",
         f"**2. Institutional Volume Flow**: RVOL is **{rvol:.2f}x** with current 1-min candle volume at {volume:,.0f} shares. {'Institutional volume accumulation confirms buying interest.' if rvol >= 1.5 and close >= prev['Close'] else 'Volume aligns with current momentum.'}",
-        f"**3. Price Action & Range**: Day High is {currency_symbol}{day_high:,.2f} and Day Low is {currency_symbol}{day_low:,.2f}. 15-Min Opening Range: {currency_symbol}{orb_low:,.2f} - {currency_symbol}{orb_high:,.2f}. Setup: **{setup_name}**.",
+        f"**3. Price Action & Range**: Day High is {currency_symbol}{day_high:,.2f} and Day Low is {currency_symbol}{day_low:,.2f}. {orb_label} Opening Range: {currency_symbol}{orb_low:,.2f} - {currency_symbol}{orb_high:,.2f}. Setup: **{setup_name}**.",
         f"**4. Momentum (RSI 14)**: RSI is currently **{rsi:.1f}**. {'Optimal bullish trajectory, plenty of headroom before overbought exhaustion.' if 50 <= rsi <= 72 else ('High momentum, watch for pullback' if rsi > 72 else 'Bearish momentum dominance.')}",
         f"**5. Volatility & Stop Loss Rule**: 1-minute ATR is {currency_symbol}{atr_val:,.2f}. Strict Stop Loss placed at **{currency_symbol}{sl_price:,.2f}** ({sl_pct:+.2f}% risk), safely anchored behind key structural support (Swing Low / VWAP buffer).",
         f"**6. Target Projections & Runner Lock-in**: Target 1 at **{currency_symbol}{t1_price:,.2f}** ({t1_pct:+.2f}%, 1:1.5 R:R); Target 2 at **{currency_symbol}{t2_price:,.2f}** ({t2_pct:+.2f}%, 1:2.5 R:R) within the realistic 0-3% intraday profit zone. Upon reaching Target 1, 50% is booked and runner Stop Loss trails to +0.5R (**{currency_symbol}{round(entry_price + (0.5 * risk_amount), 2) if action == 'LONG' else round(entry_price - (0.5 * risk_amount), 2):,.2f}**), ensuring the trade cannot regress to a loss.",
@@ -935,7 +939,7 @@ def analyze_stock_setup(
     if action == "LONG":
         pick_time_window = (
             f"Optimal Pick Window: Enter on 1m/5m green confirmation candle holding above VWAP ({currency_symbol}{vwap:,.2f}) "
-            f"or on pullback retest to 9-EMA ({currency_symbol}{ema9:,.2f}) / 15m ORB High ({currency_symbol}{orb_high:,.2f}) between {time_str} - 11:30 AM {market_tz_label}. "
+            f"or on pullback retest to 9-EMA ({currency_symbol}{ema9:,.2f}) / {orb_label} ORB High ({currency_symbol}{orb_high:,.2f}) between {time_str} - 11:30 AM {market_tz_label}. "
             f"Limit slippage: Avoid buying if price expands > 0.4% above {currency_symbol}{entry_price:,.2f}."
         )
         holding_time_window = (
@@ -945,7 +949,7 @@ def analyze_stock_setup(
     elif action == "SHORT":
         pick_time_window = (
             f"Optimal Pick Window: Enter Short on 1m/5m red confirmation candle breaking below VWAP ({currency_symbol}{vwap:,.2f}) "
-            f"or on rejection from 9-EMA ({currency_symbol}{ema9:,.2f}) / 15m ORB Low ({currency_symbol}{orb_low:,.2f}) between {time_str} - 11:30 AM {market_tz_label}."
+            f"or on rejection from 9-EMA ({currency_symbol}{ema9:,.2f}) / {orb_label} ORB Low ({currency_symbol}{orb_low:,.2f}) between {time_str} - 11:30 AM {market_tz_label}."
         )
         holding_time_window = (
             f"Holding Duration: 35 to 75 minutes. Lock 50% profit at Target 1 ({currency_symbol}{t1_price:,.2f}, +{abs(t1_pct):.2f}% profit), shift Stop Loss to Entry ({currency_symbol}{entry_price:,.2f}). "
@@ -1083,7 +1087,13 @@ def analyze_stock_setup(
         "pick_time_window": pick_time_window,
         "holding_time_window": holding_time_window,
         "mtf_alignment": mtf_data,
-        "chart_markers": markers
+        "chart_markers": markers,
+        "orb_minutes": orb_minutes,
+        "orb_timeframe": f"{orb_minutes}m",
+        "orb_high": round(orb_high, 2),
+        "orb_low": round(orb_low, 2),
+        "is_orb_breakout": is_orb_breakout,
+        "is_orb_breakdown": is_orb_breakdown
     }
 
 
