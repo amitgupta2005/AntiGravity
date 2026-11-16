@@ -3242,5 +3242,217 @@ body.light-theme .btn-live-chart {
   color: #0284c7 !important;
 }
 
+/* ========================================================
+   Auto-Refresh Toolbar Controls & Countdown Radar
+   ======================================================== */
+.rec-autorefresh-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 3px 6px;
+}
+
+.rec-ar-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.rec-ar-icon {
+  width: 13px;
+  height: 13px;
+  color: var(--accent-cyan);
+}
+
+.rec-ar-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+
+.rec-ar-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 3px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: all var(--transition-fast);
+}
+
+.rec-ar-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.rec-ar-btn.active {
+  background: var(--accent-cyan);
+  color: #0a0d14;
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.35);
+}
+
+.rec-ar-pause.active {
+  background: var(--accent-amber);
+  color: #0a0d14;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.35);
+}
+
+.rec-countdown-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  position: relative;
+  padding: 0.15rem 0.45rem;
+  background: rgba(0, 242, 254, 0.08);
+  border: 1px solid rgba(0, 242, 254, 0.25);
+  border-radius: var(--radius-sm);
+  min-width: 65px;
+}
+
+.countdown-pulse-ring {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  box-shadow: 0 0 6px var(--accent-cyan);
+  animation: radar-live-anim 1.2s infinite ease-in-out;
+}
+
+.countdown-pulse-ring.paused {
+  background: var(--text-muted);
+  box-shadow: none;
+  animation: none;
+}
+
+.countdown-text {
+  font-size: 0.72rem;
+  color: var(--accent-cyan);
+}
+
+.countdown-bar-wrap {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  overflow: hidden;
+}
+
+.countdown-bar-fill {
+  height: 100%;
+  background: var(--accent-cyan);
+  transition: width 0.9s linear;
+}
+
+/* Header Auto-Refresh Selector Pills */
+.header-ar-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 0.35rem;
+  margin-right: 0.25rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+
+.header-ar-pill {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.header-ar-pill:hover {
+  color: var(--text-main);
+}
+
+.header-ar-pill.active {
+  background: var(--accent-cyan);
+  color: #0a0d14;
+  font-weight: 800;
+  box-shadow: 0 0 8px rgba(0, 242, 254, 0.3);
+}
+
+/* TradingView Stochastic Sub-Chart Legend */
+.tv-stoch-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.72rem;
+}
+
+.tv-pill-k {
+  color: #2962ff;
+  font-weight: 700;
+}
+
+.tv-pill-d {
+  color: #ff6d00;
+  font-weight: 700;
+}
+
+.tv-pill-zone {
+  color: var(--text-muted);
+}
+
+.box-day-stats {
+  border-left: 2px solid var(--accent-cyan);
+}
+
+/* Light Theme Enhancements for Auto-Refresh */
+body.light-theme .rec-autorefresh-container {
+  background: #f1f5f9;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+body.light-theme .rec-ar-btn-group {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+body.light-theme .rec-ar-btn.active {
+  background: #0284c7;
+  color: #ffffff;
+}
+
+body.light-theme .header-ar-selector {
+  background: #f1f5f9;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+body.light-theme .header-ar-pill.active {
+  background: #0284c7;
+  color: #ffffff;
+}
+
+
 
 

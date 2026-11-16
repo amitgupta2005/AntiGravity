@@ -68,8 +68,8 @@
         <span class="live-text" id="liveStatusText">LIVE FEED</span>
       </div>
 
-      <!-- Explicit Auto-Refresh ON/OFF Switch Widget -->
-      <div class="auto-refresh-widget" id="autoRefreshWidget" title="Turn automatic 30s price updates ON or OFF">
+      <!-- Explicit Auto-Refresh ON/OFF Switch Widget with 5s Default, 10s, 15s options -->
+      <div class="auto-refresh-widget" id="autoRefreshWidget" title="Automatic live price updates (5s Default, 10s, 15s)">
         <span class="auto-refresh-label">
           <i data-lucide="timer" class="timer-icon"></i> Auto:
         </span>
@@ -82,7 +82,12 @@
         >
           <span class="switch-indicator"></span>
         </button>
-        <span id="autoRefreshBtnText" class="auto-refresh-tag tag-on">ON (30s)</span>
+        <div class="header-ar-selector" id="headerArSelector">
+          <button class="header-ar-pill active" data-sec="5" title="Refresh every 5 seconds (Default)">5s</button>
+          <button class="header-ar-pill" data-sec="10" title="Refresh every 10 seconds">10s</button>
+          <button class="header-ar-pill" data-sec="15" title="Refresh every 15 seconds">15s</button>
+        </div>
+        <span id="autoRefreshBtnText" class="auto-refresh-tag tag-on">ON (5s)</span>
       </div>
     </div>
 
@@ -351,10 +356,11 @@
             <div class="form-group">
               <label for="paramAutoRefreshInterval">Auto-Refresh Cadence</label>
               <select id="paramAutoRefreshInterval" class="form-input">
+                <option value="5" selected>Every 5 Seconds (Default)</option>
+                <option value="10">Every 10 Seconds</option>
                 <option value="15">Every 15 Seconds</option>
-                <option value="30" selected>Every 30 Seconds (Default)</option>
+                <option value="30">Every 30 Seconds</option>
                 <option value="60">Every 60 Seconds</option>
-                <option value="120">Every 2 Minutes</option>
               </select>
               <span class="form-help">Interval between automatic price synchronizations</span>
             </div>

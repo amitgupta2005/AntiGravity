@@ -120,3 +120,190 @@ export const strategyOverlayPlugin = {
     ctx.restore();
   }
 };
+
+/**
+ * Chart.js Custom TradingView-Style Stochastic Plugin
+ * Renders:
+ * 1. Shaded region between 20 (oversold) and 80 (overbought)
+ * 2. Dashed horizontal reference lines at 80.00 and 20.00
+ * 3. Right-axis colored floating badges for %K (TradingView Blue #2962ff) and %D (TradingView Orange #ff6d00)
+ * 4. Header indicator title: "Stoch 14 3 3   [K val in blue]   [D val in orange]"
+ */
+export const tradingViewStochPlugin = {
+  id: 'tradingViewStoch',
+  afterDraw(chart) {
+    const { ctx, chartArea, scales } = chart;
+    const yScale = scales?.y;
+    if (!yScale || !chartArea) return;
+
+    const opts = chart.config.options?.plugins?.tradingViewStoch || {};
+    const {
+      kVal = null,
+      dVal = null,
+      kPeriod = 14,
+      kSmooth = 3,
+      dPeriod = 3,
+      overbought = 80,
+      oversold = 20,
+      showLevels = true,
+      showBadges = true,
+      showLegend = true,
+      isDarkMode = true
+    } = opts;
+
+    ctx.save();
+
+    // 1. Shaded Region between 20 and 80
+    if (showLevels) {
+      const y80 = yScale.getPixelForValue(overbought);
+      const y20 = yScale.getPixelForValue(oversold);
+      if (y80 != null && y20 != null) {
+        const top = Math.min(y80, y20);
+        const bottom = Math.max(y80, y20);
+        ctx.fillStyle = isDarkMode ? 'rgba(41, 98, 255, 0.05)' : 'rgba(33, 150, 243, 0.05)';
+        ctx.fillRect(chartArea.left, top, chartArea.width, bottom - top);
+
+        // Dashed lines at 80 and 20
+        ctx.setLineDash([4, 4]);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = isDarkMode ? 'rgba(148, 163, 184, 0.45)' : 'rgba(100, 116, 139, 0.45)';
+
+        // 80 line
+        ctx.beginPath();
+        ctx.moveTo(chartArea.left, y80);
+        ctx.lineTo(chartArea.right, y80);
+        ctx.stroke();
+
+        // 20 line
+        ctx.beginPath();
+        ctx.moveTo(chartArea.left, y20);
+        ctx.lineTo(chartArea.right, y20);
+        ctx.stroke();
+      }
+    }
+
+    // 2. Right-Axis Badges for %K (Blue) and %D (Orange)
+    if (showBadges) {
+      let curK = kVal;
+      let curD = dVal;
+      const dsets = chart.data?.datasets || [];
+      if (curK == null && dsets[0]?.data?.length) {
+        curK = dsets[0].data[dsets[0].data.length - 1];
+      }
+      if (curD == null && dsets[1]?.data?.length) {
+        curD = dsets[1].data[dsets[1].data.length - 1];
+      }
+
+      const drawAxisBadge = (val, color, isBlue) => {
+        if (val == null || isNaN(val)) return null;
+        const y = yScale.getPixelForValue(val);
+        if (y < chartArea.top - 6 || y > chartArea.bottom + 6) return null;
+        return { val, color, y, isBlue };
+      };
+
+      const badges = [];
+      if (curD != null) badges.push(drawAxisBadge(curD, '#ff6d00', false));
+      if (curK != null) badges.push(drawAxisBadge(curK, '#2962ff', true));
+
+      const validBadges = badges.filter(Boolean);
+      if (validBadges.length === 2) {
+        // Handle collision avoidance if values are within 18px
+        const diff = Math.abs(validBadges[0].y - validBadges[1].y);
+        if (diff < 18) {
+          const shift = (18 - diff) / 2;
+          if (validBadges[0].y < validBadges[1].y) {
+            validBadges[0].y -= shift;
+            validBadges[1].y += shift;
+          } else {
+            validBadges[0].y += shift;
+            validBadges[1].y -= shift;
+          }
+        }
+      }
+
+      ctx.setLineDash([]);
+      for (const b of validBadges) {
+        const badgeWidth = 46;
+        const badgeHeight = 18;
+        const badgeX = chartArea.right + 2;
+        const badgeY = Math.max(chartArea.top, Math.min(chartArea.bottom - badgeHeight, b.y - badgeHeight / 2));
+
+        // Connecting tick
+        ctx.strokeStyle = b.color;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(chartArea.right - 4, b.y);
+        ctx.lineTo(badgeX, b.y);
+        ctx.stroke();
+
+        // Rounded badge
+        ctx.fillStyle = b.color;
+        const r = 3;
+        ctx.beginPath();
+        ctx.moveTo(badgeX + r, badgeY);
+        ctx.lineTo(badgeX + badgeWidth - r, badgeY);
+        ctx.quadraticCurveTo(badgeX + badgeWidth, badgeY, badgeX + badgeWidth, badgeY + r);
+        ctx.lineTo(badgeX + badgeWidth, badgeY + badgeHeight - r);
+        ctx.quadraticCurveTo(badgeX + badgeWidth, badgeY + badgeHeight, badgeX + badgeWidth - r, badgeY + badgeHeight);
+        ctx.lineTo(badgeX + r, badgeY + badgeHeight);
+        ctx.quadraticCurveTo(badgeX, badgeY + badgeHeight, badgeX, badgeY + badgeHeight - r);
+        ctx.lineTo(badgeX, badgeY + r);
+        ctx.quadraticCurveTo(badgeX, badgeY, badgeX + r, badgeY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Value text
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 10px "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(Number(b.val).toFixed(2), badgeX + badgeWidth / 2, badgeY + badgeHeight / 2);
+      }
+    }
+
+    // 3. Top-left Indicator Header Legend (TradingView Style)
+    if (showLegend) {
+      let curK = kVal;
+      let curD = dVal;
+      const dsets = chart.data?.datasets || [];
+      if (curK == null && dsets[0]?.data?.length) {
+        curK = dsets[0].data[dsets[0].data.length - 1];
+      }
+      if (curD == null && dsets[1]?.data?.length) {
+        curD = dsets[1].data[dsets[1].data.length - 1];
+      }
+
+      const padX = chartArea.left + 8;
+      const padY = chartArea.top + 14;
+
+      ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+
+      const titleText = `Stoch ${kPeriod} ${kSmooth} ${dPeriod}`;
+      ctx.fillStyle = isDarkMode ? '#94a3b8' : '#64748b';
+      ctx.fillText(titleText, padX, padY);
+
+      const titleWidth = ctx.measureText(titleText).width;
+      let cursorX = padX + titleWidth + 10;
+
+      if (curK != null) {
+        ctx.fillStyle = '#2962ff';
+        ctx.font = 'bold 11px "JetBrains Mono", monospace';
+        const kStr = Number(curK).toFixed(2);
+        ctx.fillText(kStr, cursorX, padY);
+        cursorX += ctx.measureText(kStr).width + 8;
+      }
+
+      if (curD != null) {
+        ctx.fillStyle = '#ff6d00';
+        ctx.font = 'bold 11px "JetBrains Mono", monospace';
+        const dStr = Number(curD).toFixed(2);
+        ctx.fillText(dStr, cursorX, padY);
+      }
+    }
+
+    ctx.restore();
+  }
+};
+

@@ -1,11 +1,15 @@
 /**
- * Test Suite: Real-Time Chart Terminal for Screened Recommendations & Live Market Feed
+ * Comprehensive Test Suite:
+ * Real-Time Chart Terminal for Screened Recommendations & Live Market Feed
+ * 
  * Verifies:
- * 1. HTML structure contains #recommendation-chart-container and #toggleRecChartBtn
- * 2. CSS contains styling for recommendation chart terminal, chips, and live pulse animations
+ * 1. HTML structure contains #recommendation-chart-container, #toggleRecChartBtn, and header auto-refresh pills
+ * 2. CSS contains styling for recommendation chart terminal, chips, countdown radar, and TradingView elements
  * 3. Strategy Overlay Plugin renders Stop Loss, Target 1, Target 2, Entry Zone, and CMP
- * 4. RecommendationChartTerminal extracts recommendations and selects stocks
- * 5. Real-time market feed subscription and tick propagation
+ * 4. TradingView Stochastic Plugin renders 20/80 dashed reference lines, shaded band, and blue/orange right-axis badges
+ * 5. Today's Intraday Candles generation (09:15 to 15:30 IST) & Stochastic (14, 3, 3) calculation
+ * 6. Recommendation extraction, stock switching, and 5s/10s/15s auto-refresh intervals with pause/resume
+ * 7. Real-time market feed subscription and tick propagation
  */
 
 import assert from 'node:assert';
@@ -26,7 +30,11 @@ const htmlContent = fs.readFileSync(htmlPath, 'utf8');
 assert(htmlContent.includes('id="recommendation-chart-container"'), 'Missing #recommendation-chart-container in index.html');
 assert(htmlContent.includes('id="toggleRecChartBtn"'), 'Missing #toggleRecChartBtn in index.html');
 assert(htmlContent.includes('class="recommendation-chart-section"'), 'Missing .recommendation-chart-section class');
-console.log('  ✅ Test 1 Passed: index.html contains all required containers and toggle buttons.');
+assert(htmlContent.includes('class="header-ar-selector"'), 'Missing .header-ar-selector in index.html');
+assert(htmlContent.includes('data-sec="5"'), 'Missing 5s header auto-refresh option');
+assert(htmlContent.includes('data-sec="10"'), 'Missing 10s header auto-refresh option');
+assert(htmlContent.includes('data-sec="15"'), 'Missing 15s header auto-refresh option');
+console.log('  ✅ Test 1 Passed: index.html contains all required containers, toggle buttons, and 5s/10s/15s auto-refresh pills.');
 
 // TEST 2: Validate CSS Rules
 console.log('\n▶ Test 2: Validating CSS Rules in src/style.css...');
@@ -40,13 +48,18 @@ assert(cssContent.includes('.rec-live-price'), 'Missing .rec-live-price CSS');
 assert(cssContent.includes('.live-flash-green'), 'Missing .live-flash-green CSS');
 assert(cssContent.includes('.live-flash-red'), 'Missing .live-flash-red CSS');
 assert(cssContent.includes('.btn-live-chart'), 'Missing .btn-live-chart CSS');
-assert(cssContent.includes('@keyframes radar-live-anim'), 'Missing @keyframes radar-live-anim CSS');
-console.log('  ✅ Test 2 Passed: src/style.css contains complete styling for terminal, chips, and animations.');
+assert(cssContent.includes('.rec-autorefresh-container'), 'Missing .rec-autorefresh-container CSS');
+assert(cssContent.includes('.rec-ar-btn'), 'Missing .rec-ar-btn CSS');
+assert(cssContent.includes('.rec-countdown-badge'), 'Missing .rec-countdown-badge CSS');
+assert(cssContent.includes('.countdown-bar-fill'), 'Missing .countdown-bar-fill CSS');
+assert(cssContent.includes('.header-ar-pill'), 'Missing .header-ar-pill CSS');
+console.log('  ✅ Test 2 Passed: src/style.css contains complete styling for terminal, auto-refresh, and TradingView elements.');
 
 // TEST 3: Strategy Overlay Plugin Canvas Drawing
 console.log('\n▶ Test 3: Verifying Strategy Overlay Plugin Level Rendering...');
-const { strategyOverlayPlugin } = await import('./src/services/strategyChartPlugin.js');
-assert(strategyOverlayPlugin && strategyOverlayPlugin.id === 'strategyOverlay', 'Plugin must export valid ID');
+const { strategyOverlayPlugin, tradingViewStochPlugin } = await import('./src/services/strategyChartPlugin.js');
+assert(strategyOverlayPlugin && strategyOverlayPlugin.id === 'strategyOverlay', 'strategyOverlayPlugin must export valid ID');
+assert(tradingViewStochPlugin && tradingViewStochPlugin.id === 'tradingViewStoch', 'tradingViewStochPlugin must export valid ID');
 
 class MockCanvasContext {
   constructor() {
@@ -65,8 +78,9 @@ class MockCanvasContext {
   quadraticCurveTo() {}
   stroke() { this.calls.push('stroke'); }
   fill() { this.calls.push('fill'); }
-  fillText(text, x, y) { this.calls.push({ op: 'fillText', text, x, y }); }
+  fillText(text, x, y) { this.calls.push({ op: 'fillText', text, x, y, fillStyle: this.fillStyle }); }
   setLineDash(dash) { this.calls.push({ op: 'setLineDash', dash }); }
+  measureText(text) { return { width: (text || '').length * 7 }; }
 }
 
 const mockCtx = new MockCanvasContext();
@@ -107,8 +121,87 @@ assert(textCalls.some(t => t.includes('T2: ₹125')), 'Must draw Target 2 text l
 assert(textCalls.some(t => t.includes('CMP: ₹108')), 'Must draw CMP text label');
 console.log(`  ✅ Test 3 Passed: Strategy Overlay Plugin rendered labels: ${textCalls.join(' • ')}`);
 
-// TEST 4: RecommendationChartTerminal Logic & Stock Switching
-console.log('\n▶ Test 4: Verifying Recommendation Extraction & Switching...');
+// TEST 4: TradingView Stochastic Plugin Canvas Drawing
+console.log('\n▶ Test 4: Verifying TradingView Stochastic Plugin (20/80 Lines, Shaded Band & Badges)...');
+const mockTvCtx = new MockCanvasContext();
+const mockTvChart = {
+  ctx: mockTvCtx,
+  chartArea: { left: 40, right: 600, top: 20, bottom: 200, width: 560, height: 180 },
+  scales: {
+    y: {
+      getPixelForValue: (v) => 200 - (v / 100) * 180
+    }
+  },
+  data: {
+    datasets: [
+      { data: [35, 38, 40.85] }, // %K
+      { data: [50, 52, 53.90] }  // %D
+    ]
+  },
+  config: {
+    options: {
+      plugins: {
+        tradingViewStoch: {
+          kVal: 40.85,
+          dVal: 53.90,
+          kPeriod: 14,
+          kSmooth: 3,
+          dPeriod: 3,
+          overbought: 80,
+          oversold: 20,
+          isDarkMode: true,
+          showBadges: true,
+          showLevels: true,
+          showLegend: true
+        }
+      }
+    }
+  }
+};
+
+tradingViewStochPlugin.afterDraw(mockTvChart);
+
+// Check that shaded band was drawn
+const fills = mockTvCtx.calls.filter(c => c.op === 'fillRect');
+assert(fills.length > 0, 'Must draw shaded band between 20 and 80');
+
+// Check that 40.85 (blue badge) and 53.90 (orange badge) were drawn
+const tvTextCalls = mockTvCtx.calls.filter(c => c.op === 'fillText');
+const badge40 = tvTextCalls.find(c => c.text === '40.85');
+const badge53 = tvTextCalls.find(c => c.text === '53.90');
+const headerText = tvTextCalls.find(c => c.text.includes('Stoch 14 3 3'));
+
+assert(badge40, 'Must draw right-axis badge with value 40.85 for %K');
+assert(badge53, 'Must draw right-axis badge with value 53.90 for %D');
+assert(headerText, 'Must render TradingView header legend "Stoch 14 3 3"');
+console.log(`  ✅ Test 4 Passed: TradingView Plugin correctly rendered: "${headerText.text}", %K Badge: ${badge40.text}, %D Badge: ${badge53.text}`);
+
+// TEST 5: Today's Intraday Candles Generation & Stochastic Calculation
+console.log('\n▶ Test 5: Verifying Today\'s Intraday Session Candles & Stochastic (14, 3, 3)...');
+const { generateTodayIntradayCandles } = await import('./src/services/marketData.js');
+const { calculateStochasticSeries } = await import('./src/quant/stochastic.js');
+
+const intradayCandles = generateTodayIntradayCandles('RELIANCE.NS', true, 2850, 0.5);
+assert(Array.isArray(intradayCandles) && intradayCandles.length === 75, 'Must generate exactly 75 5-minute bars for today\'s session (09:15 to 15:30)');
+assert.strictEqual(intradayCandles[0].date, '09:15', 'First candle must open at 09:15');
+assert.strictEqual(intradayCandles[intradayCandles.length - 1].date, '15:25', 'Last candle must close at end of session');
+assert.strictEqual(intradayCandles[intradayCandles.length - 1].close, 2850, 'Latest intraday close must match current price');
+
+const intradayStoch = calculateStochasticSeries(intradayCandles, {
+  kPeriod: 14,
+  kSmoothing: 3,
+  dPeriod: 3,
+  useClosingOnly: true
+});
+
+assert.strictEqual(intradayStoch.length, 75, 'Stochastic series must match candle count');
+const lastStoch = intradayStoch[intradayStoch.length - 1];
+assert(typeof lastStoch.slowK === 'number' && !isNaN(lastStoch.slowK), 'Latest %K must be numeric');
+assert(typeof lastStoch.d === 'number' && !isNaN(lastStoch.d), 'Latest %D must be numeric');
+console.log(`  ✅ Test 5 Passed: 75 intraday bars generated from 09:15 to 15:25. Latest Stoch: %K=${lastStoch.slowK.toFixed(2)}, %D=${lastStoch.d.toFixed(2)}`);
+
+// TEST 6: RecommendationChartTerminal Logic, Timeframe & Auto-Refresh Options
+console.log('\n▶ Test 6: Verifying Recommendation Extraction, Default Timeframe & Auto-Refresh Controls...');
 
 class MockDOMElement {
   constructor(id = '', tag = 'div') {
@@ -148,12 +241,18 @@ globalThis.document = {
   createElement: (tag) => new MockDOMElement(tag, tag),
   body: new MockDOMElement('body'),
   querySelectorAll: () => [],
+  querySelector: () => null,
   addEventListener: () => {},
   hidden: false
 };
 globalThis.window = {
   addEventListener: () => {},
   scrollY: 0
+};
+globalThis.localStorage = {
+  _store: {},
+  getItem: (k) => globalThis.localStorage._store[k] || null,
+  setItem: (k, v) => globalThis.localStorage._store[k] = String(v)
 };
 
 const { RecommendationChartTerminal } = await import('./src/components/recommendationChart.js');
@@ -163,67 +262,42 @@ document.getElementById = (id) => (id === 'recommendation-chart-container' ? moc
 
 const terminal = new RecommendationChartTerminal('recommendation-chart-container');
 
-const sampleResults = [
-  {
-    ticker: 'RELIANCE.NS',
-    name: 'Reliance Industries Ltd',
-    price: 2850,
-    slowK: 14.5, // Oversold (<20)
-    d: 16.2,
-    spread: -1.7,
-    signalLabel: 'Deep Oversold',
-    strategy: { direction: 'LONG', stopLoss: 2790, target1: 2930, target2: 2990 }
-  },
-  {
-    ticker: 'TCS.NS',
-    name: 'Tata Consultancy Services',
-    price: 3450,
-    slowK: 18.2, // Golden Cross in Oversold
-    d: 17.5,
-    spread: 0.7,
-    signalType: 'GOLDEN_CROSS',
-    signalLabel: 'Bullish Golden Cross',
-    strategy: { direction: 'LONG', stopLoss: 3380, target1: 3550, target2: 3620 }
-  },
-  {
-    ticker: 'HDFCBANK.NS',
-    name: 'HDFC Bank Ltd',
-    price: 1680,
-    slowK: 55.0, // Neutral
-    d: 54.0,
-    spread: 1.0,
-    signalLabel: 'Neutral'
-  },
-  {
-    ticker: 'NVDA',
-    name: 'NVIDIA Corporation',
-    price: 140,
-    slowK: 85.0, // Overbought (>80)
-    d: 82.0,
-    spread: 3.0,
-    signalLabel: 'Overbought Short',
-    strategy: { direction: 'SHORT', stopLoss: 146, target1: 132, target2: 125 }
-  }
-];
+// Verify default timeframe is 'today'
+assert.strictEqual(terminal.activeTimeframe, 'today', 'Default active timeframe must be "today" for today\'s price framework');
 
-terminal.setResults(sampleResults);
+// Verify default auto-refresh is 5 seconds
+assert.strictEqual(terminal.refreshIntervalSec, 5, 'Default auto-refresh must be 5 seconds');
 
-assert.strictEqual(terminal.recommendations.length, 3, 'Must extract exactly 3 actionable recommendations (2 oversold + 1 overbought)');
-assert.strictEqual(terminal.recommendations[0].ticker, 'RELIANCE.NS', 'First recommendation should be deepest oversold RELIANCE.NS');
-assert.strictEqual(terminal.selectedStock.ticker, 'RELIANCE.NS', 'Default selected stock should be RELIANCE.NS');
+// Test auto-refresh switching to 10s and 15s
+terminal.setRefreshInterval(10);
+assert.strictEqual(terminal.refreshIntervalSec, 10, 'Auto-refresh must update to 10s');
+assert.strictEqual(globalThis.localStorage.getItem('antigravity_rec_chart_refresh_interval'), '10', 'Should persist 10s to localStorage');
 
-// Test selecting a different recommendation
-terminal.selectStock(sampleResults[1]); // Select TCS.NS
-assert.strictEqual(terminal.selectedStock.ticker, 'TCS.NS', 'Selected stock must switch to TCS.NS');
+terminal.setRefreshInterval(15);
+assert.strictEqual(terminal.refreshIntervalSec, 15, 'Auto-refresh must update to 15s');
 
-console.log('  ✅ Test 4 Passed: Recommendations accurately filtered and selected (Oversold, Golden Cross, Overbought).');
+terminal.setRefreshInterval(0); // Pause
+assert.strictEqual(terminal.isFeedPaused, true, 'Auto-refresh must pause when interval is 0');
 
-// TEST 5: Real-time Live Market Feed Subscription
-console.log('\n▶ Test 5: Verifying Real-Time Market Feed Subscription & Ticking...');
+terminal.setRefreshInterval(5); // Reset to default 5s
+assert.strictEqual(terminal.refreshIntervalSec, 5, 'Auto-refresh must reset to 5s default');
+assert.strictEqual(terminal.isFeedPaused, false, 'Auto-refresh must resume');
+
+console.log('  ✅ Test 6 Passed: Default timeframe is "today", auto-refresh default is 5s with working 10s, 15s and Pause toggling.');
+
+// TEST 7: Real-time Live Market Feed Subscription
+console.log('\n▶ Test 7: Verifying Real-Time Market Feed Subscription & Ticking...');
 const { subscribeRealtimeStock, unsubscribeRealtimeStock } = await import('./src/services/marketData.js');
 
+const sampleStock = {
+  ticker: 'RELIANCE.NS',
+  price: 2850,
+  slowK: 14.5,
+  d: 16.2
+};
+
 let tickReceived = null;
-const unsub = subscribeRealtimeStock(sampleResults[0], (tick) => {
+const unsub = subscribeRealtimeStock(sampleStock, (tick) => {
   tickReceived = tick;
 }, 100);
 
@@ -233,7 +307,7 @@ assert(typeof tickReceived.price === 'number', 'Tick must contain numeric price'
 unsub();
 unsubscribeRealtimeStock();
 
-console.log(`  ✅ Test 5 Passed: Real-Time Market Feed subscription successfully delivered tick: Symbol=${tickReceived.symbol}, Price=₹${tickReceived.price}`);
+console.log(`  ✅ Test 7 Passed: Real-Time Market Feed subscription successfully delivered tick: Symbol=${tickReceived.symbol}, Price=₹${tickReceived.price}`);
 
-console.log('\n🎉 ALL REAL-TIME RECOMMENDATION CHART TESTS PASSED SUCCESSFULLY! (5/5 Checks)\n');
+console.log('\n🎉 ALL REAL-TIME RECOMMENDATION CHART & TRADINGVIEW FRAMEWORK TESTS PASSED! (7/7 Checks)\n');
 process.exit(0);

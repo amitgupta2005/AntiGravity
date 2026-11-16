@@ -53,11 +53,19 @@ export async function fetchStockCandles(symbol, range = '3mo', interval = '1d', 
     const volumes = quotes.volume || [];
 
     const candles = [];
+    const isIntraday = interval.endsWith('m') || interval.endsWith('h') || range === '1d';
     for (let i = 0; i < timestamps.length; i++) {
       const c = closes[i];
       if (c != null && !isNaN(c)) {
         const d = new Date(timestamps[i] * 1000);
-        const dateStr = formatISTDate(d);
+        const dateStr = isIntraday
+          ? new Intl.DateTimeFormat('en-IN', {
+              timeZone: 'Asia/Kolkata',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            }).format(d)
+          : formatISTDate(d);
         candles.push({
           date: dateStr,
           timestamp: timestamps[i],
@@ -79,6 +87,9 @@ export async function fetchStockCandles(symbol, range = '3mo', interval = '1d', 
       return candleCache.get(cacheKey).candles;
     }
     // Generate synthetic realistic market series as deterministic fallback
+    if (range === '1d' || interval.endsWith('m')) {
+      return generateTodayIntradayCandles(symbol, isINR);
+    }
     return generateSyntheticCandles(symbol, isINR);
   }
 }
@@ -166,6 +177,67 @@ export function generateSyntheticCandles(symbol, isINR = false) {
       low: Number((current - range).toFixed(2)),
       close: current,
       volume: Math.floor(1500000 + Math.abs(pseudoRand) * 8000000)
+    });
+  }
+
+  return candles;
+}
+
+/**
+ * Generate realistic synthetic intraday 5-minute candles for Today's session
+ * Formats time from 09:15 to 15:30 IST for Indian stocks, or 09:30 to 16:00 EST for US stocks.
+ */
+export function generateTodayIntradayCandles(symbol, isINR = false, currentPrice = null, dayChangePct = null) {
+  let basePrice = currentPrice;
+  if (!basePrice || isNaN(basePrice)) {
+    basePrice = isINR ? 1250 : 125;
+    const sym = symbol.toUpperCase();
+    if (sym.includes('RELIANCE')) basePrice = 2850;
+    else if (sym.includes('TCS')) basePrice = 3850;
+    else if (sym.includes('HDFCBANK')) basePrice = 1680;
+    else if (sym.includes('NVDA')) basePrice = 135;
+    else if (sym.includes('AAPL')) basePrice = 228;
+    else if (sym.includes('MSFT')) basePrice = 425;
+    else if (sym.includes('SPY')) basePrice = 585;
+  }
+
+  const chgPct = dayChangePct != null ? dayChangePct : 0.45;
+  const openPrice = Number((basePrice / (1 + chgPct / 100)).toFixed(2));
+
+  let hash = 0;
+  const sym = symbol.toUpperCase();
+  for (let i = 0; i < sym.length; i++) {
+    hash = (hash << 5) - hash + sym.charCodeAt(i);
+    hash |= 0;
+  }
+
+  const candles = [];
+  const barsCount = 75; // 09:15 to 15:30 is 75 bars of 5 mins
+  let cur = openPrice;
+  const startHour = isINR ? 9 : 9;
+  const startMinute = isINR ? 15 : 30;
+
+  for (let i = 0; i < barsCount; i++) {
+    const totalMinutes = startMinute + i * 5;
+    const h = Math.floor(startHour + totalMinutes / 60);
+    const m = totalMinutes % 60;
+    const timeLabel = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+
+    const progress = i / (barsCount - 1);
+    const targetPrice = openPrice + (basePrice - openPrice) * progress;
+    const oscillation = Math.sin(hash + i * 0.45) * (basePrice * 0.0035);
+    cur = Number((targetPrice + oscillation).toFixed(2));
+    if (i === barsCount - 1) cur = basePrice;
+
+    const spread = cur * 0.0018;
+    candles.push({
+      date: timeLabel,
+      timestamp: Math.floor(Date.now() / 1000) - (barsCount - 1 - i) * 300,
+      open: Number((cur - spread * 0.2).toFixed(2)),
+      high: Number((cur + spread).toFixed(2)),
+      low: Number((cur - spread).toFixed(2)),
+      close: cur,
+      volume: Math.floor(25000 + Math.abs(Math.sin(hash + i)) * 120000)
     });
   }
 
@@ -319,15 +391,15 @@ let activeRealtimeSubscription = null;
 
 /**
  * Subscribe to real-time market feed ticks for an active stock
- * Polling cadence defaults to 3000ms with smooth simulated micro-tick variations
+ * Polling cadence defaults to 5000ms (5s) with smooth simulated micro-tick variations
  * to keep chart and stochastic oscillator alive during after-hours/weekends.
  *
  * @param {Object} stock - Active stock object
  * @param {Function} onTick - Callback receiving ({ symbol, price, change, changePct, timestamp, isLive })
- * @param {number} intervalMs - Polling interval in ms (default 3000ms)
+ * @param {number} intervalMs - Polling interval in ms (default 5000ms)
  * @returns {Function} Unsubscribe function
  */
-export function subscribeRealtimeStock(stock, onTick, intervalMs = 3000) {
+export function subscribeRealtimeStock(stock, onTick, intervalMs = 5000) {
   if (activeRealtimeSubscription) {
     clearInterval(activeRealtimeSubscription);
     activeRealtimeSubscription = null;

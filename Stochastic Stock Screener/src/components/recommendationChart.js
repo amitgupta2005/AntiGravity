@@ -1,8 +1,10 @@
 /**
  * Real-Time Chart Terminal for Screened Recommendations
- * Displays interactive live candlestick/line chart and Stochastic (14,3,3) sub-chart
+ * Displays interactive live candlestick/line chart and TradingView-style Stochastic (14,3,3) sub-chart
  * with live streaming market feed, quantitative strategy visual overlays (Entry Zone, SL, T1, T2, CMP),
  * and rapid recommendation switching.
+ *
+ * Defaults to Today's Intraday Price and 5-second auto-refresh with 10s and 15s options.
  */
 
 import {
@@ -30,9 +32,10 @@ Chart.register(
   Filler
 );
 
-import { strategyOverlayPlugin } from '../services/strategyChartPlugin.js';
+import { strategyOverlayPlugin, tradingViewStochPlugin } from '../services/strategyChartPlugin.js';
 import { 
   fetchStockCandles, 
+  generateTodayIntradayCandles,
   subscribeRealtimeStock, 
   unsubscribeRealtimeStock 
 } from '../services/marketData.js';
@@ -47,13 +50,24 @@ export class RecommendationChartTerminal {
     this.allResults = [];
     this.recommendations = [];
     this.selectedStock = null;
-    this.activeTimeframe = '1d'; // '1d' or '5m'
+    this.activeTimeframe = 'today'; // 'today' (Default: Today's Price in Stochastic framework) or '1d' (Macro Daily)
     this.isCollapsed = false;
     this.priceChart = null;
     this.stochChart = null;
     this.unsubscribeFeed = null;
     this.onStockSelect = options.onStockSelect || null;
-    this.lastTickTime = Date.now();
+    
+    // Auto-refresh cadence: 5s (Default), with 10s and 15s options
+    const savedInterval = typeof localStorage !== 'undefined' 
+      ? parseInt(localStorage.getItem('antigravity_rec_chart_refresh_interval'), 10) 
+      : 5;
+    this.refreshIntervalSec = [5, 10, 15].includes(savedInterval) ? savedInterval : 5;
+    this.isFeedPaused = false;
+    this.secondsUntilNextTick = this.refreshIntervalSec;
+    this.countdownTimerId = null;
+
+    // Cache for today's intraday series
+    this.intradayCandlesCache = new Map();
   }
 
   setResults(results) {
@@ -85,7 +99,6 @@ export class RecommendationChartTerminal {
     });
 
     if (actionables.length > 0) {
-      // Sort recommendations: Oversold <20 first, then Golden Crosses
       actionables.sort((a, b) => {
         const aK = a.slowK ?? 50;
         const bK = b.slowK ?? 50;
@@ -95,13 +108,11 @@ export class RecommendationChartTerminal {
       });
       this.recommendations = actionables;
     } else {
-      // Fallback: take top 6 lowest %K stocks
       this.recommendations = [...this.allResults]
         .sort((a, b) => (a.slowK ?? 50) - (b.slowK ?? 50))
         .slice(0, 8);
     }
 
-    // Preserve selected stock if still in recommendations, else pick first recommendation
     if (this.selectedStock) {
       const sym = this.selectedStock.ticker || this.selectedStock.symbol;
       const found = this.recommendations.find(x => (x.ticker || x.symbol) === sym);
@@ -121,7 +132,6 @@ export class RecommendationChartTerminal {
     const item = this.allResults.find(x => (x.ticker || x.symbol) === sym) || stock;
     this.selectedStock = item;
 
-    // Ensure it exists in recommendations list
     if (!this.recommendations.some(x => (x.ticker || x.symbol) === sym)) {
       this.recommendations.unshift(item);
     }
@@ -136,6 +146,32 @@ export class RecommendationChartTerminal {
     }
   }
 
+  setRefreshInterval(sec) {
+    if (sec === 0) {
+      // Toggle Pause / Resume
+      this.isFeedPaused = !this.isFeedPaused;
+      if (this.isFeedPaused) {
+        if (this.unsubscribeFeed) {
+          this.unsubscribeFeed();
+          this.unsubscribeFeed = null;
+        }
+      } else {
+        const isINR = (this.selectedStock?.ticker || '').endsWith('.NS') || (this.selectedStock?.ticker || '').endsWith('.BO');
+        this.startRealtimeFeed(this.selectedStock, isINR ? '₹' : '$');
+      }
+    } else {
+      this.refreshIntervalSec = sec;
+      this.isFeedPaused = false;
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('antigravity_rec_chart_refresh_interval', String(sec));
+      }
+      const isINR = (this.selectedStock?.ticker || '').endsWith('.NS') || (this.selectedStock?.ticker || '').endsWith('.BO');
+      this.startRealtimeFeed(this.selectedStock, isINR ? '₹' : '$');
+    }
+    this.secondsUntilNextTick = this.refreshIntervalSec;
+    this.updateAutoRefreshUI();
+  }
+
   toggleCollapse() {
     this.isCollapsed = !this.isCollapsed;
     this.render();
@@ -144,19 +180,7 @@ export class RecommendationChartTerminal {
   render() {
     if (!this.container) return;
 
-    // Cleanup active feed & charts before re-rendering
-    if (this.unsubscribeFeed) {
-      this.unsubscribeFeed();
-      this.unsubscribeFeed = null;
-    }
-    if (this.priceChart) {
-      this.priceChart.destroy();
-      this.priceChart = null;
-    }
-    if (this.stochChart) {
-      this.stochChart.destroy();
-      this.stochChart = null;
-    }
+    this.cleanup();
 
     if (!this.selectedStock || this.recommendations.length === 0) {
       this.container.innerHTML = `
@@ -180,56 +204,90 @@ export class RecommendationChartTerminal {
     const isUp = chg >= 0;
     const kVal = stock.slowK ?? 50;
     const dVal = stock.d ?? 50;
-    const spreadVal = stock.spread ?? (kVal - dVal);
     const strat = stock.strategy || {};
     const isShort = strat.direction === 'SHORT' || kVal > 80;
+
+    // Estimate Today's Day High / Low / Open
+    const dayOpen = stock.open ?? (priceVal / (1 + chg / 100));
+    const dayHigh = stock.high ?? Math.max(priceVal, dayOpen * 1.012);
+    const dayLow = stock.low ?? Math.min(priceVal, dayOpen * 0.988);
 
     const isDark = document.body.classList.contains('dark-theme') || !document.body.classList.contains('light-theme');
 
     this.container.innerHTML = `
       <div class="rec-chart-card ${this.isCollapsed ? 'is-collapsed' : ''}" id="recChartCard">
-        <!-- Top Toolbar & Recommendation Chips -->
+        <!-- Top Toolbar & Controls -->
         <div class="rec-header-toolbar">
           <div class="rec-title-wrap">
             <span class="rec-terminal-badge">
               <span class="live-pulse-radar"></span>
-              <span class="font-bold">REAL-TIME CHART</span>
+              <span class="font-bold">LIVE STOCHASTIC TERMINAL</span>
             </span>
             <span class="rec-heading-text font-bold">Screened Strategy Recommendations</span>
             <span class="rec-count-pill font-mono font-bold">${this.recommendations.length} Active</span>
           </div>
 
           <div class="rec-controls-right">
-            <!-- Timeframe switcher -->
-            <div class="rec-timeframe-group">
-              <button class="rec-tf-btn ${this.activeTimeframe === '1d' ? 'active' : ''}" data-tf="1d" title="Daily Closing Basis (60 Bars)">
-                1D Daily
+            <!-- 1. Auto-Refresh Controls (5s Default, 10s, 15s, Pause) -->
+            <div class="rec-autorefresh-container font-mono">
+              <span class="rec-ar-title">
+                <i data-lucide="timer" class="rec-ar-icon"></i>
+                <span class="rec-ar-text">Auto-Refresh:</span>
+              </span>
+              <div class="rec-ar-btn-group" id="recAutoRefreshBtnGroup">
+                <button class="rec-ar-btn ${this.refreshIntervalSec === 5 && !this.isFeedPaused ? 'active' : ''}" data-interval="5" title="Auto-Refresh every 5 seconds (Recommended Default)">
+                  5s
+                </button>
+                <button class="rec-ar-btn ${this.refreshIntervalSec === 10 && !this.isFeedPaused ? 'active' : ''}" data-interval="10" title="Auto-Refresh every 10 seconds">
+                  10s
+                </button>
+                <button class="rec-ar-btn ${this.refreshIntervalSec === 15 && !this.isFeedPaused ? 'active' : ''}" data-interval="15" title="Auto-Refresh every 15 seconds">
+                  15s
+                </button>
+                <button class="rec-ar-btn rec-ar-pause ${this.isFeedPaused ? 'active' : ''}" data-interval="0" title="${this.isFeedPaused ? 'Resume Live Feed' : 'Pause Live Feed'}">
+                  <i data-lucide="${this.isFeedPaused ? 'play' : 'pause'}"></i>
+                  <span>${this.isFeedPaused ? 'Resume' : 'Pause'}</span>
+                </button>
+              </div>
+
+              <!-- Live Countdown Badge -->
+              <div class="rec-countdown-badge" id="recCountdownBadge" title="Next Live Market Tick">
+                <span class="countdown-pulse-ring ${this.isFeedPaused ? 'paused' : ''}"></span>
+                <span class="countdown-text font-mono font-bold" id="recCountdownSec">
+                  ${this.isFeedPaused ? 'PAUSED' : `${this.secondsUntilNextTick}s`}
+                </span>
+                <div class="countdown-bar-wrap">
+                  <div class="countdown-bar-fill" id="recCountdownFill" style="width: 100%;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Timeframe Switcher (Default: Today's Live Intraday) -->
+            <div class="rec-timeframe-group font-mono">
+              <button class="rec-tf-btn ${this.activeTimeframe === 'today' ? 'active' : ''}" data-tf="today" title="Today's Live Intraday Price & Stochastic Framework">
+                ⚡ Today's Live
               </button>
-              <button class="rec-tf-btn ${this.activeTimeframe === '5m' ? 'active' : ''}" data-tf="5m" title="Intraday Live 5-Minute Stream">
-                5m Intraday
+              <button class="rec-tf-btn ${this.activeTimeframe === '1d' ? 'active' : ''}" data-tf="1d" title="Historical Daily Closing Basis (60 Days)">
+                📅 Daily (60D)
               </button>
             </div>
 
-            <!-- Screenshot button -->
+            <!-- 3. Screenshot & Deep-Dive Buttons -->
             <button class="btn btn-secondary btn-xs btn-rec-action" id="recDownloadScreenshotBtn" title="Download High-Res PNG Chart Screenshot">
               <i data-lucide="camera"></i>
               <span>Save PNG</span>
             </button>
-
-            <!-- Deep Dive modal button -->
             <button class="btn btn-secondary btn-xs btn-rec-action" id="recOpenModalBtn" title="Open Comprehensive 10-Bar Math Breakdown Modal">
               <i data-lucide="maximize-2"></i>
               <span>Deep-Dive</span>
             </button>
-
-            <!-- Collapse toggle button -->
             <button class="btn btn-ghost btn-xs btn-collapse-rec" id="recToggleCollapseBtn" title="${this.isCollapsed ? 'Expand Chart' : 'Minimize Chart'}">
               <i data-lucide="${this.isCollapsed ? 'chevron-down' : 'chevron-up'}"></i>
             </button>
           </div>
         </div>
 
-        <!-- Horizontal Recommendations Ribbon / Carousel -->
+        <!-- Horizontal Recommendations Ribbon / Quick Switcher -->
         <div class="rec-chips-ribbon" id="recChipsRibbon">
           <div class="rec-chips-scroll">
             ${this.recommendations.map(r => {
@@ -251,7 +309,7 @@ export class RecommendationChartTerminal {
         </div>
 
         ${!this.isCollapsed ? `
-          <!-- Active Stock Real-Time Price Strip & Live Feed Beacon -->
+          <!-- Active Stock Real-Time Price Strip & Today's Intraday Session Stats -->
           <div class="rec-stock-strip">
             <div class="rec-stock-left">
               <div class="rec-stock-primary">
@@ -260,6 +318,9 @@ export class RecommendationChartTerminal {
                 <span class="rec-stock-name text-dim">${name}</span>
                 <span class="badge ${strat.actionBadge || (isShort ? 'badge-overbought' : 'badge-golden-cross')} font-bold">
                   ${strat.actionLabel || (isShort ? 'Overbought Short' : 'Oversold Accumulation')}
+                </span>
+                <span class="badge badge-cyan font-mono" id="recSessionModeBadge">
+                  ${this.activeTimeframe === 'today' ? "TODAY'S INTRADAY SESSION" : 'HISTORICAL DAILY'}
                 </span>
               </div>
 
@@ -276,8 +337,16 @@ export class RecommendationChartTerminal {
               </div>
             </div>
 
-            <!-- Quantitative Strategy Level Summary Chips -->
+            <!-- Today's Session High / Low / Open Stats & Strategy Levels -->
             <div class="rec-strategy-kpi-grid font-mono">
+              <div class="rec-kpi-box box-day-stats">
+                <span class="rec-kpi-lbl">Today's Range (O/H/L):</span>
+                <span class="rec-kpi-val text-dim">
+                  <span title="Open">${curr}${Number(dayOpen).toFixed(1)}</span> / 
+                  <span class="text-emerald" title="High">${curr}${Number(dayHigh).toFixed(1)}</span> / 
+                  <span class="text-rose" title="Low">${curr}${Number(dayLow).toFixed(1)}</span>
+                </span>
+              </div>
               <div class="rec-kpi-box box-entry">
                 <span class="rec-kpi-lbl">${isShort ? 'Short Entry:' : 'Buy Entry Zone:'}</span>
                 <span class="rec-kpi-val ${isShort ? 'text-amber' : 'text-cyan'} font-bold">
@@ -305,28 +374,26 @@ export class RecommendationChartTerminal {
                   <span class="rec-kpi-sub">(+${strat.target2GainPct || 0}%)</span>
                 </span>
               </div>
-              <div class="rec-kpi-box box-rr">
-                <span class="rec-kpi-lbl">Target R:R:</span>
-                <span class="rec-kpi-val text-cyan font-bold">${strat.rrRatio || '1 : 2.8'}</span>
-              </div>
               <div class="rec-kpi-box box-stoch">
                 <span class="rec-kpi-lbl">Stoch %K / %D:</span>
                 <span class="rec-kpi-val font-bold">
-                  <span class="text-cyan" id="recSlowKVal">${kVal.toFixed(1)}</span> / 
-                  <span class="text-amber" id="recDVal">${dVal.toFixed(1)}</span>
+                  <span style="color: #2962ff;" id="recSlowKVal">${kVal.toFixed(1)}</span> / 
+                  <span style="color: #ff6d00;" id="recDVal">${dVal.toFixed(1)}</span>
                 </span>
               </div>
             </div>
           </div>
 
-          <!-- Dual Real-Time Canvas Charts Container -->
+          <!-- Dual Synchronized Real-Time Canvas Charts -->
           <div class="rec-charts-wrapper">
-            <!-- 1. Real-Time Price Chart with Strategy Overlays -->
+            <!-- 1. Price Chart with Quantitative Strategy Overlays -->
             <div class="rec-chart-canvas-box">
               <div class="rec-canvas-header">
                 <div class="rec-canvas-title">
                   <i data-lucide="trending-up" class="text-cyan"></i>
-                  <span>Price History with Quantitative Strategy Lines (SL, Target 1, Target 2, Entry Zone)</span>
+                  <span id="recPriceChartTitle">
+                    ${this.activeTimeframe === 'today' ? "Today's Intraday Price Action (Market Open to Live CMP)" : "Historical Daily Closing Price (60 Days)"}
+                  </span>
                 </div>
                 <div class="rec-canvas-legend font-mono">
                   <span class="legend-pill pill-sl">■ Stop Loss</span>
@@ -335,23 +402,25 @@ export class RecommendationChartTerminal {
                   <span class="legend-pill pill-cmp">■ Live CMP</span>
                 </div>
               </div>
-              <div class="rec-canvas-container" style="height: 250px; position: relative;">
+              <div class="rec-canvas-container" style="height: 230px; position: relative;">
                 <canvas id="recPriceChartCanvas"></canvas>
               </div>
             </div>
 
-            <!-- 2. Real-Time Stochastic (14,3,3) Sub-Chart -->
-            <div class="rec-chart-canvas-box" style="margin-top: 0.75rem;">
+            <!-- 2. TradingView-Style Stochastic (14,3,3) Sub-Chart -->
+            <div class="rec-chart-canvas-box tv-stoch-box" style="margin-top: 0.75rem;">
               <div class="rec-canvas-header">
                 <div class="rec-canvas-title">
-                  <i data-lucide="activity" class="text-amber"></i>
-                  <span>Stochastic Oscillator (%K 14,3 Cyan | %D 3 Amber | Oversold &lt;20 | Overbought &gt;80)</span>
+                  <i data-lucide="activity" style="color: #2962ff;"></i>
+                  <span>Stochastic Framework (%K 14,3 Blue | %D 3 Orange | 20 Oversold | 80 Overbought)</span>
                 </div>
-                <div class="rec-canvas-legend font-mono text-dim">
-                  <span>Fast %K: 14 • Smooth: 3 • Signal: 3 • Close-Only Basis</span>
+                <div class="rec-canvas-legend font-mono tv-stoch-legend">
+                  <span class="tv-pill-k">■ %K (Fast 14, Smooth 3)</span>
+                  <span class="tv-pill-d">■ %D (Signal 3)</span>
+                  <span class="tv-pill-zone">░ 20-80 Zone</span>
                 </div>
               </div>
-              <div class="rec-canvas-container" style="height: 160px; position: relative;">
+              <div class="rec-canvas-container" style="height: 175px; position: relative;">
                 <canvas id="recStochChartCanvas"></canvas>
               </div>
             </div>
@@ -369,6 +438,7 @@ export class RecommendationChartTerminal {
     if (!this.isCollapsed) {
       this.initCharts(stock, isDark, curr);
       this.startRealtimeFeed(stock, curr);
+      this.startCountdownLoop();
     }
   }
 
@@ -387,7 +457,7 @@ export class RecommendationChartTerminal {
       });
     });
 
-    // Timeframe switcher
+    // Timeframe switcher (Today Intraday vs Daily)
     this.container.querySelectorAll('.rec-tf-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const tf = btn.getAttribute('data-tf');
@@ -395,6 +465,15 @@ export class RecommendationChartTerminal {
           this.activeTimeframe = tf;
           this.render();
         }
+      });
+    });
+
+    // Auto-Refresh interval buttons (5s, 10s, 15s, Pause)
+    this.container.querySelectorAll('.rec-ar-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const val = parseInt(btn.getAttribute('data-interval'), 10);
+        this.setRefreshInterval(val);
       });
     });
 
@@ -428,49 +507,132 @@ export class RecommendationChartTerminal {
     }
   }
 
+  updateAutoRefreshUI() {
+    const btnGroup = this.container.querySelector('#recAutoRefreshBtnGroup');
+    if (btnGroup) {
+      btnGroup.querySelectorAll('.rec-ar-btn').forEach(b => {
+        const interval = parseInt(b.getAttribute('data-interval'), 10);
+        if (interval === 0) {
+          b.classList.toggle('active', this.isFeedPaused);
+          const icon = b.querySelector('[data-lucide]');
+          const span = b.querySelector('span');
+          if (icon) icon.setAttribute('data-lucide', this.isFeedPaused ? 'play' : 'pause');
+          if (span) span.textContent = this.isFeedPaused ? 'Resume' : 'Pause';
+        } else {
+          b.classList.toggle('active', !this.isFeedPaused && this.refreshIntervalSec === interval);
+        }
+      });
+      if (window.lucide?.createIcons) window.lucide.createIcons({ root: btnGroup });
+    }
+
+    const secEl = document.getElementById('recCountdownSec');
+    const ringEl = this.container?.querySelector ? this.container.querySelector('.countdown-pulse-ring') : null;
+    if (secEl) {
+      secEl.textContent = this.isFeedPaused ? 'PAUSED' : `${this.secondsUntilNextTick}s`;
+    }
+    if (ringEl) {
+      ringEl.classList.toggle('paused', this.isFeedPaused);
+    }
+  }
+
+  startCountdownLoop() {
+    if (this.countdownTimerId) {
+      clearInterval(this.countdownTimerId);
+      this.countdownTimerId = null;
+    }
+
+    this.secondsUntilNextTick = this.refreshIntervalSec;
+
+    this.countdownTimerId = setInterval(() => {
+      if (this.isFeedPaused) {
+        this.updateAutoRefreshUI();
+        return;
+      }
+
+      this.secondsUntilNextTick -= 1;
+      if (this.secondsUntilNextTick <= 0) {
+        this.secondsUntilNextTick = this.refreshIntervalSec;
+      }
+
+      const secEl = document.getElementById('recCountdownSec');
+      const fillEl = document.getElementById('recCountdownFill');
+      if (secEl) {
+        secEl.textContent = `${this.secondsUntilNextTick}s`;
+      }
+      if (fillEl) {
+        const pct = Math.max(0, Math.min(100, (this.secondsUntilNextTick / this.refreshIntervalSec) * 100));
+        fillEl.style.width = `${pct}%`;
+      }
+    }, 1000);
+  }
+
   async initCharts(stock, isDarkMode, curr) {
     const priceCanvas = document.getElementById('recPriceChartCanvas');
     const stochCanvas = document.getElementById('recStochChartCanvas');
     if (!priceCanvas || !stochCanvas) return;
 
-    let candles = stock.history || [];
-    if (this.activeTimeframe === '5m') {
-      try {
-        const intraday = await fetchStockCandles(stock.ticker, '1d', '5m', true);
-        if (intraday && intraday.length > 5) {
-          candles = intraday;
-        }
-      } catch (_) {}
-    }
+    let candles = [];
+    const sym = stock.ticker || stock.symbol;
+    const isINR = sym.endsWith('.NS') || sym.endsWith('.BO') || stock.exchange === 'NSE';
 
-    if (!candles || candles.length === 0) {
+    if (this.activeTimeframe === 'today') {
+      // Load Today's Intraday Session Candles
+      if (this.intradayCandlesCache.has(sym)) {
+        candles = this.intradayCandlesCache.get(sym);
+      } else {
+        try {
+          const fetched = await fetchStockCandles(sym, '1d', '5m', true);
+          if (fetched && fetched.length >= 10) {
+            candles = fetched;
+          }
+        } catch (_) {}
+
+        if (!candles || candles.length < 10) {
+          candles = generateTodayIntradayCandles(sym, isINR, stock.price ?? stock.close, stock.changePct);
+        }
+        this.intradayCandlesCache.set(sym, candles);
+      }
+    } else {
+      // Historical Daily Candles (60 Bars)
       candles = stock.history || [];
     }
 
+    if (!candles || candles.length === 0) {
+      candles = generateTodayIntradayCandles(sym, isINR, stock.price ?? stock.close, stock.changePct);
+    }
+
+    // Calculate Stochastic Series across the active candles
+    const stochasticSeries = calculateStochasticSeries(candles, {
+      kPeriod: stock.kPeriod || 14,
+      kSmoothing: stock.kSmoothing || 3,
+      dPeriod: stock.dPeriod || 3,
+      useClosingOnly: true
+    });
+
     const labels = candles.map(c => c.date);
     const closes = candles.map(c => c.close);
-    const slowKs = candles.map(c => c.slowK != null ? c.slowK : 50);
-    const ds = candles.map(c => c.d != null ? c.d : 50);
+    const slowKs = stochasticSeries.map(s => s.slowK != null ? s.slowK : 50);
+    const ds = stochasticSeries.map(s => s.d != null ? s.d : 50);
 
     const textColor = isDarkMode ? '#94a3b8' : '#64748b';
     const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)';
 
-    // 1. Price Chart with Strategy Overlay Plugin
+    // 1. Top Price Chart with Strategy Overlay Plugin
     this.priceChart = new Chart(priceCanvas, {
       type: 'line',
       data: {
         labels,
         datasets: [
           {
-            label: 'Closing Price',
+            label: this.activeTimeframe === 'today' ? "Today's Price" : 'Closing Price',
             data: closes,
             borderColor: isDarkMode ? '#00f2fe' : '#0284c7',
-            backgroundColor: isDarkMode ? 'rgba(0, 242, 254, 0.12)' : 'rgba(2, 132, 199, 0.10)',
+            backgroundColor: isDarkMode ? 'rgba(0, 242, 254, 0.10)' : 'rgba(2, 132, 199, 0.08)',
             fill: true,
-            tension: 0.2,
-            borderWidth: 2.2,
-            pointRadius: 2,
-            pointHoverRadius: 6
+            tension: 0.18,
+            borderWidth: 2,
+            pointRadius: this.activeTimeframe === 'today' ? 0 : 2,
+            pointHoverRadius: 5
           }
         ]
       },
@@ -478,7 +640,10 @@ export class RecommendationChartTerminal {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        animation: { duration: 400 },
+        animation: { duration: 300 },
+        layout: {
+          padding: { right: 54, top: 6, bottom: 4 }
+        },
         plugins: {
           legend: { display: false },
           strategyOverlay: {
@@ -489,7 +654,10 @@ export class RecommendationChartTerminal {
             currencySymbol: curr
           },
           tooltip: {
+            mode: 'index',
+            intersect: false,
             callbacks: {
+              title: (ctx) => `${this.activeTimeframe === 'today' ? 'Time: ' : 'Date: '}${ctx[0]?.label || ''}`,
               label: (ctx) => ` Price: ${curr}${ctx.parsed.y.toFixed(2)}`
             }
           }
@@ -497,7 +665,11 @@ export class RecommendationChartTerminal {
         scales: {
           x: {
             grid: { color: gridColor },
-            ticks: { color: textColor, font: { family: 'JetBrains Mono', size: 10 } }
+            ticks: {
+              color: textColor,
+              font: { family: 'JetBrains Mono', size: 10 },
+              maxTicksLimit: this.activeTimeframe === 'today' ? 12 : 10
+            }
           },
           y: {
             grid: { color: gridColor },
@@ -511,7 +683,11 @@ export class RecommendationChartTerminal {
       }
     });
 
-    // 2. Stochastic Oscillator Sub-Chart
+    // 2. Bottom TradingView-Style Stochastic (14,3,3) Oscillator Sub-Chart
+    // Exact match to TradingView: Blue %K, Orange %D, 20-80 shaded band, right badges!
+    const latestK = slowKs[slowKs.length - 1] ?? 50;
+    const latestD = ds[ds.length - 1] ?? 50;
+
     this.stochChart = new Chart(stochCanvas, {
       type: 'line',
       data: {
@@ -520,50 +696,71 @@ export class RecommendationChartTerminal {
           {
             label: `%K (14, 3)`,
             data: slowKs,
-            borderColor: '#00f2fe',
+            borderColor: '#2962ff', // TradingView Royal Blue
             backgroundColor: 'transparent',
-            borderWidth: 2.4,
-            pointRadius: 2.5,
-            pointHoverRadius: 5,
-            tension: 0.25,
+            borderWidth: 1.9,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            tension: 0.22,
             order: 1
           },
           {
             label: `%D (3 Signal)`,
             data: ds,
-            borderColor: '#f59e0b',
+            borderColor: '#ff6d00', // TradingView Orange
             backgroundColor: 'transparent',
-            borderWidth: 2,
-            pointRadius: 2,
+            borderWidth: 1.8,
+            pointRadius: 0,
             pointHoverRadius: 4,
-            tension: 0.25,
+            tension: 0.22,
             order: 2
           }
         ]
       },
+      plugins: [tradingViewStochPlugin],
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        animation: { duration: 400 },
+        animation: { duration: 300 },
+        layout: {
+          padding: {
+            right: 54, // Space for right-axis colored floating badges (40.85 & 53.90)
+            top: 6,
+            bottom: 4
+          }
+        },
         plugins: {
-          legend: {
-            position: 'top',
-            labels: {
-              color: isDarkMode ? '#f8fafc' : '#0f172a',
-              boxWidth: 12,
-              font: { family: 'Inter', size: 11, weight: '500' }
-            }
+          legend: { display: false }, // Rendered dynamically by tradingViewStochPlugin header
+          tradingViewStoch: {
+            kVal: latestK,
+            dVal: latestD,
+            kPeriod: stock.kPeriod || 14,
+            kSmooth: stock.kSmoothing || 3,
+            dPeriod: stock.dPeriod || 3,
+            overbought: 80,
+            oversold: 20,
+            isDarkMode,
+            showBadges: true,
+            showLevels: true,
+            showLegend: true
           },
           tooltip: {
+            mode: 'index',
+            intersect: false,
             callbacks: {
-              label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) : 'N/A'}`
+              title: (ctx) => `${this.activeTimeframe === 'today' ? 'Time: ' : 'Date: '}${ctx[0]?.label || ''}`,
+              label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) : '-'}`
             }
           }
         },
         scales: {
           x: {
             grid: { color: gridColor },
-            ticks: { color: textColor, font: { family: 'JetBrains Mono', size: 10 } }
+            ticks: {
+              color: textColor,
+              font: { family: 'JetBrains Mono', size: 10 },
+              maxTicksLimit: this.activeTimeframe === 'today' ? 12 : 10
+            }
           },
           y: {
             min: 0,
@@ -572,7 +769,8 @@ export class RecommendationChartTerminal {
             ticks: {
               stepSize: 20,
               color: textColor,
-              font: { family: 'JetBrains Mono', size: 10 }
+              font: { family: 'JetBrains Mono', size: 10 },
+              callback: (v) => `${Number(v).toFixed(2)}`
             }
           }
         }
@@ -586,6 +784,8 @@ export class RecommendationChartTerminal {
       this.unsubscribeFeed = null;
     }
 
+    if (this.isFeedPaused) return;
+
     const priceEl = document.getElementById('recLivePrice');
     const changeEl = document.getElementById('recLiveChange');
     const clockEl = document.getElementById('recFeedClock');
@@ -593,8 +793,13 @@ export class RecommendationChartTerminal {
     const slowKEl = document.getElementById('recSlowKVal');
     const dEl = document.getElementById('recDVal');
 
+    const intervalMs = this.refreshIntervalSec * 1000;
+
     this.unsubscribeFeed = subscribeRealtimeStock(stock, (tick) => {
       if (!tick || !priceEl) return;
+
+      // Reset countdown timer on each tick arrival
+      this.secondsUntilNextTick = this.refreshIntervalSec;
 
       const newPrice = tick.price;
       const prevPrice = stock.price ?? stock.close ?? newPrice;
@@ -620,35 +825,39 @@ export class RecommendationChartTerminal {
       }
 
       if (clockEl) {
-        clockEl.textContent = `FEED LIVE • ${formatISTTime(new Date())}`;
+        clockEl.textContent = `FEED LIVE (${this.refreshIntervalSec}s) • ${formatISTTime(new Date())}`;
       }
       if (dotEl) {
         dotEl.classList.add('pulse-tick');
         setTimeout(() => dotEl?.classList.remove('pulse-tick'), 600);
       }
 
-      // 2. Dynamically Update Charts with new point
+      // 2. Dynamically Update Top Price Chart with new point
       if (this.priceChart && this.priceChart.data?.datasets?.[0]?.data) {
         const dataArr = this.priceChart.data.datasets[0].data;
         const lastIdx = dataArr.length - 1;
         if (lastIdx >= 0) {
           dataArr[lastIdx] = newPrice;
-          // Update strategy overlay CMP line
           if (this.priceChart.options.plugins?.strategyOverlay?.strategy) {
             this.priceChart.options.plugins.strategyOverlay.strategy.currentPrice = newPrice;
           }
-          this.priceChart.update('none'); // Silky 60fps update without full rebuild
+          this.priceChart.update('none');
         }
       }
 
-      // 3. Recalculate and update Stochastic values on latest tick
-      if (stock.history && stock.history.length > 0) {
-        const lastHistory = stock.history[stock.history.length - 1];
-        lastHistory.close = newPrice;
-        if (newPrice > (lastHistory.high || newPrice)) lastHistory.high = newPrice;
-        if (newPrice < (lastHistory.low || newPrice)) lastHistory.low = newPrice;
+      // 3. Recalculate Stochastic on the active candles and update TradingView sub-chart
+      const sym = stock.ticker || stock.symbol;
+      const activeCandles = this.activeTimeframe === 'today'
+        ? (this.intradayCandlesCache.get(sym) || stock.history || [])
+        : (stock.history || []);
 
-        const updatedSeries = calculateStochasticSeries(stock.history, {
+      if (activeCandles && activeCandles.length > 0) {
+        const lastCandle = activeCandles[activeCandles.length - 1];
+        lastCandle.close = newPrice;
+        if (newPrice > (lastCandle.high || newPrice)) lastCandle.high = newPrice;
+        if (newPrice < (lastCandle.low || newPrice)) lastCandle.low = newPrice;
+
+        const updatedSeries = calculateStochasticSeries(activeCandles, {
           kPeriod: stock.kPeriod || 14,
           kSmoothing: stock.kSmoothing || 3,
           dPeriod: stock.dPeriod || 3,
@@ -671,15 +880,25 @@ export class RecommendationChartTerminal {
             if (lastIdx >= 0) {
               kData[lastIdx] = latestStoch.slowK;
               dData[lastIdx] = latestStoch.d;
+
+              // Update TradingView plugin options for badges and header legend
+              if (this.stochChart.options.plugins?.tradingViewStoch) {
+                this.stochChart.options.plugins.tradingViewStoch.kVal = latestStoch.slowK;
+                this.stochChart.options.plugins.tradingViewStoch.dVal = latestStoch.d;
+              }
               this.stochChart.update('none');
             }
           }
         }
       }
-    }, 3000);
+    }, intervalMs);
   }
 
-  destroy() {
+  cleanup() {
+    if (this.countdownTimerId) {
+      clearInterval(this.countdownTimerId);
+      this.countdownTimerId = null;
+    }
     if (this.unsubscribeFeed) {
       this.unsubscribeFeed();
       this.unsubscribeFeed = null;
@@ -692,5 +911,9 @@ export class RecommendationChartTerminal {
       this.stochChart.destroy();
       this.stochChart = null;
     }
+  }
+
+  destroy() {
+    this.cleanup();
   }
 }

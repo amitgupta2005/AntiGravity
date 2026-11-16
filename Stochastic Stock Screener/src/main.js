@@ -47,8 +47,8 @@ const state = {
   recChartTerminal: null,
   isScanning: false,
   autoRefreshEnabled: typeof localStorage !== 'undefined' ? localStorage.getItem('antigravity_auto_refresh') !== 'off' : true,
-  autoRefreshIntervalSec: typeof localStorage !== 'undefined' ? (parseInt(localStorage.getItem('antigravity_auto_refresh_interval'), 10) || 30) : 30,
-  secondsRemaining: typeof localStorage !== 'undefined' ? (parseInt(localStorage.getItem('antigravity_auto_refresh_interval'), 10) || 30) : 30,
+  autoRefreshIntervalSec: typeof localStorage !== 'undefined' ? (parseInt(localStorage.getItem('antigravity_auto_refresh_interval'), 10) || 5) : 5,
+  secondsRemaining: typeof localStorage !== 'undefined' ? (parseInt(localStorage.getItem('antigravity_auto_refresh_interval'), 10) || 5) : 5,
   autoRefreshTimerId: null
 };
 
@@ -242,6 +242,13 @@ function updateAutoRefreshDisplay() {
       liveStatusText.textContent = 'PAUSED';
     }
   }
+
+  // Sync Header Auto-Refresh Pills (5s, 10s, 15s)
+  const headerPills = document.querySelectorAll('.header-ar-pill');
+  headerPills.forEach(p => {
+    const sec = parseInt(p.getAttribute('data-sec'), 10);
+    p.classList.toggle('active', sec === state.autoRefreshIntervalSec);
+  });
 }
 
 /**
@@ -262,6 +269,7 @@ function toggleAutoRefresh(forcedState = null) {
 function setupAutoRefresh() {
   const widget = document.getElementById('autoRefreshWidget');
   const toggleBtn = document.getElementById('autoRefreshToggleBtn');
+  const headerPills = document.querySelectorAll('.header-ar-pill');
 
   if (toggleBtn) {
     toggleBtn.addEventListener('click', (e) => {
@@ -270,9 +278,28 @@ function setupAutoRefresh() {
     });
   }
 
+  // Header quick pills: 5s (Default), 10s, 15s
+  headerPills.forEach(pill => {
+    pill.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const sec = parseInt(pill.getAttribute('data-sec'), 10) || 5;
+      state.autoRefreshIntervalSec = sec;
+      state.secondsRemaining = sec;
+      localStorage.setItem('antigravity_auto_refresh_interval', String(sec));
+      if (!state.autoRefreshEnabled) {
+        toggleAutoRefresh(true);
+      } else {
+        updateAutoRefreshDisplay();
+      }
+      if (state.recChartTerminal) {
+        state.recChartTerminal.setRefreshInterval(sec);
+      }
+    });
+  });
+
   if (widget) {
     widget.addEventListener('click', (e) => {
-      if (e.target !== toggleBtn && !toggleBtn.contains(e.target)) {
+      if (e.target !== toggleBtn && !toggleBtn.contains(e.target) && !e.target.classList.contains('header-ar-pill')) {
         toggleAutoRefresh();
       }
     });
@@ -586,7 +613,7 @@ function setupSettingsModal() {
         localStorage.setItem('antigravity_auto_refresh', state.autoRefreshEnabled ? 'on' : 'off');
       }
       if (autoRefreshIntervalInp) {
-        state.autoRefreshIntervalSec = parseInt(autoRefreshIntervalInp.value, 10) || 30;
+        state.autoRefreshIntervalSec = parseInt(autoRefreshIntervalInp.value, 10) || 5;
         localStorage.setItem('antigravity_auto_refresh_interval', String(state.autoRefreshIntervalSec));
       }
       state.secondsRemaining = state.autoRefreshIntervalSec;
@@ -617,7 +644,7 @@ function setupSettingsModal() {
       osInp.value = DEFAULT_STOCHASTIC_PARAMS.oversoldThreshold;
       closeOnlyInp.checked = DEFAULT_STOCHASTIC_PARAMS.useClosingOnly;
       if (autoRefreshToggleInp) autoRefreshToggleInp.checked = true;
-      if (autoRefreshIntervalInp) autoRefreshIntervalInp.value = "30";
+      if (autoRefreshIntervalInp) autoRefreshIntervalInp.value = "5";
     });
   }
 }
