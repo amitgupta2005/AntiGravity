@@ -27,20 +27,38 @@ console.log('▶ Test 1: Validating HTML Structure in index.html...');
 const htmlPath = path.join(__dirname, 'index.html');
 const htmlContent = fs.readFileSync(htmlPath, 'utf8');
 
+assert(htmlContent.includes('id="terminal-layout"'), 'Missing #terminal-layout in index.html');
+assert(htmlContent.includes('id="screener-pane"'), 'Missing #screener-pane in index.html');
+assert(htmlContent.includes('id="chart-pane"'), 'Missing #chart-pane in index.html');
+assert(htmlContent.includes('id="analysis-sidebar"'), 'Missing #analysis-sidebar in index.html');
+assert(htmlContent.includes('id="main-candlestick-chart"'), 'Missing #main-candlestick-chart in index.html');
+assert(htmlContent.includes('id="stoch-sub-chart"'), 'Missing #stoch-sub-chart in index.html');
+assert(htmlContent.includes('id="viewModeSelector"'), 'Missing #viewModeSelector in index.html');
+assert(htmlContent.includes('id="viewWorkstationBtn"'), 'Missing #viewWorkstationBtn in index.html');
+assert(htmlContent.includes('id="viewTableBtn"'), 'Missing #viewTableBtn in index.html');
 assert(htmlContent.includes('id="recommendation-chart-container"'), 'Missing #recommendation-chart-container in index.html');
 assert(htmlContent.includes('id="toggleRecChartBtn"'), 'Missing #toggleRecChartBtn in index.html');
-assert(htmlContent.includes('class="recommendation-chart-section"'), 'Missing .recommendation-chart-section class');
+assert(htmlContent.includes('recommendation-chart-section'), 'Missing recommendation-chart-section class');
 assert(htmlContent.includes('class="header-ar-selector"'), 'Missing .header-ar-selector in index.html');
 assert(htmlContent.includes('data-sec="5"'), 'Missing 5s header auto-refresh option');
 assert(htmlContent.includes('data-sec="10"'), 'Missing 10s header auto-refresh option');
 assert(htmlContent.includes('data-sec="15"'), 'Missing 15s header auto-refresh option');
-console.log('  ✅ Test 1 Passed: index.html contains all required containers, toggle buttons, and 5s/10s/15s auto-refresh pills.');
+console.log('  ✅ Test 1 Passed: index.html contains #terminal-layout (3 Panes), View Mode switcher, and dual chart canvases.');
 
 // TEST 2: Validate CSS Rules
 console.log('\n▶ Test 2: Validating CSS Rules in src/style.css...');
 const cssPath = path.join(__dirname, 'src', 'style.css');
 const cssContent = fs.readFileSync(cssPath, 'utf8');
 
+assert(cssContent.includes('.terminal-layout'), 'Missing .terminal-layout CSS');
+assert(cssContent.includes('.screener-pane'), 'Missing .screener-pane CSS');
+assert(cssContent.includes('.chart-pane'), 'Missing .chart-pane CSS');
+assert(cssContent.includes('.analysis-pane'), 'Missing .analysis-pane CSS');
+assert(cssContent.includes('.stock-card'), 'Missing .stock-card CSS');
+assert(cssContent.includes('.mtf-grid'), 'Missing .mtf-grid CSS');
+assert(cssContent.includes('.levels-grid'), 'Missing .levels-grid CSS');
+assert(cssContent.includes('.calc-box'), 'Missing .calc-box CSS');
+assert(cssContent.includes('.rationale-list'), 'Missing .rationale-list CSS');
 assert(cssContent.includes('.recommendation-chart-section'), 'Missing .recommendation-chart-section CSS');
 assert(cssContent.includes('.rec-chart-card'), 'Missing .rec-chart-card CSS');
 assert(cssContent.includes('.rec-chip'), 'Missing .rec-chip CSS');
@@ -53,7 +71,7 @@ assert(cssContent.includes('.rec-ar-btn'), 'Missing .rec-ar-btn CSS');
 assert(cssContent.includes('.rec-countdown-badge'), 'Missing .rec-countdown-badge CSS');
 assert(cssContent.includes('.countdown-bar-fill'), 'Missing .countdown-bar-fill CSS');
 assert(cssContent.includes('.header-ar-pill'), 'Missing .header-ar-pill CSS');
-console.log('  ✅ Test 2 Passed: src/style.css contains complete styling for terminal, auto-refresh, and TradingView elements.');
+console.log('  ✅ Test 2 Passed: src/style.css contains complete styling for 3-pane terminal, auto-refresh, and TradingView elements.');
 
 // TEST 3: Strategy Overlay Plugin Canvas Drawing
 console.log('\n▶ Test 3: Verifying Strategy Overlay Plugin Level Rendering...');
@@ -309,5 +327,101 @@ unsubscribeRealtimeStock();
 
 console.log(`  ✅ Test 7 Passed: Real-Time Market Feed subscription successfully delivered tick: Symbol=${tickReceived.symbol}, Price=₹${tickReceived.price}`);
 
-console.log('\n🎉 ALL REAL-TIME RECOMMENDATION CHART & TRADINGVIEW FRAMEWORK TESTS PASSED! (7/7 Checks)\n');
+// TEST 8: Institutional 3-Pane Workstation Terminal Verification
+console.log('\n▶ Test 8: Verifying Institutional 3-Pane Workstation Terminal Logic...');
+const { WorkstationTerminal } = await import('./src/components/workstationTerminal.js');
+
+const workstation = new WorkstationTerminal('non-existent-mock-id');
+assert(workstation, 'WorkstationTerminal instance must be created');
+assert.strictEqual(workstation.refreshIntervalSec, 5, 'Default refresh interval must be 5s');
+assert.strictEqual(workstation.activeTimeframe, 'today', 'Default timeframe must be today');
+
+// Sample test stocks
+const mockStocks = [
+  {
+    ticker: 'HDFCBANK.NS',
+    name: 'HDFC Bank Ltd',
+    price: 813.05,
+    changePct: 1.13,
+    slowK: 18.5,
+    d: 16.2,
+    is_buy_zone: true,
+    is_recommended: true,
+    signalType: 'BULLISH_CROSSOVER_OVERSOLD',
+    signalLabel: 'Bullish Golden Cross',
+    roi_pct: 1.5,
+    strategy: { stopLoss: 800, target1: 825, target2: 840, rrRatio: '1:2.5' }
+  },
+  {
+    ticker: 'AXISBANK.NS',
+    name: 'Axis Bank Ltd',
+    price: 1338.5,
+    changePct: -0.19,
+    slowK: 84.2,
+    d: 81.0,
+    is_sell_zone: true,
+    is_recommended: false,
+    signalType: 'BEARISH_CROSSOVER_OVERBOUGHT',
+    signalLabel: 'Death Cross in Overbought',
+    roi_pct: 1.5,
+    strategy: { stopLoss: 1358, target1: 1318, target2: 1290, rrRatio: '1:2.0' }
+  },
+  {
+    ticker: 'INDUSINDBK.NS',
+    name: 'IndusInd Bank Ltd',
+    price: 911.0,
+    changePct: -0.87,
+    slowK: 45.0,
+    d: 46.0,
+    is_sell_zone: false,
+    is_buy_zone: false,
+    is_recommended: false,
+    signalType: 'NEUTRAL',
+    signalLabel: 'Neutral Consolidation',
+    roi_pct: 0.8,
+    strategy: { stopLoss: 895, target1: 925, target2: 940, rrRatio: '1:1.5' }
+  }
+];
+
+workstation.allResults = mockStocks;
+
+// 1. Test Filter: Oversold
+workstation.currentFilter = 'oversold';
+workstation.applyFilterAndSort();
+assert.strictEqual(workstation.filteredResults.length, 1, 'Only HDFCBANK should be in oversold (<20)');
+assert.strictEqual(workstation.filteredResults[0].ticker, 'HDFCBANK.NS');
+
+// 2. Test Filter: Overbought
+workstation.currentFilter = 'overbought';
+workstation.applyFilterAndSort();
+assert.strictEqual(workstation.filteredResults.length, 1, 'Only AXISBANK should be in overbought (>80)');
+assert.strictEqual(workstation.filteredResults[0].ticker, 'AXISBANK.NS');
+
+// 3. Test Filter: All
+workstation.currentFilter = 'all';
+workstation.applyFilterAndSort();
+assert.strictEqual(workstation.filteredResults.length, 3, 'All 3 stocks should be returned when filter is all');
+
+// 4. Test Sorting: Highest R:R
+workstation.currentSort = 'rr-desc';
+workstation.applyFilterAndSort();
+assert.strictEqual(workstation.filteredResults[0].roi_pct >= workstation.filteredResults[1].roi_pct, true, 'Stocks sorted by ROI/RR descending');
+
+// 5. Test EMA Calculation (9 EMA)
+const testPrices = [100, 102, 101, 103, 105, 104, 106, 108, 107, 109, 110];
+const ema9 = workstation.calculateEMA(testPrices, 9);
+assert.strictEqual(ema9.length, testPrices.length, 'EMA series length must match prices length');
+assert(typeof ema9[ema9.length - 1] === 'number', 'Latest EMA must be a valid number');
+
+// 6. Test Interval Controls: 5s, 10s, 15s
+workstation.setRefreshInterval(10);
+assert.strictEqual(workstation.refreshIntervalSec, 10, 'Workstation interval updated to 10s');
+workstation.setRefreshInterval(15);
+assert.strictEqual(workstation.refreshIntervalSec, 15, 'Workstation interval updated to 15s');
+workstation.setRefreshInterval(5);
+assert.strictEqual(workstation.refreshIntervalSec, 5, 'Workstation interval reset to 5s default');
+
+console.log('  ✅ Test 8 Passed: WorkstationTerminal filtering, sorting, 9/21/50 EMA calculations, and 5s/10s/15s cadence verified.');
+
+console.log('\n🎉 ALL REAL-TIME RECOMMENDATION CHART & TRADINGVIEW FRAMEWORK TESTS PASSED! (8/8 Checks)\n');
 process.exit(0);

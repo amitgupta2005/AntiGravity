@@ -11,6 +11,7 @@ import { renderKpiBar } from './components/kpiBar.js';
 import { ScreenerTable } from './components/screenerTable.js';
 import { setupChartModal, openStockChartModal } from './components/chartModal.js';
 import { RecommendationChartTerminal } from './components/recommendationChart.js';
+import { WorkstationTerminal } from './components/workstationTerminal.js';
 import { 
   exportToExcel, 
   exportToXLS, 
@@ -45,6 +46,8 @@ const state = {
   activeAbortController: null,
   screenerTable: null,
   recChartTerminal: null,
+  workstationTerminal: null,
+  viewMode: 'workstation',
   isScanning: false,
   autoRefreshEnabled: typeof localStorage !== 'undefined' ? localStorage.getItem('antigravity_auto_refresh') !== 'off' : true,
   autoRefreshIntervalSec: typeof localStorage !== 'undefined' ? (parseInt(localStorage.getItem('antigravity_auto_refresh_interval'), 10) || 5) : 5,
@@ -66,16 +69,24 @@ function initApp() {
       exportOversoldWithCharts(oversoldList);
     },
     onSelectStock: (stock) => {
+      if (state.workstationTerminal) {
+        state.workstationTerminal.selectStock(stock);
+      }
       if (state.recChartTerminal) {
         state.recChartTerminal.selectStock(stock);
       }
     }
   });
 
-  // Initialize Real-Time Recommendation Chart Terminal
+  // Initialize 3-Pane Institutional Trading Workstation
+  state.workstationTerminal = new WorkstationTerminal('terminal-layout');
+
+  // Initialize Real-Time Recommendation Chart Terminal (for Table view mode)
   state.recChartTerminal = new RecommendationChartTerminal('recommendation-chart-container', {
     onStockSelect: (stock) => {
-      // Keep table in sync if needed
+      if (state.workstationTerminal) {
+        state.workstationTerminal.selectStock(stock);
+      }
     }
   });
 
@@ -86,6 +97,7 @@ function initApp() {
   setupThemeToggle();
   setupHeaderFullscreen();
   setupRecChartToggle();
+  setupViewModeToggle();
   setupUniverseSelector();
   setupOversoldQuickFilter();
   setupAutoRefresh();
@@ -135,6 +147,9 @@ async function startScreening(stocks, universeLabel = '', isBackgroundRefresh = 
     const instantBaseline = getInstantBaselineResults(stocks, state.stochasticParams);
     state.screenedResults = instantBaseline;
     state.screenerTable.setResults(state.screenedResults);
+    if (state.workstationTerminal) {
+      state.workstationTerminal.setResults(state.screenedResults);
+    }
     if (state.recChartTerminal) {
       state.recChartTerminal.setResults(state.screenedResults);
     }
@@ -170,6 +185,11 @@ async function startScreening(stocks, universeLabel = '', isBackgroundRefresh = 
         if (currentResult && state.screenerTable) {
           state.screenerTable.updateSingleStock(currentResult, true);
           renderKpiBar(state.screenedResults);
+
+          if (state.workstationTerminal) {
+            state.workstationTerminal.setResults(state.screenedResults);
+          }
+
           if (state.recChartTerminal && state.recChartTerminal.selectedStock) {
             const curSym = state.recChartTerminal.selectedStock.ticker || state.recChartTerminal.selectedStock.symbol;
             if (curSym === (currentResult.ticker || currentResult.symbol)) {
@@ -183,6 +203,9 @@ async function startScreening(stocks, universeLabel = '', isBackgroundRefresh = 
 
     state.screenedResults = results;
     state.isScanning = false;
+    if (state.workstationTerminal) {
+      state.workstationTerminal.setResults(results);
+    }
     if (state.recChartTerminal) {
       state.recChartTerminal.setResults(results);
     }
@@ -696,6 +719,10 @@ function setupThemeToggle() {
     if (state.recChartTerminal) {
       state.recChartTerminal.render();
     }
+    if (state.workstationTerminal && state.workstationTerminal.selectedStock) {
+      const isINR = (state.workstationTerminal.selectedStock.ticker || '').endsWith('.NS') || (state.workstationTerminal.selectedStock.ticker || '').endsWith('.BO');
+      state.workstationTerminal.renderDualCharts(state.workstationTerminal.selectedStock, isINR ? '₹' : '$');
+    }
   });
 }
 
@@ -737,4 +764,53 @@ function setupRecChartToggle() {
     btn.classList.toggle('active', nextState);
     localStorage.setItem('antigravity_rec_chart_visible', nextState ? 'on' : 'off');
   });
+}
+
+/**
+ * Setup View Mode Switcher: 3-Pane Workstation (Default) vs Table View
+ */
+function setupViewModeToggle() {
+  const btnWorkstation = document.getElementById('viewWorkstationBtn');
+  const btnTable = document.getElementById('viewTableBtn');
+  const terminalLayout = document.getElementById('terminal-layout');
+  const tableContainer = document.getElementById('table-container');
+  const recContainer = document.getElementById('recommendation-chart-container');
+
+  const setViewMode = (mode) => {
+    state.viewMode = mode;
+    const isWorkstation = mode === 'workstation';
+
+    if (btnWorkstation) btnWorkstation.classList.toggle('active', isWorkstation);
+    if (btnTable) btnTable.classList.toggle('active', !isWorkstation);
+
+    if (terminalLayout) {
+      terminalLayout.style.display = isWorkstation ? 'grid' : 'none';
+      if (isWorkstation && state.workstationTerminal) {
+        setTimeout(() => {
+          state.workstationTerminal.priceChart?.resize();
+          state.workstationTerminal.stochChart?.resize();
+        }, 120);
+      }
+    }
+
+    if (tableContainer) {
+      tableContainer.style.display = isWorkstation ? 'none' : 'block';
+    }
+
+    if (recContainer) {
+      recContainer.style.display = isWorkstation ? 'none' : (localStorage.getItem('antigravity_rec_chart_visible') !== 'off' ? 'block' : 'none');
+    }
+
+    localStorage.setItem('antigravity_view_mode', mode);
+  };
+
+  if (btnWorkstation) {
+    btnWorkstation.addEventListener('click', () => setViewMode('workstation'));
+  }
+  if (btnTable) {
+    btnTable.addEventListener('click', () => setViewMode('table'));
+  }
+
+  const savedMode = localStorage.getItem('antigravity_view_mode') || 'workstation';
+  setViewMode(savedMode);
 }
