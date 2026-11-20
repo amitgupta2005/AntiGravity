@@ -68,6 +68,11 @@ const state = {
   isDarkMode: true,
   sortColumn: 'pop',
   sortDirection: 'desc',
+  lastInspectedStrategyId: null,
+  lastInspectedTicker: null,
+  scannerTableScrollLeft: 0,
+  scannerTableScrollTop: 0,
+  scannerWindowScrollY: 0,
   filters: {
     market: 'ALL',
     cap: 'ALL',
@@ -459,6 +464,8 @@ function renderScannerTab() {
     state.scannerViewMode,
     // On Select Strategy (Payoff Analysis)
     (strat) => {
+      state.lastInspectedStrategyId = strat.id;
+      state.lastInspectedTicker = strat.ticker;
       state.activeStrategy = strat;
       switchTab('tab-analyzer');
     },
@@ -466,6 +473,11 @@ function renderScannerTab() {
     (ticker) => {
       const found = state.quotes.find(q => q.ticker === ticker) || OPTION_UNIVERSE.find(a => a.ticker === ticker);
       if (found) {
+        state.lastInspectedTicker = ticker;
+        const matchingStrat = state.strategies.find(s => s.ticker === ticker);
+        if (matchingStrat) {
+          state.lastInspectedStrategyId = matchingStrat.id;
+        }
         state.activeChainAsset = found;
         const select = document.getElementById('chainAssetSelector');
         if (select) select.value = found.ticker;
@@ -474,6 +486,8 @@ function renderScannerTab() {
     },
     // On Custom Build
     (strat) => {
+      state.lastInspectedStrategyId = strat.id;
+      state.lastInspectedTicker = strat.ticker;
       const asset = state.quotes.find(q => q.ticker === strat.ticker) || OPTION_UNIVERSE.find(a => a.ticker === strat.ticker);
       initBuilderState(asset, strat.legs, strat.dte);
       switchTab('tab-builder');
@@ -520,6 +534,12 @@ function renderAnalyzerTab() {
 
   // Calculate Payoff Profile
   const payoff = calculatePayoffProfile(strat.legs, S, lotSize, dte, ivDecimal, r);
+
+  // Update Breadcrumb Title
+  const breadcrumbTitle = document.getElementById('analyzerBreadcrumbTitle');
+  if (breadcrumbTitle) {
+    breadcrumbTitle.innerHTML = `<span class="text-dim font-normal">${strat.displayTicker}</span> • ${strat.strategyName}`;
+  }
 
   // Render Header
   const headerEl = document.getElementById('analyzerStrategyHeader');
@@ -686,6 +706,12 @@ function renderOptionChainTab() {
   const asset = state.activeChainAsset;
   const quote = state.quotes.find(q => q.ticker === asset.ticker) || asset;
 
+  // Update Breadcrumb Title
+  const chainBreadcrumb = document.getElementById('chainBreadcrumbTitle');
+  if (chainBreadcrumb && quote) {
+    chainBreadcrumb.innerHTML = `<span class="text-dim font-normal">${quote.displayTicker || quote.ticker}</span> • Option Chain`;
+  }
+
   renderOptionChain(
     'optionChainContainer',
     quote,
@@ -702,6 +728,13 @@ function renderOptionChainTab() {
  * 4. Render Strategy Builder Tab
  */
 function renderStrategyBuilderTab() {
+  // Update Breadcrumb Title
+  const builderBreadcrumb = document.getElementById('builderBreadcrumbTitle');
+  if (builderBreadcrumb) {
+    const asset = state.activeStrategy ? state.activeStrategy : (state.activeChainAsset || OPTION_UNIVERSE[0]);
+    builderBreadcrumb.innerHTML = `<span class="text-dim font-normal">${asset.displayTicker || asset.ticker}</span> • Custom Builder`;
+  }
+
   renderStrategyBuilder('strategyBuilderContainer', ({ asset, legs, dte, payoff }) => {
     // Sync custom build into activeStrategy and switch to Payoff Analyzer
     const curr = asset.currencySymbol || '$';
@@ -767,8 +800,14 @@ function switchTab(tabId) {
   const prevTab = state.activeTab;
   state.activeTab = tabId;
 
-  // Cleanup table scroll listeners if navigating away from strategy scanner
+  // Preserve table horizontal/vertical scroll & window scroll when navigating away from strategy scanner
   if (prevTab === 'tab-scanner' && tabId !== 'tab-scanner') {
+    const existingTableContainer = document.getElementById('scannerTableContainer');
+    if (existingTableContainer) {
+      state.scannerTableScrollLeft = existingTableContainer.scrollLeft;
+      state.scannerTableScrollTop = existingTableContainer.scrollTop;
+    }
+    state.scannerWindowScrollY = (typeof window !== 'undefined') ? (window.scrollY || window.pageYOffset || 0) : 0;
     cleanupTableHorizontalScroll();
   }
 
@@ -793,18 +832,88 @@ function switchTab(tabId) {
   if (tabId === 'tab-analyzer') {
     setTimeout(resizePayoffChart, 50);
   }
+
+  // Refresh icons for newly active views and navigation action bars
+  refreshIcons();
+}
+
+/**
+ * Navigate back to Strategy Scanner from any Action Screen
+ * Restores horizontal/vertical scroll position and smoothly highlights inspected row
+ */
+export function navigateBackToScanner() {
+  switchTab('tab-scanner');
+
+  // Restore scroll positions and highlight the strategy row/card previously inspected
+  if (typeof window !== 'undefined') {
+    const restoreAndHighlight = () => {
+      const tableContainer = document.getElementById('scannerTableContainer');
+      if (tableContainer && typeof state.scannerTableScrollLeft === 'number') {
+        tableContainer.scrollLeft = state.scannerTableScrollLeft;
+        if (typeof state.scannerTableScrollTop === 'number') {
+          tableContainer.scrollTop = state.scannerTableScrollTop;
+        }
+      }
+
+      if (typeof state.scannerWindowScrollY === 'number' && state.scannerWindowScrollY > 0) {
+        window.scrollTo({ top: state.scannerWindowScrollY, behavior: 'instant' });
+      }
+
+      // Smooth scroll and pulse highlight inspected row/card
+      if (state.lastInspectedStrategyId) {
+        setTimeout(() => {
+          const targetRow = document.querySelector(`.scanner-table-row[data-id="${state.lastInspectedStrategyId}"]`) ||
+                            document.querySelector(`.strat-card[data-id="${state.lastInspectedStrategyId}"]`);
+          if (targetRow) {
+            targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            targetRow.classList.add('row-highlight-pulse');
+            setTimeout(() => {
+              targetRow.classList.remove('row-highlight-pulse');
+            }, 2200);
+          }
+        }, 60);
+      }
+    };
+
+    if (typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(restoreAndHighlight);
+    } else {
+      setTimeout(restoreAndHighlight, 50);
+    }
+  }
 }
 
 /**
  * Setup All Event Listeners
  */
 function setupEventListeners() {
-  // 1. Navigation Tab Buttons
+  // 1a. Navigation Tab Buttons
   document.querySelectorAll('.nav-tab-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const tabId = e.currentTarget.dataset.tab;
       switchTab(tabId);
     });
+  });
+
+  // 1b. Global Back to Strategy Scanner Event Delegation
+  document.addEventListener('click', (e) => {
+    const backBtn = e.target.closest('.btn-back-to-scanner, [data-back-to="tab-scanner"]');
+    if (backBtn) {
+      e.preventDefault();
+      navigateBackToScanner();
+    }
+  });
+
+  // 1c. Keyboard navigation back to Scanner (Escape or Alt+ArrowLeft when on Action Screens)
+  window.addEventListener('keydown', (e) => {
+    if (state.activeTab && state.activeTab !== 'tab-scanner') {
+      const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(tag)) return;
+      if (e.key === 'Escape' || (e.altKey && e.key === 'ArrowLeft')) {
+        e.preventDefault();
+        navigateBackToScanner();
+      }
+    }
   });
 
   // 2. Quick Market Chips

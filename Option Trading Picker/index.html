@@ -254,6 +254,20 @@
            TAB 2: STRATEGY ANALYZER & PAYOFF
            ======================================================== -->
       <section id="tab-analyzer" class="tab-pane">
+        <!-- Action Screen Navigation Bar -->
+        <div class="action-screen-nav-bar">
+          <button class="btn btn-secondary btn-sm btn-back-to-scanner" id="btnBackToScannerFromAnalyzer" title="Return to Strategy Scanner">
+            <i data-lucide="arrow-left"></i> Back to Strategy Scanner
+          </button>
+          <div class="action-screen-breadcrumb font-mono text-dim">
+            <button class="breadcrumb-link-btn btn-back-to-scanner" data-back-to="tab-scanner" title="Return to Strategy Scanner">
+              <i data-lucide="crosshair" style="width: 13px; height: 13px;"></i> Strategy Scanner
+            </button>
+            <i data-lucide="chevron-right" class="breadcrumb-sep"></i>
+            <span class="text-cyan font-bold" id="analyzerBreadcrumbTitle">Strategy Analyzer &amp; Payoff</span>
+          </div>
+        </div>
+
         <div class="analyzer-panel">
           <!-- Active Strategy Header -->
           <div class="analyzer-header-bar">
@@ -261,6 +275,9 @@
               <!-- Dynamically populated -->
             </div>
             <div class="analyzer-controls">
+              <button class="btn btn-secondary btn-sm btn-back-to-scanner" id="btnBackToScannerFromAnalyzerControls" title="Return to Strategy Scanner">
+                <i data-lucide="arrow-left"></i> Back to Scanner
+              </button>
               <button class="btn btn-secondary btn-sm" id="btnOpenChainFromAnalyzer">
                 <i data-lucide="list"></i> View Option Chain
               </button>
@@ -303,6 +320,13 @@
               </tbody>
             </table>
           </div>
+
+          <!-- Bottom Action Bar -->
+          <div class="analyzer-bottom-actions">
+            <button class="btn btn-secondary btn-sm btn-back-to-scanner" id="btnBackToScannerFromAnalyzerBottom" title="Return to Strategy Scanner">
+              <i data-lucide="arrow-left"></i> Back to Strategy Scanner
+            </button>
+          </div>
         </div>
       </section>
 
@@ -310,8 +334,22 @@
            TAB 3: LIVE OPTION CHAIN
            ======================================================== -->
       <section id="tab-chain" class="tab-pane">
-        <div style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between;">
-          <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <!-- Action Screen Navigation Bar -->
+        <div class="action-screen-nav-bar">
+          <button class="btn btn-secondary btn-sm btn-back-to-scanner" id="btnBackToScannerFromChain" title="Return to Strategy Scanner">
+            <i data-lucide="arrow-left"></i> Back to Strategy Scanner
+          </button>
+          <div class="action-screen-breadcrumb font-mono text-dim">
+            <button class="breadcrumb-link-btn btn-back-to-scanner" data-back-to="tab-scanner" title="Return to Strategy Scanner">
+              <i data-lucide="crosshair" style="width: 13px; height: 13px;"></i> Strategy Scanner
+            </button>
+            <i data-lucide="chevron-right" class="breadcrumb-sep"></i>
+            <span class="text-cyan font-bold" id="chainBreadcrumbTitle">Live Option Chain</span>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
             <label class="control-label text-dim" style="margin-bottom: 0;">Select Underlying Asset:</label>
             <select id="chainAssetSelector" class="filter-select font-mono font-bold" style="min-width: 260px;">
               <!-- Dynamically populated with USA & India Stocks/Indices -->
@@ -331,6 +369,20 @@
            TAB 4: STRATEGY BUILDER
            ======================================================== -->
       <section id="tab-builder" class="tab-pane">
+        <!-- Action Screen Navigation Bar -->
+        <div class="action-screen-nav-bar">
+          <button class="btn btn-secondary btn-sm btn-back-to-scanner" id="btnBackToScannerFromBuilder" title="Return to Strategy Scanner">
+            <i data-lucide="arrow-left"></i> Back to Strategy Scanner
+          </button>
+          <div class="action-screen-breadcrumb font-mono text-dim">
+            <button class="breadcrumb-link-btn btn-back-to-scanner" data-back-to="tab-scanner" title="Return to Strategy Scanner">
+              <i data-lucide="crosshair" style="width: 13px; height: 13px;"></i> Strategy Scanner
+            </button>
+            <i data-lucide="chevron-right" class="breadcrumb-sep"></i>
+            <span class="text-cyan font-bold" id="builderBreadcrumbTitle">Custom Strategy Builder</span>
+          </div>
+        </div>
+
         <div id="strategyBuilderContainer">
           <!-- Dynamically populated -->
         </div>
@@ -340,6 +392,20 @@
            TAB 5: MARKET OVERVIEW & MAX PAIN
            ======================================================== -->
       <section id="tab-overview" class="tab-pane">
+        <!-- Action Screen Navigation Bar -->
+        <div class="action-screen-nav-bar">
+          <button class="btn btn-secondary btn-sm btn-back-to-scanner" id="btnBackToScannerFromOverview" title="Return to Strategy Scanner">
+            <i data-lucide="arrow-left"></i> Back to Strategy Scanner
+          </button>
+          <div class="action-screen-breadcrumb font-mono text-dim">
+            <button class="breadcrumb-link-btn btn-back-to-scanner" data-back-to="tab-scanner" title="Return to Strategy Scanner">
+              <i data-lucide="crosshair" style="width: 13px; height: 13px;"></i> Strategy Scanner
+            </button>
+            <i data-lucide="chevron-right" class="breadcrumb-sep"></i>
+            <span class="text-cyan font-bold">Market Overview &amp; Max Pain</span>
+          </div>
+        </div>
+
         <div id="marketOverviewContainer">
           <!-- Dynamically populated -->
         </div>

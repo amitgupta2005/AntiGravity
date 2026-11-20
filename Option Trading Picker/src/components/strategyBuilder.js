@@ -276,9 +276,12 @@ export function renderStrategyBuilder(containerId, onPayoffUpdate) {
       ` : ''}
 
       <!-- Action Button -->
-      <div class="builder-footer-row">
+      <div class="builder-footer-row" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
         <button class="btn btn-primary" id="btnSyncToPayoff">
           <i data-lucide="line-chart"></i> Plot on Interactive Payoff Chart
+        </button>
+        <button type="button" class="btn btn-secondary btn-back-to-scanner" id="btnBackToScannerFromBuilderFooter" title="Return to Strategy Scanner">
+          <i data-lucide="arrow-left"></i> Back to Strategy Scanner
         </button>
       </div>
     </div>

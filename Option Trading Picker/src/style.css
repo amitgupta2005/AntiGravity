@@ -3083,6 +3083,124 @@ body.light-theme .simple-spot-pill {
 }
 
 /* =========================================================
+   Action Screen Navigation Bar & Back to Scanner Controls
+   ========================================================= */
+.action-screen-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 1.15rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.action-screen-nav-bar:hover {
+  border-color: var(--border-strong);
+}
+
+body.light-theme .action-screen-nav-bar {
+  background: var(--bg-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.action-screen-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.breadcrumb-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: color 0.2s ease;
+}
+
+.breadcrumb-link-btn:hover {
+  color: var(--cyan-primary);
+  text-decoration: underline;
+}
+
+.breadcrumb-sep {
+  width: 14px;
+  height: 14px;
+  opacity: 0.45;
+  flex-shrink: 0;
+}
+
+.btn-back-to-scanner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.btn-back-to-scanner:hover {
+  transform: translateX(-3px);
+  border-color: var(--cyan-primary);
+  color: var(--cyan-primary);
+  box-shadow: 0 0 14px var(--cyan-glow);
+}
+
+.btn-back-to-scanner i,
+.btn-back-to-scanner svg {
+  transition: transform 0.2s ease;
+}
+
+.btn-back-to-scanner:hover i,
+.btn-back-to-scanner:hover svg {
+  transform: translateX(-2px);
+}
+
+.analyzer-bottom-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 1rem;
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Subtle glowing pulse when returning to the inspected strategy row */
+@keyframes rowHighlightPulseAnim {
+  0% {
+    background-color: rgba(0, 242, 254, 0.28);
+    box-shadow: inset 0 0 0 2px var(--cyan-primary), 0 0 24px rgba(0, 242, 254, 0.4);
+  }
+  40% {
+    background-color: rgba(0, 242, 254, 0.16);
+    box-shadow: inset 0 0 0 1px var(--cyan-primary), 0 0 14px rgba(0, 242, 254, 0.25);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.row-highlight-pulse {
+  animation: rowHighlightPulseAnim 2.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
+}
+
+/* =========================================================
    Responsive Breakpoints
    ========================================================= */
 @media (max-width: 1024px) {
