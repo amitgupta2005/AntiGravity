@@ -479,6 +479,221 @@ export function buildExitPlan({
 }
 
 /**
+ * Enrich option strategy legs with granular per-leg entry, target exit (TP), and stop loss (SL) execution plans.
+ */
+export function enrichLegsWithExecutionPlan(legs, {
+  category = '',
+  strategyName = '',
+  S = 0,
+  lotSize = 100,
+  curr = '₹',
+  exitPlan = null,
+  isCredit = false,
+  market = 'IN'
+} = {}) {
+  if (!Array.isArray(legs) || legs.length === 0) return legs;
+
+  const actualLot = Math.max(1, lotSize || 100);
+
+  // Identify strategy nature
+  const isCondor = category === STRATEGY_CATEGORIES.IRON_CONDORS || category === STRATEGY_CATEGORIES.THETA_DECAY;
+  const isCreditSpread = category === STRATEGY_CATEGORIES.CREDIT_SPREADS;
+  const isDebitSpread = category === STRATEGY_CATEGORIES.DEBIT_SPREADS;
+  const isStraddle = category === STRATEGY_CATEGORIES.STRADDLES;
+  const isNakedDirectional = category === STRATEGY_CATEGORIES.BULLISH_CALLS || category === STRATEGY_CATEGORIES.BEARISH_PUTS;
+
+  legs.forEach(leg => {
+    const isBuy = leg.action === 'buy';
+    const isPut = leg.type === 'put';
+    const isCall = leg.type === 'call';
+    const prem = Number(Number(leg.premium || 0).toFixed(3));
+    leg.entryPrice = prem;
+    leg.entryOrderType = 'LIMIT';
+
+    // 1. IRON CONDORS & THETA DECAY (4 Legs)
+    if (isCondor) {
+      if (isPut && isBuy) {
+        // Long Put Wing
+        leg.role = 'Downside Protective Wing (Tail-Risk Hedge & Margin Reducer)';
+        leg.entryRule = `Buy 1st @ Limit ${curr}${prem} to secure broker margin relief before selling short strikes.`;
+        leg.targetPrice = Number((prem * 0.10).toFixed(3));
+        leg.targetProfitPerShare = 0;
+        leg.targetProfitPerLot = 0;
+        leg.targetRule = `Close simultaneously when short put leg is bought back, or let expire worthless if residual premium < ${curr}0.10.`;
+        leg.stopLossPrice = prem;
+        leg.stopLossLossPerShare = prem;
+        leg.stopLossLossPerLot = Number((prem * actualLot).toFixed(2));
+        leg.stopLossRule = `Defined Risk Wing. Maximum risk is capped at entry premium (${curr}${prem}). Acts as hard stop-loss ceiling for the short put.`;
+        leg.spotTrigger = `Floor protection active below ${curr}${leg.strike}`;
+      } else if (isPut && !isBuy) {
+        // Short Put Leg
+        const tp = Number(Math.max(0.05, prem * 0.50).toFixed(3));
+        const sl = Number((prem * 2.50).toFixed(3));
+        const profitSh = Number((prem - tp).toFixed(3));
+        const lossSh = Number((sl - prem).toFixed(3));
+        leg.role = 'Short Put (Primary Downside Theta Decay Harvester)';
+        leg.entryRule = `Sell 2nd @ Limit ${curr}${prem} (or Mid) immediately after protective long put wing fills.`;
+        leg.targetPrice = tp;
+        leg.targetProfitPerShare = profitSh;
+        leg.targetProfitPerLot = Number((profitSh * actualLot).toFixed(2));
+        leg.targetRule = `Buy back @ ${curr}${tp} (capture 50% theta decay, +${curr}${leg.targetProfitPerLot.toLocaleString()}/lot) or when overall condor hits 50% profit.`;
+        leg.stopLossPrice = sl;
+        leg.stopLossLossPerShare = lossSh;
+        leg.stopLossLossPerLot = Number((lossSh * actualLot).toFixed(2));
+        leg.stopLossRule = `Buy to close if leg premium expands to ${curr}${sl} (2.5x credit stop, -${curr}${leg.stopLossLossPerLot.toLocaleString()}/lot) or stock drops to test strike ${curr}${leg.strike}.`;
+        leg.spotTrigger = `🛑 Spot tests ${curr}${leg.strike} • ⏱️ 21 DTE Armor`;
+      } else if (isCall && !isBuy) {
+        // Short Call Leg
+        const tp = Number(Math.max(0.05, prem * 0.50).toFixed(3));
+        const sl = Number((prem * 2.50).toFixed(3));
+        const profitSh = Number((prem - tp).toFixed(3));
+        const lossSh = Number((sl - prem).toFixed(3));
+        leg.role = 'Short Call (Primary Upside Theta Decay Harvester)';
+        leg.entryRule = `Sell 2nd @ Limit ${curr}${prem} (or Mid) immediately after protective long call wing fills.`;
+        leg.targetPrice = tp;
+        leg.targetProfitPerShare = profitSh;
+        leg.targetProfitPerLot = Number((profitSh * actualLot).toFixed(2));
+        leg.targetRule = `Buy back @ ${curr}${tp} (capture 50% theta decay, +${curr}${leg.targetProfitPerLot.toLocaleString()}/lot) or when overall condor hits 50% profit.`;
+        leg.stopLossPrice = sl;
+        leg.stopLossLossPerShare = lossSh;
+        leg.stopLossLossPerLot = Number((lossSh * actualLot).toFixed(2));
+        leg.stopLossRule = `Buy to close if leg premium expands to ${curr}${sl} (2.5x credit stop, -${curr}${leg.stopLossLossPerLot.toLocaleString()}/lot) or stock rallies to test strike ${curr}${leg.strike}.`;
+        leg.spotTrigger = `🛑 Spot tests ${curr}${leg.strike} • ⏱️ 21 DTE Armor`;
+      } else if (isCall && isBuy) {
+        // Long Call Wing
+        leg.role = 'Upside Protective Wing (Tail-Risk Hedge & Margin Reducer)';
+        leg.entryRule = `Buy 1st @ Limit ${curr}${prem} to secure broker margin relief before selling short strikes.`;
+        leg.targetPrice = Number((prem * 0.10).toFixed(3));
+        leg.targetProfitPerShare = 0;
+        leg.targetProfitPerLot = 0;
+        leg.targetRule = `Close simultaneously when short call leg is bought back, or let expire worthless if residual premium < ${curr}0.10.`;
+        leg.stopLossPrice = prem;
+        leg.stopLossLossPerShare = prem;
+        leg.stopLossLossPerLot = Number((prem * actualLot).toFixed(2));
+        leg.stopLossRule = `Defined Risk Wing. Maximum risk is capped at entry premium (${curr}${prem}). Acts as hard stop-loss ceiling for the short call.`;
+        leg.spotTrigger = `Ceiling protection active above ${curr}${leg.strike}`;
+      }
+    }
+
+    // 2. CREDIT SPREADS (Bull Put Spread / Bear Call Spread)
+    else if (isCreditSpread) {
+      if (!isBuy) {
+        // Short Credit Leg
+        const tp = Number(Math.max(0.05, prem * 0.50).toFixed(3));
+        const sl = Number((prem * 2.50).toFixed(3));
+        const profitSh = Number((prem - tp).toFixed(3));
+        const lossSh = Number((sl - prem).toFixed(3));
+        leg.role = isPut ? 'Short Put (Primary Bullish Income Harvester)' : 'Short Call (Primary Bearish Income Harvester)';
+        leg.entryRule = `Sell 2nd @ Limit ${curr}${prem} (or Mid) immediately after protective wing is filled.`;
+        leg.targetPrice = tp;
+        leg.targetProfitPerShare = profitSh;
+        leg.targetProfitPerLot = Number((profitSh * actualLot).toFixed(2));
+        leg.targetRule = `Buy back @ ${curr}${tp} (capture 50% credit, +${curr}${leg.targetProfitPerLot.toLocaleString()}/lot) or exit at 21 DTE Gamma Armor.`;
+        leg.stopLossPrice = sl;
+        leg.stopLossLossPerShare = lossSh;
+        leg.stopLossLossPerLot = Number((lossSh * actualLot).toFixed(2));
+        leg.stopLossRule = `Buy to close if premium expands to ${curr}${sl} (2.5x credit stop) or underlying tests ${curr}${leg.strike}.`;
+        leg.spotTrigger = `🛑 Spot tests ${curr}${leg.strike} • ⏱️ 21 DTE Armor`;
+      } else {
+        // Long Protective Wing
+        leg.role = isPut ? 'Long Put (Downside Floor Hedge & Margin Reducer)' : 'Long Call (Upside Ceiling Hedge & Margin Reducer)';
+        leg.entryRule = `Buy 1st @ Limit ${curr}${prem} to activate broker margin relief and cap tail risk.`;
+        leg.targetPrice = Number((prem * 0.10).toFixed(3));
+        leg.targetProfitPerShare = 0;
+        leg.targetProfitPerLot = 0;
+        leg.targetRule = `Close simultaneously when short leg is closed, or let expire worthless if < ${curr}0.10.`;
+        leg.stopLossPrice = prem;
+        leg.stopLossLossPerShare = prem;
+        leg.stopLossLossPerLot = Number((prem * actualLot).toFixed(2));
+        leg.stopLossRule = `Defined Risk Wing. Capped at entry premium (${curr}${prem}). Guarantees hard max loss ceiling on the spread.`;
+        leg.spotTrigger = isPut ? `Hard floor below ${curr}${leg.strike}` : `Hard ceiling above ${curr}${leg.strike}`;
+      }
+    }
+
+    // 3. DEBIT SPREADS (Bull Call Spread / Bear Put Spread)
+    else if (isDebitSpread) {
+      if (isBuy) {
+        // Long Main Leg
+        const tp = Number((prem * 1.50).toFixed(3));
+        const sl = Number(Math.max(0.05, prem * 0.55).toFixed(3));
+        const profitSh = Number((tp - prem).toFixed(3));
+        const lossSh = Number((prem - sl).toFixed(3));
+        leg.role = isCall ? 'Long Call (Directional Upside Driver)' : 'Long Put (Directional Downside Driver)';
+        leg.entryRule = `Buy @ Limit ${curr}${prem} simultaneously via 2-leg combo/basket order.`;
+        leg.targetPrice = tp;
+        leg.targetProfitPerShare = profitSh;
+        leg.targetProfitPerLot = Number((profitSh * actualLot).toFixed(2));
+        leg.targetRule = `Close spread when spread value expands to target (+70% max spread profit) or underlying touches target strike.`;
+        leg.stopLossPrice = sl;
+        leg.stopLossLossPerShare = lossSh;
+        leg.stopLossLossPerLot = Number((lossSh * actualLot).toFixed(2));
+        leg.stopLossRule = `Close spread if net spread value drops 45% (-${curr}${leg.stopLossLossPerLot.toLocaleString()}/lot) or underlying breaches stop level.`;
+        leg.spotTrigger = isCall ? `🎯 Spot ≥ ${curr}${leg.strike} target` : `🎯 Spot ≤ ${curr}${leg.strike} target`;
+      } else {
+        // Short Financing Leg
+        const tp = Number(Math.max(0.05, prem * 0.30).toFixed(3));
+        const sl = Number((prem * 1.80).toFixed(3));
+        const profitSh = Number((prem - tp).toFixed(3));
+        const lossSh = Number((sl - prem).toFixed(3));
+        leg.role = isCall ? 'Short Call (Financing & Theta Reducer)' : 'Short Put (Financing & Theta Reducer)';
+        leg.entryRule = `Sell @ Limit ${curr}${prem} simultaneously via 2-leg combo order to finance long leg.`;
+        leg.targetPrice = tp;
+        leg.targetProfitPerShare = profitSh;
+        leg.targetProfitPerLot = Number((profitSh * actualLot).toFixed(2));
+        leg.targetRule = `Close simultaneously with long leg when spread profit target is achieved.`;
+        leg.stopLossPrice = sl;
+        leg.stopLossLossPerShare = lossSh;
+        leg.stopLossLossPerLot = Number((lossSh * actualLot).toFixed(2));
+        leg.stopLossRule = `Close simultaneously with long leg if spread stop loss is triggered.`;
+        leg.spotTrigger = `Covered by long option position`;
+      }
+    }
+
+    // 4. STRADDLES
+    else if (isStraddle) {
+      const tp = Number((prem * 1.80).toFixed(3));
+      const sl = Number(Math.max(0.05, prem * 0.65).toFixed(3));
+      const profitSh = Number((tp - prem).toFixed(3));
+      const lossSh = Number((prem - sl).toFixed(3));
+      leg.role = isCall ? 'ATM Long Call (Upside Volatility Breakout)' : 'ATM Long Put (Downside Volatility Breakout)';
+      leg.entryRule = `Buy @ Limit ${curr}${prem} simultaneously with opposite ATM leg before catalyst event.`;
+      leg.targetPrice = tp;
+      leg.targetProfitPerShare = profitSh;
+      leg.targetProfitPerLot = Number((profitSh * actualLot).toFixed(2));
+      leg.targetRule = `Book profit when explosive directional move pushes this leg to +80% to +100% gain.`;
+      leg.stopLossPrice = sl;
+      leg.stopLossLossPerShare = lossSh;
+      leg.stopLossLossPerLot = Number((lossSh * actualLot).toFixed(2));
+      leg.stopLossRule = `Close position if IV collapses post-event or combined straddle loses 35%.`;
+      leg.spotTrigger = `Breakout beyond breakevens`;
+    }
+
+    // 5. NAKED OUTRIGHT CALLS / PUTS
+    else {
+      const tp = Number((prem * 1.55).toFixed(3));
+      const sl = Number(Math.max(0.05, prem * 0.60).toFixed(3));
+      const profitSh = Number((tp - prem).toFixed(3));
+      const lossSh = Number((prem - sl).toFixed(3));
+      leg.role = isCall ? 'Outright Long Call (Momentum Breakout Driver)' : 'Outright Long Put (Momentum Breakdown Driver)';
+      leg.entryRule = `Buy @ Limit ${curr}${prem} on technical confirmation.`;
+      leg.targetPrice = tp;
+      leg.targetProfitPerShare = profitSh;
+      leg.targetProfitPerLot = Number((profitSh * actualLot).toFixed(2));
+      leg.targetRule = `Sell to close when option reaches ${curr}${tp} (+55% premium gain, +${curr}${leg.targetProfitPerLot.toLocaleString()}/lot) or stock touches technical target.`;
+      leg.stopLossPrice = sl;
+      leg.stopLossLossPerShare = lossSh;
+      leg.stopLossLossPerLot = Number((lossSh * actualLot).toFixed(2));
+      leg.stopLossRule = `Exit immediately if option premium drops to ${curr}${sl} (-40% stop loss, -${curr}${leg.stopLossLossPerLot.toLocaleString()}/lot) or underlying violates technical floor.`;
+      leg.spotTrigger = exitPlan?.stopLoss?.spotPrice ? `🛑 Spot: ${curr}${exitPlan.stopLoss.spotPrice} • 🎯 Spot: ${curr}${exitPlan.targetBooking?.spotPrice}` : 'Technical Stop / Target';
+    }
+
+    leg.summaryPill = `Entry: ${curr}${leg.entryPrice} ➔ TP: ${curr}${leg.targetPrice} | SL: ${curr}${leg.stopLossPrice}`;
+  });
+
+  return legs;
+}
+
+/**
  * Scan an underlying asset quote and generate all valid option strategies with exit plans
  */
 
@@ -1492,6 +1707,22 @@ export function scanStrategiesForAsset(quote) {
       }
     }
   }
+
+  // Enrich all generated strategies with granular leg-by-leg execution, target exit & stop loss blueprints
+  strategies.forEach(strat => {
+    if (Array.isArray(strat.legs)) {
+      enrichLegsWithExecutionPlan(strat.legs, {
+        category: strat.category,
+        strategyName: strat.strategyName,
+        S: strat.spotPrice,
+        lotSize: quote.lotSize || 100,
+        curr: strat.currencySymbol,
+        exitPlan: strat.exitPlan,
+        isCredit: strat.isCredit,
+        market: strat.market
+      });
+    }
+  });
 
   return strategies;
 }

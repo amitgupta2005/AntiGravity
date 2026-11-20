@@ -294,9 +294,21 @@ export function renderScannerTable(
       const badgeStyle = isBuy ? 'badge-buy' : 'badge-sell';
       const actionText = isBuy ? 'BUY' : 'SELL';
       const typeText = leg.type.toUpperCase();
+      const tpFormatted = (leg.targetPrice !== undefined && leg.targetPrice !== null) ? `${curr}${Number(leg.targetPrice).toFixed(2)}` : '';
+      const slFormatted = (leg.stopLossPrice !== undefined && leg.stopLossPrice !== null) ? `${curr}${Number(leg.stopLossPrice).toFixed(2)}` : '';
+      const tooltip = leg.role ? `${leg.role} | Entry: ${curr}${leg.premium} | TP: ${tpFormatted} | SL: ${slFormatted}` : `Entry: ${curr}${leg.premium}`;
+
       return `
-        <span class="leg-pill ${badgeStyle}">
-          <strong>${actionText}</strong> ${curr}${leg.strike} ${typeText} <span class="leg-prem font-mono">@ ${curr}${leg.premium}</span>
+        <span class="leg-pill ${badgeStyle}" title="${tooltip}">
+          <span class="leg-pill-main">
+            <strong>${actionText}</strong> ${curr}${leg.strike} ${typeText} <span class="leg-prem font-mono">@ ${curr}${leg.premium}</span>
+          </span>
+          ${tpFormatted && slFormatted ? `
+            <span class="leg-pill-sub font-mono">
+              <span class="leg-pill-tp text-emerald" title="Target Exit (TP): ${tpFormatted}">🎯${tpFormatted}</span>
+              <span class="leg-pill-sl text-rose" title="Stop Loss (SL): ${slFormatted}">🛑${slFormatted}</span>
+            </span>
+          ` : ''}
         </span>
       `;
     }).join('');
@@ -477,9 +489,67 @@ export function renderScannerTable(
                     <span class="detail-pill">🛡️ Preserves <strong>${strat.exitPlan.capitalPreservedPct}% Capital</strong></span>
                     <span class="detail-pill text-amber">⏱️ ${strat.exitPlan.laymanSummary?.timeExitRule || 'Close before expiry week'}</span>
                   </div>
-                </div>
               </div>
             ` : ''}
+
+            <!-- Full-Width: Leg-by-Leg Execution Blueprint, Targets & Stop Loss -->
+            <div class="detail-col-legs-blueprint">
+              <div class="detail-section-header">
+                <i data-lucide="layers" class="text-cyan"></i>
+                <span class="font-bold">Leg-by-Leg Execution Blueprint, Targets &amp; Stop Loss</span>
+                <span class="badge badge-subtle font-mono">${strat.legs.length} Active Legs</span>
+              </div>
+              <div class="legs-blueprint-table-wrap">
+                <table class="legs-blueprint-table font-mono">
+                  <thead>
+                    <tr>
+                      <th>Leg / Strike</th>
+                      <th>Role &amp; Function</th>
+                      <th>1. Entry Strategy</th>
+                      <th>2. Target Exit (TP)</th>
+                      <th>3. Stop Loss (SL)</th>
+                      <th>Spot / Technical Trigger</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${strat.legs.map(leg => {
+                      const isBuy = leg.action === 'buy';
+                      const badgeStyle = isBuy ? 'badge-buy' : 'badge-sell';
+                      const actionText = isBuy ? 'BUY' : 'SELL';
+                      const typeText = leg.type.toUpperCase();
+                      const tpFormatted = (leg.targetPrice !== undefined && leg.targetPrice !== null) ? `${curr}${Number(leg.targetPrice).toFixed(2)}` : '--';
+                      const slFormatted = (leg.stopLossPrice !== undefined && leg.stopLossPrice !== null) ? `${curr}${Number(leg.stopLossPrice).toFixed(2)}` : '--';
+                      return `
+                        <tr>
+                          <td>
+                            <span class="leg-pill ${badgeStyle}">
+                              <span class="leg-pill-main">
+                                <strong>${actionText}</strong> ${curr}${leg.strike} ${typeText}
+                                <span class="leg-prem font-mono">@ ${curr}${leg.premium}</span>
+                              </span>
+                            </span>
+                          </td>
+                          <td class="leg-role-cell font-bold text-cyan">${leg.role || 'Option Leg'}</td>
+                          <td class="leg-entry-cell">
+                            <div class="font-bold">Limit @ ${curr}${leg.premium}</div>
+                            <div class="leg-rule-sub text-dim">${leg.entryRule || 'Enter at limit price.'}</div>
+                          </td>
+                          <td class="leg-target-cell">
+                            <div class="font-bold text-emerald">🎯 ${tpFormatted}</div>
+                            <div class="leg-rule-sub text-emerald-light">${leg.targetRule || 'Exit at target.'}</div>
+                          </td>
+                          <td class="leg-stop-cell">
+                            <div class="font-bold text-rose">🛑 ${slFormatted}</div>
+                            <div class="leg-rule-sub text-rose-light">${leg.stopLossRule || 'Cut loss at stop level.'}</div>
+                          </td>
+                          <td class="leg-spot-cell text-dim">${leg.spotTrigger || '--'}</td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </td>
       </tr>
@@ -589,9 +659,21 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
       const badgeStyle = isBuy ? 'badge-buy' : 'badge-sell';
       const actionText = isBuy ? 'BUY' : 'SELL';
       const typeText = leg.type.toUpperCase();
+      const tpFormatted = (leg.targetPrice !== undefined && leg.targetPrice !== null) ? `${curr}${Number(leg.targetPrice).toFixed(2)}` : '';
+      const slFormatted = (leg.stopLossPrice !== undefined && leg.stopLossPrice !== null) ? `${curr}${Number(leg.stopLossPrice).toFixed(2)}` : '';
+      const tooltip = leg.role ? `${leg.role} | Entry: ${curr}${leg.premium} | TP: ${tpFormatted} | SL: ${slFormatted}` : `Entry: ${curr}${leg.premium}`;
+
       return `
-        <span class="leg-pill ${badgeStyle}">
-          <strong>${actionText}</strong> ${curr}${leg.strike} ${typeText} <span class="leg-prem font-mono">@ ${curr}${leg.premium}</span>
+        <span class="leg-pill ${badgeStyle}" title="${tooltip}">
+          <span class="leg-pill-main">
+            <strong>${actionText}</strong> ${curr}${leg.strike} ${typeText} <span class="leg-prem font-mono">@ ${curr}${leg.premium}</span>
+          </span>
+          ${tpFormatted && slFormatted ? `
+            <span class="leg-pill-sub font-mono">
+              <span class="leg-pill-tp text-emerald" title="Target Exit (TP): ${tpFormatted}">🎯${tpFormatted}</span>
+              <span class="leg-pill-sl text-rose" title="Stop Loss (SL): ${slFormatted}">🛑${slFormatted}</span>
+            </span>
+          ` : ''}
         </span>
       `;
     }).join('');
@@ -799,6 +881,45 @@ export function renderScannerCards(containerId, strategies, onSelectStrategy, on
                 <span class="footer-pill">⚖️ Risk : Reward <strong class="text-cyan">${strat.exitPlan.managedRiskReward}</strong></span>
                 <span class="footer-pill">🛡️ Preserves <strong class="text-emerald">${strat.exitPlan.capitalPreservedPct}% Capital</strong></span>
                 <span class="footer-pill pill-timer text-amber">⏱️ ${strat.exitPlan.laymanSummary?.timeExitRule || 'Close before expiry week'}</span>
+              </div>
+            </div>
+
+            <!-- Card Leg-by-Leg Execution & Stop Loss Matrix -->
+            <div class="card-legs-blueprint">
+              <div class="card-blueprint-title font-bold text-dim">
+                <i data-lucide="layers" class="inline-icon text-cyan"></i> Leg-by-Leg Execution &amp; SL Matrix:
+              </div>
+              <div class="card-legs-list">
+                ${strat.legs.map(leg => {
+                  const isBuy = leg.action === 'buy';
+                  const badgeStyle = isBuy ? 'badge-buy' : 'badge-sell';
+                  const actionText = isBuy ? 'BUY' : 'SELL';
+                  const typeText = leg.type.toUpperCase();
+                  const tpFormatted = (leg.targetPrice !== undefined && leg.targetPrice !== null) ? `${curr}${Number(leg.targetPrice).toFixed(2)}` : '--';
+                  const slFormatted = (leg.stopLossPrice !== undefined && leg.stopLossPrice !== null) ? `${curr}${Number(leg.stopLossPrice).toFixed(2)}` : '--';
+                  return `
+                    <div class="card-leg-blueprint-item">
+                      <div class="card-leg-item-top">
+                        <span class="leg-pill ${badgeStyle}">
+                          <span class="leg-pill-main">
+                            <strong>${actionText}</strong> ${curr}${leg.strike} ${typeText} <span class="leg-prem font-mono">@ ${curr}${leg.premium}</span>
+                          </span>
+                        </span>
+                        <span class="card-leg-role text-cyan font-bold">${leg.role || 'Option Leg'}</span>
+                      </div>
+                      <div class="card-leg-item-plan font-mono">
+                        <span class="plan-entry"><strong>Entry:</strong> Limit @ ${curr}${leg.premium}</span>
+                        <span class="plan-tp text-emerald"><strong>TP:</strong> 🎯${tpFormatted}</span>
+                        <span class="plan-sl text-rose"><strong>SL:</strong> 🛑${slFormatted}</span>
+                      </div>
+                      <div class="card-leg-rules text-dim">
+                        <div>👉 <strong>Entry:</strong> ${leg.entryRule || ''}</div>
+                        <div>👉 <strong>Exit:</strong> ${leg.targetRule || ''}</div>
+                        <div>👉 <strong>SL:</strong> ${leg.stopLossRule || ''}</div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
               </div>
             </div>
           </div>

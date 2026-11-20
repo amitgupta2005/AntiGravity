@@ -694,12 +694,32 @@ body.light-theme .app-title {
 
 .leg-pill {
   display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
   padding: 0.3rem 0.6rem;
   border-radius: var(--radius-sm);
   font-size: 0.75rem;
   font-family: 'JetBrains Mono', monospace;
+  transition: all 0.2s ease;
+}
+
+.leg-pill-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.leg-pill-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.65rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.12);
+  padding-top: 0.15rem;
+  margin-top: 0.1rem;
+  width: 100%;
 }
 
 .badge-buy {
@@ -1233,13 +1253,13 @@ body.light-theme .view-mode-btn.active {
 /* Legs Wrap */
 .td-legs-wrap {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 0.35rem;
-  max-width: 280px;
+  min-width: 210px;
 }
 
 .td-legs-wrap .leg-pill {
-  padding: 0.15rem 0.45rem;
+  padding: 0.2rem 0.45rem;
   font-size: 0.7rem;
 }
 
@@ -1438,6 +1458,138 @@ body.light-theme .view-mode-btn.active {
   .strat-table-detail-box {
     grid-template-columns: 1fr;
   }
+}
+
+/* Detail Drawer Leg-by-Leg Execution Blueprint */
+.detail-col-legs-blueprint {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.legs-blueprint-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+}
+
+.legs-blueprint-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.73rem;
+  line-height: 1.35;
+}
+
+.legs-blueprint-table th {
+  background: var(--bg-secondary);
+  color: var(--text-dim);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.legs-blueprint-table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: top;
+}
+
+.legs-blueprint-table tr:last-child td {
+  border-bottom: none;
+}
+
+.leg-role-cell {
+  font-size: 0.72rem;
+  min-width: 180px;
+}
+
+.leg-entry-cell,
+.leg-target-cell,
+.leg-stop-cell {
+  min-width: 170px;
+}
+
+.leg-rule-sub {
+  font-size: 0.68rem;
+  margin-top: 0.2rem;
+  line-height: 1.25;
+}
+
+.leg-spot-cell {
+  font-size: 0.68rem;
+  min-width: 140px;
+}
+
+/* Card view blueprint */
+.card-legs-blueprint {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.card-blueprint-title {
+  font-size: 0.72rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.card-legs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.card-leg-blueprint-item {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+}
+
+.card-leg-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.card-leg-role {
+  font-size: 0.68rem;
+}
+
+.card-leg-item-plan {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.7rem;
+  background: var(--bg-secondary);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.card-leg-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.68rem;
+  line-height: 1.3;
 }
 
 /* =========================================================

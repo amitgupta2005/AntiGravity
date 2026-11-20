@@ -632,12 +632,17 @@ function renderAnalyzerTab() {
       const legDelta = Number((sign * greeks.delta).toFixed(3));
       const legTheta = Number((sign * greeks.theta * lotSize).toFixed(2));
 
+      const tpFormatted = (leg.targetPrice !== undefined && leg.targetPrice !== null) ? `${curr}${Number(leg.targetPrice).toFixed(2)}` : '--';
+      const slFormatted = (leg.stopLossPrice !== undefined && leg.stopLossPrice !== null) ? `${curr}${Number(leg.stopLossPrice).toFixed(2)}` : '--';
+
       return `
         <tr>
           <td>${actionBadge}</td>
           <td>${typeBadge}</td>
           <td class="font-bold text-cyan">${curr}${leg.strike}</td>
           <td class="font-mono">${curr}${leg.premium.toFixed(2)}</td>
+          <td class="font-mono font-bold text-emerald">${tpFormatted}</td>
+          <td class="font-mono font-bold text-rose">${slFormatted}</td>
           <td>${leg.contracts || 1}</td>
           <td class="font-mono font-bold ${isBuy ? 'text-rose' : 'text-emerald'}">
             ${isBuy ? '-' : '+'}${curr}${cost.toLocaleString()}
